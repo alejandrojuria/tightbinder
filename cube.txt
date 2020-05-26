@@ -1,0 +1,48 @@
+! ------- Config file formatting rules -------
+! Lines starting with ! are comments
+! Lines with # denote argument types and must be present (removing one or wirting it wrogn will result in error)
+! Blank spaces are irrelevant
+! All numbers must be separated by either spaces, commas or semicolons
+! Beware: Leaving a blank space at the beginning of a line will result in it being skipped
+
+#System name
+Test cube
+
+#Dimensionality
+3
+
+#Bravais lattice   
+! Each row corresponds to one vector of the basis (vectors have to be in R^3)
+1 0 0
+0 1 0
+0 0 1
+
+#Species
+! Number of atomic species (isoelectronic at the moment)
+2
+
+#Motif
+! Each row corresponds to one vector of the basis; fourth number denotes atomic species
+! Species have to be either 1 or 2
+! 
+0 0 0 1
+
+#Orbitals
+! Always use cubic harmonic orbitals
+! Order is irrelevant 
+! Species have to be isoelectronic (same number of valence shell electrons)
+! Possible orbitals are: s, px, py, pz, dxy, dyz, dxz, dx2-y2, d3z2-r2
+s, px, py
+
+#Onsite energy
+! One for each different orbital defined above
+-1.3 0.4
+
+#SK amplitudes
+! Order is fixed: Vsss, Vsps, Vpps, Vppp, Vsds, Vpds, Vpdp, Vdds, Vddp, Vddd (separated by spaces)
+! In case of having two atomic species, two lines must be appended, one for each element
+0.15 0.05 0.03 0.1
+0.2 0.1 0.4 0.5
+
+# Spin-orbit coupling
+0
