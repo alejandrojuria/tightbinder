@@ -4,6 +4,7 @@
 
 import argparse, sys
 import fileparse
+import hamiltonian
 import numpy as np
 
 ''' Main routine '''
@@ -21,8 +22,9 @@ def main():
     
     configuration = fileparse.parseConfigFile(file)
 
-    print(configuration)
-
+    bravais_lattice = configuration['Bravais lattice']
+    reciprocal_basis = hamiltonian.reciprocal_lattice(bravais_lattice)
+    print(reciprocal_basis)
 
 if __name__ == "__main__":
     main()

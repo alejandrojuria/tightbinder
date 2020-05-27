@@ -9,13 +9,13 @@
 Test cube
 
 #Dimensionality
-3
+2
 
 #Bravais lattice   
 ! Each row corresponds to one vector of the basis (vectors have to be in R^3)
-1 0 0
+! For 1D and 2D systems, the z component must be zero
+3 0 0
 0 1 0
-0 0 1
 
 #Species
 ! Number of atomic species (isoelectronic at the moment)
