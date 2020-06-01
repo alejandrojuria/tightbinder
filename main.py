@@ -5,6 +5,7 @@
 import argparse, sys
 import fileparse
 import hamiltonian
+import crystal
 import numpy as np
 
 ''' Main routine '''
@@ -12,6 +13,7 @@ def main():
     # ------------------------------ Argument & file parsing ------------------------------
     parser = argparse.ArgumentParser()
     parser.add_argument('file', help='input file for tight-binding model')
+    parser.add_argument( '-v', '--verbose', action='store_true', help='verbose output')
     args = parser.parse_args()
 
     try:
@@ -19,12 +21,22 @@ def main():
     except:
         print('Error: Input file does not exist')
         sys.exit(1)
-    
+
+    try:
+        verbose = args.verbose
+    except:
+        verbose = False
+
     configuration = fileparse.parseConfigFile(file)
 
     bravais_lattice = configuration['Bravais lattice']
-    reciprocal_basis = hamiltonian.reciprocal_lattice(bravais_lattice)
-    print(reciprocal_basis)
+    reciprocal_basis = crystal.reciprocal_lattice(bravais_lattice)
+    
+    kpoints = crystal.brillouin_zone_mesh([2,3], reciprocal_basis)
+    group = crystal.crystallographic_group(bravais_lattice)
+
+    print(group)
+
 
 if __name__ == "__main__":
     main()

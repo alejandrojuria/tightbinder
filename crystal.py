@@ -6,10 +6,12 @@
 # constructed from the parameters of the configuration file
 
 import numpy as np
+import math
 import sys
 
 # --------------- Constants ---------------
-PI = 3.14159265359
+PI = 3.141592653589793238
+EPS = 1E-16
 
 
 
@@ -18,15 +20,44 @@ PI = 3.14159265359
 ''' Determines the crystallographic group associated to the material from
 the configuration file. NOTE: Only the group associated to the Bravais lattice,
 reduced symmetry due to presence of motif is not taken into account. Its purpose is to
-provide a path in k-space to plot the band structure. '''
+provide a path in k-space to plot the band structure.
+Workflow is the following: First determine length and angles between basis vectors.
+Then we separate by dimensionality: first we check angles, and then length to
+determine the crystal group. '''
 def crystallographic_group(bravais_lattice):
 
     dimension = len(bravais_lattice)
     basis_norm = [np.linalg.norm(vector) for vector in bravais_lattice]
+    group = ''
+
+    basis_angles = []
+    for i in range(dimension):
+        for j in range(dimension):
+            if(j <= i): continue
+            v1 = bravais_lattice[i]
+            v2 = bravais_lattice[j]
+            basis_angles.append(math.acos(np.dot(v1, v2)/(np.linalg.norm(v1)*np.linalg.norm(v2))))
     
+    if(dimension == 2):
+        if(abs(basis_angles[0] - PI/2) < EPS):
+            if(abs(basis_norm[0] - basis_norm[1]) < EPS):
+                group += 'Square'
+            else:
+                group += 'Rectangular'
+        
+        elif(abs(basis_angles[0] - PI/3) < EPS or abs(basis_angles[0] - 2*PI/3) < EPS and abs(basis_norm[0] - basis_norm[1]) < EPS):
+            group += 'Hexagonal'
+        
+        else:
+            if(abs(basis_norm[0] - basis_norm[1]) < EPS):
+                group += 'Centered rectangular'
+            else:
+                group += 'Oblique'
+        
+    elif(dimension == 3):
+        print('Work in progress')
 
-
-    return 
+    return group
 
 
 ''' Routine to compute the reciprocal lattice basis vectors from
@@ -87,14 +118,33 @@ def brillouin_zone_mesh(mesh, reciprocal_basis):
 These symmetry points will be used in order to plot the band structure along the main
 reciprocal paths of the system. Returns a vector with the principal high symmetry points,
 and the letter used to name them. '''
-def high_symmetry_points(reciprocal_basis):
+def high_symmetry_points(group, reciprocal_basis):
 
     dimension = len(reciprocal_basis)
     special_points = [['Gamma', np.array([0.,0.,0.])]]
     if(dimension == 1):
          special_points.append(['K', reciprocal_basis[0]/2])
         
+    elif(dimension == 2):
+        special_points.append(['M', reciprocal_basis[0]/2])
+        if(group == 'Square'):
+            special_points.append(['K', reciprocal_basis[0]/2 + reciprocal_basis[1]/2])
+        
+        elif(group == 'Rectangle'):
+            special_points.append(['M*', reciprocal_basis[1]/2])
+            special_points.append(['K',  reciprocal_basis[0]/2 + reciprocal_basis[1]/2])
+            special_points.append(['K*',-reciprocal_basis[0]/2 + reciprocal_basis[1]/2])
+        
+        elif(group == 'Hexagonal'):
+            special_points.append(['K',  reciprocal_basis[0]/2 + reciprocal_basis[1]/2])
+            special_points.append(['K*',-reciprocal_basis[0]/2 + reciprocal_basis[1]/2])
 
+
+
+
+
+
+            
         
 
     return special_points

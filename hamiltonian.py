@@ -10,6 +10,7 @@ PI = 3.14159265359
 
 
 # --------------- Routines ---------------
+
 ''' Routine to compute the reciprocal lattice basis vectors from
 the Bravais lattice basis. The algorithm is based on the fact that
 a_i\dot b_j=2PI\delta_ij, which can be written as a linear system of
@@ -39,10 +40,47 @@ def reciprocal_lattice(bravais_lattice):
 
     return reciprocal_basis
 
-''' Routine to compute high symmetry points '''
-def high_symmetry_points(reciprocal_basis):
-    return
 
+''' Routine to compute a mesh of the first Brillouin zone using the
+Monkhorst-Pack algorithm. Returns a list of k vectors. '''
+def brillouin_zone_mesh(mesh, reciprocal_basis):
+
+    dimension = len(reciprocal_basis)
+    if(len(mesh) != dimension):
+        print('Error: Mesh does not match dimension of the system')
+        sys.exit(1)
+
+    kpoints = []
+    mesh_points = []
+    for i in range(dimension):
+        mesh_points.append(list(range(1, mesh[i] + 1)))
+
+    mesh_points = np.array(np.meshgrid(*mesh_points)).T.reshape(-1,dimension)
+
+    for point in mesh_points:
+        kpoint = 0
+        for i in range(dimension):
+            kpoint += (2.*point[i] - mesh[i])/(2*mesh[i])*reciprocal_basis[i]
+        kpoints.append(kpoint)
+
+    return np.array(kpoints)
+
+''' Routine to compute high symmetry points depending on the dimension of the system.
+These symmetry points will be used in order to plot the band structure along the main
+reciprocal paths of the system. Returns a vector with the principal high symmetry points,
+and the letter used to name them. '''
+def high_symmetry_points(reciprocal_basis):
+
+    dimension = len(reciprocal_basis)
+    special_points = [['Gamma', np.array([0.,0.,0.])]]
+    if(dimension == 1):
+         special_points.append(['K', reciprocal_basis[0]/2])
+
+
+
+        
+
+    return special_points
 
 
 

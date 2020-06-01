@@ -1,10 +1,10 @@
-! ------- Config file formatting rules -------
+! --------------------- Config file formatting rules ---------------------
 ! Lines starting with ! are comments
 ! Lines with # denote argument types and must be present (removing one or wirting it wrogn will result in error)
 ! Blank spaces are irrelevant
 ! All numbers must be separated by either spaces, commas or semicolons
 ! Beware: Leaving a blank space at the beginning of a line will result in it being skipped
-
+! --------------------- Material parameters ---------------------
 #System name
 Test cube
 
@@ -13,7 +13,7 @@ Test cube
 
 #Bravais lattice   
 ! Each row corresponds to one vector of the basis (vectors have to be in R^3)
-! For 1D and 2D systems, the z component must be zero
+! For 1D and 2D systems, the z component must be zero (z should always be regarded as height component)
 3 0 0
 0 1 0
 
@@ -46,3 +46,5 @@ s, px, py
 
 # Spin-orbit coupling
 0
+
+! --------------------- Simulation parameters ---------------------
