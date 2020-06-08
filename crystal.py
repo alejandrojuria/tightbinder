@@ -14,7 +14,6 @@ PI = 3.141592653589793238
 EPS = 1E-16
 
 
-
 # --------------- Routines ---------------
 
 ''' Determines the crystallographic group associated to the material from
@@ -138,6 +137,20 @@ def high_symmetry_points(group, reciprocal_basis):
         elif(group == 'Hexagonal'):
             special_points.append(['K',  reciprocal_basis[0]/2 + reciprocal_basis[1]/2])
             special_points.append(['K*',-reciprocal_basis[0]/2 + reciprocal_basis[1]/2])
+        
+        else:
+            print('High symmetry points not implemented yet')
+    
+    else:
+        special_points.append(['M', reciprocal_basis[0]/2])
+        if(group == 'Cube'):
+            special_points.append(['M*', reciprocal_basis[1]/2])
+            special_points.append(['K', reciprocal_basis[0]/2 + reciprocal_basis[1]/2])
+
+        else:
+            print('High symmetry points not implemented yet')
+
+        
 
 
 

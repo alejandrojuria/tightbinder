@@ -35,7 +35,8 @@ def main():
     kpoints = crystal.brillouin_zone_mesh([2,3], reciprocal_basis)
     group = crystal.crystallographic_group(bravais_lattice)
 
-    print(group)
+    motif = configuration['Motif']
+    hamiltonian.first_neighbours(motif, bravais_lattice, "minimal", R=1)
 
 
 if __name__ == "__main__":
