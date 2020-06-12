@@ -6,37 +6,40 @@ import argparse, sys
 import fileparse
 import hamiltonian
 import crystal
-import numpy as np
 
 ''' Main routine '''
 def main():
     # ------------------------------ Argument & file parsing ------------------------------
     parser = argparse.ArgumentParser()
     parser.add_argument('file', help='input file for tight-binding model')
-    parser.add_argument( '-v', '--verbose', action='store_true', help='verbose output')
+    parser.add_argument('-v', '--verbose', action='store_true', help='verbose output')
     args = parser.parse_args()
 
     try:
         file = open(args.file, 'r')
-    except:
+    except IOError:
         print('Error: Input file does not exist')
         sys.exit(1)
 
-    try:
-        verbose = args.verbose
-    except:
-        verbose = False
+    verbose = args.verbose
 
-    configuration = fileparse.parseConfigFile(file)
+    configuration = fileparse.parse_config_file(file)
+
+    print(configuration['Onsite energy'])
 
     bravais_lattice = configuration['Bravais lattice']
     reciprocal_basis = crystal.reciprocal_lattice(bravais_lattice)
     
-    kpoints = crystal.brillouin_zone_mesh([2,3], reciprocal_basis)
+    kpoints = crystal.brillouin_zone_mesh([2, 3], reciprocal_basis)
     group = crystal.crystallographic_group(bravais_lattice)
 
     motif = configuration['Motif']
-    hamiltonian.first_neighbours(motif, bravais_lattice, "minimal", R=1)
+    hamiltonian.first_neighbours(motif, bravais_lattice, "minimal", r=1)
+
+    sk_amplitudes = configuration["SK amplitudes"]
+    orbitals = hamiltonian.transform_orbitals_to_string(configuration["Orbitals"])
+
+    basis = hamiltonian.create_atomic_orbital_basis(motif, orbitals)
 
 
 if __name__ == "__main__":
