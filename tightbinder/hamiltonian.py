@@ -4,6 +4,7 @@
 import numpy as np
 import sys
 import math
+import cmath
 import itertools
 
 # --------------- Constants ---------------
@@ -242,22 +243,72 @@ def create_atomic_orbital_basis(motif, orbitals):
     return basis
 
 
+def extend_onsite_vector(onsite_energies, orbitals):
+    """ Routine to extend the onsite energies from the original list to
+     a list the same length as the orbitals one, with the corresponding onsite energy
+     per index """
+
+    onsite_list = []
+    reduced_orbitals = []
+    onsite_orbital_dictionary = {}
+    count = 0
+    for orbital in orbitals:
+        if orbital[0] not in reduced_orbitals:
+            reduced_orbitals.append(orbital[0])
+            onsite_orbital_dictionary.update({orbital[0]: onsite_energies[count]})
+            count += 1
+    for orbital in orbitals:
+        onsite_list.append(onsite_orbital_dictionary[orbital[0]])
+
+    return onsite_list
+
+
 def initialize_hamiltonian(k, configuration):
     """ Routine to initialize the hamiltonian matrix which describes the system. """
 
     orbitals = transform_orbitals_to_string(configuration['Orbitals'])
     basis = create_atomic_orbital_basis(configuration['Motif'], orbitals)
+    motif = configuration['Motif']
+    bravais_lattice = configuration['Bravais lattice']
+    sk_amplitudes = configuration['SK amplitudes']
 
-    dimension_block = len(orbitals)
+    dimension_orbitals = len(orbitals)
+    dimension = len(basis)
 
-    hamiltonian_block = np.zeros([dimension_block, dimension_block], dtype=np.complex_)
-    #for atom in basis:
+    hamiltonian_block = np.zeros([dimension_orbitals, dimension_orbitals], dtype=np.complex_)
+    hamiltonian = np.zeros(([dimension, dimension]), dtype=np.complex_)
 
+    onsite_energies = []
+    for energy_array in configuration['Onsite energy']:
+        onsite_energies.append(extend_onsite_vector(energy_array, orbitals))
 
+    for n, atom in enumerate(motif):
+        species = atom[3]
+        hamiltonian_block.diagonal(onsite_energies[species])
+        hamiltonian[dimension_orbitals*n:dimension_orbitals*(n+1),
+                    dimension_orbitals*n:dimension_orbitals*(n+1)] = hamiltonian_block
 
+    all_neighbours = first_neighbours(motif, bravais_lattice)
 
+    for i, atom in enumerate(basis):
+        atom_position = atom[0][:3]
+        species = atom[0][3]
+        orbital = atom[1]
+        atom_index = int(i/dimension_orbitals)
+        for neighbour in all_neighbours[atom_index]:
+            neigh_index = neighbour[0]
+            neigh_unit_cell = neighbour[1]
+            neigh_position = motif[neigh_index][:3]
+            neigh_species = motif[neigh_index][3]
+            for j, neigh_orbital in enumerate(orbitals):
+                position_difference = np.array(atom_position) - np.array(neigh_position)
+                orbital_config = [orbital, species, neigh_orbital, neigh_species]
+                hamiltonian[i, neigh_index*dimension_orbitals + j] = hopping_amplitude(position_difference,
+                                                                                       sk_amplitudes,
+                                                                                       orbital_config)
+                hamiltonian[i, neigh_index * dimension_orbitals + j] *= cmath.exp(1j*np.dot(float(k), neigh_unit_cell))
 
-    return None
+    return hamiltonian
 
 
 if __name__ == '__main__':

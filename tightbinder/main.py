@@ -3,12 +3,12 @@
 # Requires an input file with the data regarding the model (dimensionality, number of atoms in motif, orbitals, interaction values)
 
 import argparse, sys
-import fileparse
-import hamiltonian
-import crystal
+from tightbinder import fileparse, hamiltonian, crystal
+from numpy import np
 
-''' Main routine '''
+
 def main():
+    """ Main routine """
     # ------------------------------ Argument & file parsing ------------------------------
     parser = argparse.ArgumentParser()
     parser.add_argument('file', help='input file for tight-binding model')
@@ -25,8 +25,6 @@ def main():
 
     configuration = fileparse.parse_config_file(file)
 
-    print(configuration['Onsite energy'])
-
     bravais_lattice = configuration['Bravais lattice']
     reciprocal_basis = crystal.reciprocal_lattice(bravais_lattice)
     
@@ -40,6 +38,9 @@ def main():
     orbitals = hamiltonian.transform_orbitals_to_string(configuration["Orbitals"])
 
     basis = hamiltonian.create_atomic_orbital_basis(motif, orbitals)
+
+    k = 0.5
+    h = hamiltonian.initialize_hamiltonian(k, configuration)
 
 
 if __name__ == "__main__":
