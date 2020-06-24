@@ -1,10 +1,14 @@
 # Implementation of general tight-binding model based on the Slater-Koser approximation to parametrize
 # the hopping amplitudes in term of the angles and orbitals between atoms. 
-# Requires an input file with the data regarding the model (dimensionality, number of atoms in motif, orbitals, interaction values)
+# Requires an input file with the data regarding the model (dimensionality, number of atoms in motif, orbitals,
+# interaction values)
 
-import argparse, sys
-from tightbinder import fileparse, hamiltonian, crystal
-from numpy import np
+import argparse
+import sys
+import fileparse
+import hamiltonian
+import crystal
+import numpy as np
 
 
 def main():
@@ -25,22 +29,16 @@ def main():
 
     configuration = fileparse.parse_config_file(file)
 
-    bravais_lattice = configuration['Bravais lattice']
-    reciprocal_basis = crystal.reciprocal_lattice(bravais_lattice)
-    
-    kpoints = crystal.brillouin_zone_mesh([2, 3], reciprocal_basis)
-    group = crystal.crystallographic_group(bravais_lattice)
+    reciprocal_basis = crystal.reciprocal_lattice(configuration['Bravais lattice'])
 
-    motif = configuration['Motif']
-    hamiltonian.first_neighbours(motif, bravais_lattice, "minimal", r=1)
+    chain = hamiltonian.Hamiltonian(configuration)
+    chain.initialize_hamiltonian()
 
-    sk_amplitudes = configuration["SK amplitudes"]
-    orbitals = hamiltonian.transform_orbitals_to_string(configuration["Orbitals"])
+    kpoints = crystal.brillouin_zone_mesh([10], reciprocal_basis)
 
-    basis = hamiltonian.create_atomic_orbital_basis(motif, orbitals)
+    results = chain.solve(kpoints)
 
-    k = 0.5
-    h = hamiltonian.initialize_hamiltonian(k, configuration)
+    print(results[0])
 
 
 if __name__ == "__main__":

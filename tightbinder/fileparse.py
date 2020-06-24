@@ -83,9 +83,9 @@ def shape_arguments(arguments):
                 aux_array.append([float(num) for num in re.split(' |, |,|; |;', line)])
                 if arguments['Species'] == 1:
                     try:
-                        aux_array[n][3] = 1  # Default value to 1
+                        aux_array[n][3] = 0  # Default value to 1
                     except IndexError:
-                        aux_array[n].append(1)
+                        aux_array[n].append(0)
             arguments[arg] = aux_array
 
         elif arg == 'Orbitals':
@@ -253,7 +253,7 @@ def transform_sk_coefficients(configuration):
             amplitudes[4:] = coefs[1:]
         elif True in orbitals[1:4] and True in orbitals[4:]:
             amplitudes[2:4] = coefs[0:2]
-            amplitudes[5:]  = coefs[2:]
+            amplitudes[5:] = coefs[2:]
         elif orbitals[0]:  # s
             amplitudes[0] = coefs[0]
         elif True in orbitals[1:4]:  # p
