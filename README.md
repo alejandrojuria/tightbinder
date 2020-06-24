@@ -27,8 +27,9 @@ python bin/app.py {config_file}
 ```
 Or since the library is installed, create your own scripts. For now, usage of the ```app.py``` program is advised.
 
+
 ## Workroad
-The future updated will be:
+The future updates will be:
 - [x] hamiltonian.py: Module for inititializing and solving the Hamiltonian of the system given in the config. file
 - [ ] topology.py: This module will include routines for computing topological invariants of the system
 - [ ] disorder.py: Module with routines to introduce disorder in the system such as vacancies or impurities

@@ -6,6 +6,7 @@
 import argparse
 import sys
 import fileparse, hamiltonian, crystal
+import time
 
 
 def main():
@@ -22,8 +23,6 @@ def main():
         print('Error: Input file does not exist')
         sys.exit(1)
 
-    verbose = args.verbose
-
     configuration = fileparse.parse_config_file(file)
 
     reciprocal_basis = crystal.reciprocal_lattice(configuration['Bravais lattice'])
@@ -33,8 +32,10 @@ def main():
     chain.initialize_hamiltonian()
 
     results = chain.solve(kpoints)
-
+    results.plot()
 
 
 if __name__ == "__main__":
+    initial_time = time.time()
     main()
+    print(f'Elapsed time: {time.time() - initial_time}s')
