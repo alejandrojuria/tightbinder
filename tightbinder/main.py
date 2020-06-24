@@ -27,15 +27,12 @@ def main():
     configuration = fileparse.parse_config_file(file)
 
     reciprocal_basis = crystal.reciprocal_lattice(configuration['Bravais lattice'])
+    kpoints = crystal.brillouin_zone_mesh([11], reciprocal_basis)
 
     chain = hamiltonian.Hamiltonian(configuration)
     chain.initialize_hamiltonian()
 
-    kpoints = crystal.brillouin_zone_mesh([11], reciprocal_basis)
-
     results = chain.solve(kpoints)
-
-    print(results[0])
 
 
 if __name__ == "__main__":

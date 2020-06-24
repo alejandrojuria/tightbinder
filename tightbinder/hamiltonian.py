@@ -5,6 +5,7 @@ import numpy as np
 import sys
 import math
 import cmath
+import copy
 import itertools
 
 # --------------- Constants ---------------
@@ -347,14 +348,10 @@ class Hamiltonian:
     def hamiltonian_k(self, k):
         """ Add the k dependency of the Bloch Hamiltonian through the complex exponential """
 
-        hamiltonian = self.hamiltonian
+        hamiltonian_k = np.zeros([self.dimension, self.dimension], dtype=np.complex_)
         for cell in self.__unit_cell_list:
             h_cell = self.__unit_cell_list.index(list(cell))
-            hamiltonian[h_cell] *= cmath.exp(1j*np.dot(k, cell))
-
-        hamiltonian_k = np.zeros([self.dimension, self.dimension], dtype=np.complex_)
-        for block in hamiltonian:
-            hamiltonian_k += block
+            hamiltonian_k += self.hamiltonian[h_cell] * cmath.exp(1j*np.dot(k, cell))
 
         return hamiltonian_k
 

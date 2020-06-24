@@ -104,7 +104,7 @@ def brillouin_zone_mesh(mesh, reciprocal_basis):
     for i in range(dimension):
         mesh_points.append(list(range(1, mesh[i] + 1)))
 
-    mesh_points = np.array(np.meshgrid(*mesh_points)).T.reshape(-1,dimension)
+    mesh_points = np.array(np.meshgrid(*mesh_points)).T.reshape(-1, dimension)
 
     for point in mesh_points:
         kpoint = 0
