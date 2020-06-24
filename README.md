@@ -9,7 +9,7 @@ The idea behind the program is to allow calculations simply using the configurat
 Some examples are provided (cube.txt, chain.txt) which show the parameters needed to run a simulation.
 
 ## Installation
-Usage of a virtual environment is recommended to avoid conflicts, specially since this package is still in development so
+Usage of a **virtual environment** is recommended to avoid conflicts, specially since this package is still in development so
 it will experiment changes periodically.
 
 * From within the root folder of the repository, install the required packages:
