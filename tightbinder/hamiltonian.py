@@ -5,8 +5,8 @@ import numpy as np
 import sys
 import math
 import cmath
-import copy
 import itertools
+import result
 
 # --------------- Constants ---------------
 PI = 3.14159265359
@@ -14,17 +14,25 @@ EPS = 1E-16
 
 
 class Hamiltonian:
-
-    def __init__(self, configuration):
+    def __init__(self, configuration, mode='minimal', r=None, boundary="PBC"):
         """ Constructor for Hamiltonian objects """
         self.configuration = configuration
         self.hamiltonian = None
         self.neighbours = None
         self.dimension = None
         self.__unit_cell_list = None
+        if mode not in ['minimal', 'radius']:
+            print('Error: Incorrect mode')
+            sys.exit(1)
+        self.__mode = mode
+        self.__r = r
+        if boundary not in ["PBC", "OBC"]:
+            print('Error: Incorrect boundary option')
+            sys.exit(1)
+        self.__boundary = boundary
 
     # --------------- Methods ---------------
-    def first_neighbours(self, mode="minimal", r=None, boundary="PBC"):
+    def first_neighbours(self):
         """ Given a list of atoms (motif), it returns a list in which each
         index corresponds to a list of atoms that are first neighbours to that index
         on the initial atom list.
@@ -38,7 +46,7 @@ class Hamiltonian:
         dimension = len(bravais_lattice)
 
         # Prepare unit cells to loop over depending on boundary conditions
-        if boundary == "PBC":
+        if self.__boundary == "PBC":
             mesh_points = []
             for i in range(dimension):
                 mesh_points.append(list(range(-1, 2)))
@@ -51,11 +59,8 @@ class Hamiltonian:
                     cell_vector += (coefficient * bravais_lattice[i])
                 near_cells[n, :] = cell_vector
 
-        elif boundary == "OBC":
+        elif self.__boundary == "OBC":
             near_cells = np.array([0.0, 0.0, 0.0])
-        else:
-            print('Incorrect boundary argument, exiting...')
-            sys.exit(1)
 
         # Determine neighbour distance from one fixed atom
         neigh_distance = 1E100
@@ -66,7 +71,7 @@ class Hamiltonian:
                 if distance < neigh_distance and distance != 0: neigh_distance = distance
 
         # Determine list of neighbours for each atom of the motif
-        if mode == "minimal":
+        if self.__mode == "minimal":
             neighbours_list = []
             for n, reference_atom in enumerate(motif):
                 neighbours = []
@@ -76,11 +81,11 @@ class Hamiltonian:
                         if abs(distance - neigh_distance) < EPS: neighbours.append([i, cell])
                 neighbours_list.append(neighbours)
 
-        elif mode == "radius":
-            if r is None:
+        elif self.__mode == "radius":
+            if self.__r is None:
                 print('Radius not defined in "radius" mode, exiting...')
                 sys.exit(1)
-            elif r < neigh_distance:
+            elif self.__r < neigh_distance:
                 print("Warning: Radius smaller than first neighbour distance")
 
             neighbours_list = []
@@ -89,11 +94,8 @@ class Hamiltonian:
                 for cell in near_cells:
                     for i, atom in enumerate(motif):
                         distance = np.linalg.norm(atom[0] + cell - reference_atom[0])
-                        if distance <= r: neighbours.append([i, cell])
+                        if distance <= self.__r: neighbours.append([i, cell])
                 neighbours.append(neighbours)
-        else:
-            print('Incorrect mode option. Exiting... ')
-            sys.exit(1)
 
         self.neighbours = neighbours_list
 
@@ -358,15 +360,15 @@ class Hamiltonian:
     def solve(self, kpoints):
         """ Diagonalize the Hamiltonian to obtain the band structure and the eigenstates """
         nk = len(kpoints)
-        energy = np.zeros([self.dimension, nk])
-        eigenstates = []
+        eigen_energy = np.zeros([self.dimension, nk])
+        eigen_states = []
         for n, k in enumerate(kpoints):
             hamiltonian = self.hamiltonian_k(k)
             results = np.linalg.eig(hamiltonian)
-            energy[:, n] = results[0]
-            eigenstates.append(results[1])
+            eigen_energy[:, n] = results[0]
+            eigen_states.append(results[1])
 
-        return energy, eigenstates
+        return result.Result(self.configuration, eigen_energy, eigen_states, kpoints)
 
 
 if __name__ == '__main__':

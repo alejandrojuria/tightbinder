@@ -50,4 +50,4 @@ s
 #Mesh
 ! Number of kpoints in each direction. Syntax is Nx Ny Nz
 ! It suffices to provide the required number of points depending on the system's dimension
-11
+100
