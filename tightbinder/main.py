@@ -5,10 +5,7 @@
 
 import argparse
 import sys
-import fileparse
-import hamiltonian
-import crystal
-import numpy as np
+from tightbinder import fileparse, hamiltonian, crystal
 
 
 def main():
@@ -34,7 +31,7 @@ def main():
     chain = hamiltonian.Hamiltonian(configuration)
     chain.initialize_hamiltonian()
 
-    kpoints = crystal.brillouin_zone_mesh([10], reciprocal_basis)
+    kpoints = crystal.brillouin_zone_mesh([11], reciprocal_basis)
 
     results = chain.solve(kpoints)
 

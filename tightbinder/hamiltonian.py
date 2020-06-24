@@ -125,8 +125,7 @@ class Hamiltonian:
             effective_amplitudes = (amplitudes[initial_species] + amplitudes[final_species]) * beta
         else:
             effective_amplitudes = amplitudes[initial_species]
-        print(position_diff)
-        print(np.linalg.norm(position_diff))
+
         direction_cosines = position_diff / np.linalg.norm(position_diff)
         direction_cosines = {'x': direction_cosines[0], 'y': direction_cosines[1], 'z': direction_cosines[2]}
         [l, m, n] = direction_cosines.values()
@@ -366,10 +365,7 @@ class Hamiltonian:
         eigenstates = []
         for n, k in enumerate(kpoints):
             hamiltonian = self.hamiltonian_k(k)
-            print(hamiltonian)
-            print('Hola')
             results = np.linalg.eig(hamiltonian)
-            print(results[0])
             energy[:, n] = results[0]
             eigenstates.append(results[1])
 
