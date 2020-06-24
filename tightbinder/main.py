@@ -5,7 +5,7 @@
 
 import argparse
 import sys
-from tightbinder import fileparse, hamiltonian, crystal
+import fileparse, hamiltonian, crystal
 
 
 def main():
@@ -27,12 +27,13 @@ def main():
     configuration = fileparse.parse_config_file(file)
 
     reciprocal_basis = crystal.reciprocal_lattice(configuration['Bravais lattice'])
-    kpoints = crystal.brillouin_zone_mesh([11], reciprocal_basis)
+    kpoints = crystal.brillouin_zone_mesh(configuration['Mesh'], reciprocal_basis)
 
     chain = hamiltonian.Hamiltonian(configuration)
     chain.initialize_hamiltonian()
 
     results = chain.solve(kpoints)
+
 
 
 if __name__ == "__main__":

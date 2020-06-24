@@ -3,7 +3,7 @@
 ! Lines with # denote argument types and must be present (removing one or wirting it wrogn will result in error)
 ! Blank spaces are irrelevant
 ! All numbers must be separated by either spaces, commas or semicolons
-! Beware: Leaving a blank space at the beginning of a line will result in it being skipped
+! BEWARE: Leaving a blank space at the beginning of a line will result in it being skipped
 ! --------------------- Material parameters ---------------------
 #System name
 Test cube
@@ -23,29 +23,30 @@ Test cube
 
 #Motif
 ! Each row corresponds to one vector of the basis; fourth number denotes atomic species
-! Species have to be either 1 or 2
+! Species have to be either 0 or 1
 0 0 0 0
-0.5 0.5 0 0
 
 #Orbitals
 ! Always use cubic harmonic orbitals
 ! Order is irrelevant 
 ! Species have to be isoelectronic (same number of valence shell electrons)
 ! Possible orbitals are: s, px, py, pz, dxy, dyz, dzx, dx2-y2, d3z2-r2
-s, px, py, pz
+s
 
 #Onsite energy
 ! One for each different orbital defined above
 ! In case of having two atomic species, two lines must be appended, one for each element
-1 1
+1
 
 #SK amplitudes
 ! Order is fixed: Vsss, Vsps, Vpps, Vppp, Vsds, Vpds, Vpdp, Vdds, Vddp, Vddd (separated by spaces)
 ! Not present amplitudes can be omitted but ordering has te be respected always
 ! In case of having two atomic species, two lines must be appended, one for each element
-0.15 0.1 0.2 -0.4
+-0.3
 
-# Spin-orbit coupling
-
+#Spin-orbit coupling
+0
 
 ! --------------------- Simulation parameters ---------------------
+#Mesh
+11 11

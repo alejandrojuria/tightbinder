@@ -146,6 +146,16 @@ def shape_arguments(arguments):
                 print(f'{type(e).__name__}: Spin-orbit coupling must be a number')
                 sys.exit(1)
 
+        elif arg == 'Mesh':
+            try:
+                arguments[arg] = [int(num) for num in re.split(' |, |,', arguments[arg][0])]
+            except IndexError as e:
+                print(f'{type(e).__name__}: No mesh given')
+                sys.exit(1)
+            except ValueError as e:
+                print(f'{type(e).__name__}: Mesh must be integer numbers')
+                sys.exit(1)
+
     return arguments
 
 
@@ -232,6 +242,11 @@ def check_coherence(arguments):
         if len(species_coefs) != needed_SK_coefs:
             print('Error: Mismatch between orbitals and required SK amplitudes')
             sys.exit(1)
+
+    # Check mesh matches dimension
+    if len(arguments['Mesh']) != arguments['Dimensionality']:
+        print('Error: Mesh dimension does not match system dimension')
+        sys.exit(1)
     
     return None
 
