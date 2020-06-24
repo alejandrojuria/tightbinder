@@ -27,6 +27,11 @@ python bin/app.py {config_file}
 ```
 Or since the library is installed, create your own scripts. For now, usage of the ```app.py``` program is advised.
 
+## Examples
+The folder ```examples/``` contains some basic cases to test that the program is working correcly.
+* One-dimensional chain (1 orbital)
+
+![alt text](screenshots/test_chain_band.png)
 
 ## Workroad
 The future updates will be:
