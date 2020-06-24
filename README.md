@@ -1,13 +1,14 @@
 # tight-binder
 ## Introduction
 General purpose tight-binding code for electronic structure calculations based on the Slater-Koster approximation.
-The code is yet to be finished: so far only the module for configuration file parsing (fileparse.py) has been finished. 
-The code is designed to allow band structure calculations of alloys up to two atomic species (provided one gives the corresponding SK amplitudes).
+The code is yet to be finished: so far the modules include the strictly necessary routines to compute band structures
+without additional information. 
+It is designed to allow band structure calculations of alloys up to two atomic species (provided one gives the corresponding SK amplitudes).
 
 The idea behind the program is to allow calculations simply using the configuration file, without any need to fiddle with the code (although that option is always available).
 Some examples are provided (cube.txt, chain.txt) which show the parameters needed to run a simulation.
 
-##Installation
+## Installation
 Usage of a virtual environment is recommended to avoid conflicts, specially since this package is still in development so
 it will experiment changes periodically.
 
