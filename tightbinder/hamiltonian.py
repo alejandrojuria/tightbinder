@@ -19,6 +19,8 @@ class Hamiltonian:
         self.configuration = configuration
         self.hamiltonian = None
         self.neighbours = None
+        self.dimension = None
+        self.__unit_cell_list = None
 
     # --------------- Methods ---------------
     def first_neighbours(self, mode="minimal", r=None, boundary="PBC"):
@@ -30,7 +32,7 @@ class Hamiltonian:
         For amorphous systems the option radius is available to determine neighbours within a given radius R.
         Boundary conditions can also be set, either PBC (default) or OBC."""
 
-        bravais_lattice = self.configuration['Bravais lattice']
+        bravais_lattice = np.array(self.configuration['Bravais lattice'])
         motif = self.configuration['Motif']
         dimension = len(bravais_lattice)
 
@@ -92,7 +94,7 @@ class Hamiltonian:
             print('Incorrect mode option. Exiting... ')
             sys.exit(1)
 
-        Hamiltonian.neighbours = neighbours_list
+        self.neighbours = neighbours_list
 
     def __hopping_amplitude(self, position_diff, *orbitals):
         """ Routine to compute the hopping amplitude from one atom to another depending on the
@@ -112,7 +114,7 @@ class Hamiltonian:
         if possible_orbitals[initial_orbital_type] > possible_orbitals[final_orbital_type]:
             position_diff = np.array(position_diff)
             orbitals = [final_orbital, final_species, initial_orbital, initial_species]
-            hopping = self.hopping_amplitude(-position_diff, amplitudes, orbitals)
+            hopping = self.__hopping_amplitude(-position_diff, orbitals)
             return hopping
 
         amplitudes = np.array(amplitudes)
@@ -123,6 +125,8 @@ class Hamiltonian:
             effective_amplitudes = (amplitudes[initial_species] + amplitudes[final_species]) * beta
         else:
             effective_amplitudes = amplitudes[initial_species]
+        print(position_diff)
+        print(np.linalg.norm(position_diff))
         direction_cosines = position_diff / np.linalg.norm(position_diff)
         direction_cosines = {'x': direction_cosines[0], 'y': direction_cosines[1], 'z': direction_cosines[2]}
         [l, m, n] = direction_cosines.values()
@@ -248,10 +252,11 @@ class Hamiltonian:
 
         basis = []
         motif = self.configuration['Motif']
-        orbitals = self.configuration['Orbitals']
+        orbitals = self.__transform_orbitals_to_string()
         for element in itertools.product(motif, orbitals):
             basis.append(element)
 
+        self.dimension = len(basis)
         return basis
 
     def __extend_onsite_vector(self):
@@ -260,7 +265,6 @@ class Hamiltonian:
          per index """
 
         onsite_energies = self.configuration['Onsite energy']
-        print(onsite_energies)
         orbitals = self.__transform_orbitals_to_string()
 
         onsite_list = []
@@ -280,32 +284,46 @@ class Hamiltonian:
 
         return onsite_full_list
 
+    def __determine_connected_unit_cells(self):
+        """ Method to calculate which unit cells connect with the origin from the neighbour list """
+
+        neighbours_list = self.neighbours
+        unit_cell_list = [[0.0, 0.0, 0.0]]
+        count = 1
+        for neighbour_list in neighbours_list:
+            for neighbour in neighbour_list:
+                unit_cell = list(neighbour[1])
+                if unit_cell not in unit_cell_list:
+                    unit_cell_list.append(unit_cell)
+                    count += 1
+
+        self.__unit_cell_list = unit_cell_list
+
     def initialize_hamiltonian(self):
-        """ Routine to initialize the hamiltonian matrix which describes the system. """
+        """ Routine to initialize the hamiltonian matrices which describe the system. """
 
         orbitals = self.__transform_orbitals_to_string()
         basis = self.__create_atomic_orbital_basis()
         motif = self.configuration['Motif']
-        bravais_lattice = self.configuration['Bravais lattice']
-        sk_amplitudes = self.configuration['SK amplitudes']
 
         dimension_orbitals = len(orbitals)
-        dimension = len(basis)
-
-        hamiltonian = np.zeros(([dimension, dimension]), dtype=np.complex_)
-
-        onsite_energies = []
-        for energy_array in self.configuration['Onsite energy']:
-            onsite_energies.append(self.__extend_onsite_vector())
-
-        for n, atom in enumerate(motif):
-            species = atom[3]  # To match list beginning on zero
-            hamiltonian_atom_block = np.diag(np.array(onsite_energies[species]))
-            hamiltonian[dimension_orbitals*n:dimension_orbitals*(n+1),
-                        dimension_orbitals*n:dimension_orbitals*(n+1)] = hamiltonian_atom_block
 
         print('Computing first neighbours...\n')
         self.first_neighbours()
+        self.__determine_connected_unit_cells()
+
+        hamiltonian = []
+        for cell in self.__unit_cell_list:
+            hamiltonian.append(np.zeros(([self.dimension, self.dimension]), dtype=np.complex_))
+
+        onsite_energies = self.__extend_onsite_vector()
+
+        for n, atom in enumerate(motif):
+            species = atom[3]  # To match list beginning on zero
+
+            hamiltonian_atom_block = np.diag(np.array(onsite_energies[species]))
+            hamiltonian[0][dimension_orbitals*n:dimension_orbitals*(n+1),
+                           dimension_orbitals*n:dimension_orbitals*(n+1)] = hamiltonian_atom_block
 
         for i, atom in enumerate(basis):
             atom_position = atom[0][:3]
@@ -314,46 +332,44 @@ class Hamiltonian:
             atom_index = int(i/dimension_orbitals)
             for neighbour in self.neighbours[atom_index]:
                 neigh_index = neighbour[0]
+                neigh_unit_cell = list(neighbour[1])
                 neigh_position = motif[neigh_index][:3]
                 neigh_species = motif[neigh_index][3]
                 for j, neigh_orbital in enumerate(orbitals):
-                    position_difference = np.array(atom_position) - np.array(neigh_position)
+                    position_difference = np.array(atom_position) - np.array(neigh_position) - np.array(neigh_unit_cell)
                     orbital_config = [orbital, species, neigh_orbital, neigh_species]
-                    hamiltonian[i, neigh_index*dimension_orbitals + j] = self.__hopping_amplitude(position_difference,
-                                                                                                  orbital_config)
+                    h_cell = self.__unit_cell_list.index(neigh_unit_cell)
+                    hamiltonian[h_cell][i, neigh_index*dimension_orbitals + j] += self.__hopping_amplitude(
+                                                                                                position_difference,
+                                                                                                orbital_config)
 
-        Hamiltonian.hamiltonian = hamiltonian
+        self.hamiltonian = hamiltonian
 
     def hamiltonian_k(self, k):
         """ Add the k dependency of the Bloch Hamiltonian through the complex exponential """
 
-        orbitals = self.__transform_orbitals_to_string()
-        basis = self.__create_atomic_orbital_basis()
-        dimension_orbitals = len(orbitals)
-        all_neighbours = self.neighbours
+        hamiltonian = self.hamiltonian
+        for cell in self.__unit_cell_list:
+            h_cell = self.__unit_cell_list.index(list(cell))
+            hamiltonian[h_cell] *= cmath.exp(1j*np.dot(k, cell))
 
-        hamiltonian_k = self.__hamiltonian_base
-
-        for i, atom in enumerate(basis):
-            atom_index = int(i/dimension_orbitals)
-            for neighbour in all_neighbours[atom_index]:
-                neigh_index = neighbour[0]
-                neigh_unit_cell = neighbour[1]
-                for j, neigh_orbital in enumerate(orbitals):
-                    hamiltonian_k[i, neigh_index * dimension_orbitals + j] *= cmath.exp(1j*np.dot(k,
-                                                                                        neigh_unit_cell))
+        hamiltonian_k = np.zeros([self.dimension, self.dimension], dtype=np.complex_)
+        for block in hamiltonian:
+            hamiltonian_k += block
 
         return hamiltonian_k
 
     def solve(self, kpoints):
         """ Diagonalize the Hamiltonian to obtain the band structure and the eigenstates """
-        dim_tb = len(self.hamiltonian)
         nk = len(kpoints)
-        energy = np.zeros([dim_tb, nk])
+        energy = np.zeros([self.dimension, nk])
         eigenstates = []
         for n, k in enumerate(kpoints):
             hamiltonian = self.hamiltonian_k(k)
+            print(hamiltonian)
+            print('Hola')
             results = np.linalg.eig(hamiltonian)
+            print(results[0])
             energy[:, n] = results[0]
             eigenstates.append(results[1])
 
@@ -362,4 +378,4 @@ class Hamiltonian:
 
 if __name__ == '__main__':
 
-    hopping_amplitude([1,1,1], [1,1,1,1,1,1,1,1,1,1], 's', 1, 'dxy', 1)
+    pass
