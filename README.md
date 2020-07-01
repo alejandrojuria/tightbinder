@@ -31,7 +31,11 @@ Or since the library is installed, create your own scripts. For now, usage of th
 
 ## Examples
 The folder ```examples/``` contains some basic cases to test that the program is working correcly.
-* One-dimensional chain (1 orbital)
+* One-dimensional chain (1 orbital):
+To run the example do ``` python bin/app.py examples/chain.txt ```
+
+This model is analytically solvable, its band dispersion relation is:
+<img src="https://latex.codecogs.com/gif.latex?%5Cinline%20%5Cvarepsilon%28k%29%20%3D%20%5Cvarepsilon_0%20-%202t%5Ccos%28ka%29"/> 
 
 ![alt text](screenshots/test_chain_band.png)
 
