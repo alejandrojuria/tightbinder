@@ -31,6 +31,8 @@ class Result:
         return new_kpoints
 
     def plot(self):
+        """ Method to plot bands from diagonalization in the whole Brillouin zone """
+
         plt.figure()
         if self.configuration['Dimensionality'] == 1:
             kpoints = self.__simplify_kpoints()
@@ -40,6 +42,24 @@ class Result:
         plt.title(f'{self.configuration["System name"]} band structure')
         plt.xlabel(r'k ($A^{-1}$)')
         plt.ylabel(r'$\epsilon$ $(eV)$')
+
+        plt.show()
+
+    def plot_along_path(self, labels):
+        """ Method to plot the bands along a path in reciprocal space, normally along high symmetry points """
+        nk = len(self.kpoints)
+        x_points = np.arange(0, nk)
+        plt.figure()
+        x_ticks = []
+        number_of_paths = len(labels) - 1
+        for n, label in enumerate(labels):
+            x_ticks.append((nk - 1)/number_of_paths*n)
+        for eigen_energy_k in self.eigen_energy:
+            plt.plot(x_points, eigen_energy_k, 'g-')
+
+        plt.xticks(x_ticks, labels)
+        plt.ylabel(r'$\epsilon (eV)$')
+        plt.title(self.configuration['System name'])
 
         plt.show()
 

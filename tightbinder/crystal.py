@@ -122,24 +122,24 @@ def high_symmetry_points(group, reciprocal_basis):
     and the letter used to name them. """
 
     dimension = len(reciprocal_basis)
-    special_points = [['Gamma', np.array([0.,0.,0.])]]
+    special_points = [['Gamma', np.array([0., 0., 0.])]]
     if dimension == 1:
         special_points.append(['K', reciprocal_basis[0]/2])
-        
+
     elif dimension == 2:
         special_points.append(['M', reciprocal_basis[0]/2])
         if group == 'Square':
             special_points.append(['K', reciprocal_basis[0]/2 + reciprocal_basis[1]/2])
-        
+
         elif group == 'Rectangle':
             special_points.append(['M*', reciprocal_basis[1]/2])
             special_points.append(['K',  reciprocal_basis[0]/2 + reciprocal_basis[1]/2])
-            special_points.append(['K*',-reciprocal_basis[0]/2 + reciprocal_basis[1]/2])
-        
+            special_points.append(['K*', -reciprocal_basis[0]/2 + reciprocal_basis[1]/2])
+
         elif group == 'Hexagonal':
-            special_points.append(['K',  reciprocal_basis[0]/2 + reciprocal_basis[1]/2])
-            special_points.append(['K*',-reciprocal_basis[0]/2 + reciprocal_basis[1]/2])
-        
+            special_points.append(['K', reciprocal_basis[0]/2 + reciprocal_basis[1]/2])
+            special_points.append(['K*', -reciprocal_basis[0]/2 + reciprocal_basis[1]/2])
+
         else:
             print('High symmetry points not implemented yet')
     
@@ -152,5 +152,23 @@ def high_symmetry_points(group, reciprocal_basis):
         else:
             print('High symmetry points not implemented yet')
 
+    special_points.append(['Gamma', np.array([0., 0., 0.])])
     return special_points
+
+
+def high_symmetry_path(special_points, mesh):
+    """ Routine to generate a path in reciprocal space along the high symmetry points """
+
+    kpoints = []
+    number_of_points = len(special_points)
+    interval_mesh = int(mesh/number_of_points)
+    previous_point = special_points[0][1]
+    for point in special_points[1:]:
+        path = np.linspace(previous_point, point[1], interval_mesh)
+        for kpoint in path:
+            kpoints.append(kpoint)
+        previous_point = point[1]
+    kpoints.append([special_points[0][1]])
+
+    return kpoints
 

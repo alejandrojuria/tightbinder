@@ -6,7 +6,7 @@
 ! BEWARE: Leaving a blank space at the beginning of a line will result in it being skipped
 ! --------------------- Material parameters ---------------------
 #System name
-Test cube
+Test square
 
 #Dimensionality
 2
@@ -43,6 +43,8 @@ s
 ! Not present amplitudes can be omitted but ordering has te be respected always
 ! In case of having two atomic species, two lines must be appended, one for each element
 -0.3
+
+#Spin
 
 #Spin-orbit coupling
 0

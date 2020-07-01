@@ -419,7 +419,6 @@ class Hamiltonian:
         hamiltonian_k = np.zeros([self.dimension, self.dimension], dtype=np.complex_)
         for cell in self.__unit_cell_list:
             h_cell = self.__unit_cell_list.index(list(cell))
-            print(self.hamiltonian[h_cell])
             hamiltonian_k += self.hamiltonian[h_cell] * cmath.exp(1j*np.dot(k, cell))
 
         if self.configuration['Spin-orbit coupling'] != 0:

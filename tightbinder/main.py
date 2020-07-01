@@ -26,13 +26,18 @@ def main():
     configuration = fileparse.parse_config_file(file)
 
     reciprocal_basis = crystal.reciprocal_lattice(configuration['Bravais lattice'])
-    kpoints = crystal.brillouin_zone_mesh(configuration['Mesh'], reciprocal_basis)
+    # kpoints = crystal.brillouin_zone_mesh(configuration['Mesh'], reciprocal_basis)
 
-    chain = hamiltonian.Hamiltonian(configuration)
-    chain.initialize_hamiltonian()
+    crystal_group = crystal.crystallographic_group(configuration['Bravais lattice'])
+    special_points = crystal.high_symmetry_points(crystal_group, reciprocal_basis)
+    labels = [point[0] for point in special_points]
+    kpoints = crystal.high_symmetry_path(special_points, 100)
 
-    results = chain.solve(kpoints)
-    results.plot()
+    square = hamiltonian.Hamiltonian(configuration)
+    square.initialize_hamiltonian()
+
+    results = square.solve(kpoints)
+    results.plot_along_path(labels)
 
 
 if __name__ == "__main__":
