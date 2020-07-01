@@ -4,7 +4,7 @@
 ! Blank spaces are irrelevant
 ! All numbers must be separated by either spaces, commas or semicolons
 ! Beware: Leaving a blank space at the beginning of a line will result in it being skipped
-! --------------------- Material parameters ---------------------
+! -------------------------- Material parameters -------------------------
 #System name
 Test chain
 
@@ -27,9 +27,9 @@ Test chain
 
 #Orbitals
 ! Always use cubic harmonic orbitals
-! Order is irrelevant
 ! Species have to be isoelectronic (same number of valence shell electrons)
 ! Possible orbitals are: s, px, py, pz, dxy, dyz, dzx, dx2-y2, d3z2-r2
+! NOTE: Order must be kept
 s
 
 #Onsite energy
@@ -43,8 +43,15 @@ s
 ! In case of having two atomic species, two lines must be appended, one for each element
 -0.3
 
-# Spin-orbit coupling
+#Spin
+! Determine whether the model is spinless (spin polarized) or spinful
+! Must be either True (spinful) or False (spinless); if left blank it will default to False
+! NOTE: True or False must be capitalized
+True
 
+#Spin-orbit coupling
+! Note: Using a non-zero value will automatically produce a spinful model
+1
 
 ! --------------------- Simulation parameters ---------------------
 #Mesh

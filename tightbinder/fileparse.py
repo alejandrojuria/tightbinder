@@ -136,6 +136,15 @@ def shape_arguments(arguments):
                     sys.exit(1)
             arguments[arg] = aux_array
 
+        elif arg == 'Spin':
+            try:
+                arguments[arg] = bool(arguments[arg][0])
+            except IndexError as e:
+                print('Warning: No spin parameter given, defaulting to spinless')
+            except ValueError as e:
+                print(f'{type(e).__name__}: Spin parameter must be True or False (or 1 or 0 respectively)')
+                sys.exit(1)
+
         elif arg == 'Spin-orbit coupling':
             try:
                 arguments[arg] = float(arguments[arg][0])
@@ -162,6 +171,7 @@ def shape_arguments(arguments):
 def check_coherence(arguments):
     """ Routine to check that the present arguments are coherent among them (numbers basically) """
 
+    # --------------- Model ---------------
     # Check dimensions
     if arguments['Dimensionality'] > 3 or arguments['Dimensionality'] < 0:
         print('Error: Invalid dimension!')
@@ -211,6 +221,10 @@ def check_coherence(arguments):
     elif len(arguments['SK amplitudes']) > arguments['Species']:
         print('Error: Expected only one row of SK coefficients')
         sys.exit(1)
+
+    if arguments['Spin-orbit coupling'] != 0 and not arguments['Spin']:
+        print('Warning: Spin-orbit coupling is non-zero but spin was set to False. ')
+        arguments['Spin'] = True
     
     # ------------ Orbital consistency ------------
     diff_orbitals = 0
@@ -243,6 +257,7 @@ def check_coherence(arguments):
             print('Error: Mismatch between orbitals and required SK amplitudes')
             sys.exit(1)
 
+    # ---------------- Simulation ----------------
     # Check mesh matches dimension
     if len(arguments['Mesh']) != arguments['Dimensionality']:
         print('Error: Mesh dimension does not match system dimension')

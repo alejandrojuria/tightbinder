@@ -6,7 +6,7 @@ import sys
 import math
 import cmath
 import itertools
-import result
+from . import result
 
 # --------------- Constants ---------------
 PI = 3.14159265359
@@ -19,6 +19,7 @@ class Hamiltonian:
         self.configuration = configuration
         self.hamiltonian = None
         self.neighbours = None
+        self.spin_orbit_hamiltonian = None
         self.dimension = None
         self.__unit_cell_list = None
         if mode not in ['minimal', 'radius']:
@@ -30,6 +31,7 @@ class Hamiltonian:
             print('Error: Incorrect boundary option')
             sys.exit(1)
         self.__boundary = boundary
+        self.__spin_blocks = None
 
     # --------------- Methods ---------------
     def first_neighbours(self):
@@ -291,15 +293,69 @@ class Hamiltonian:
 
         neighbours_list = self.neighbours
         unit_cell_list = [[0.0, 0.0, 0.0]]
-        count = 1
         for neighbour_list in neighbours_list:
             for neighbour in neighbour_list:
                 unit_cell = list(neighbour[1])
                 if unit_cell not in unit_cell_list:
                     unit_cell_list.append(unit_cell)
-                    count += 1
 
         self.__unit_cell_list = unit_cell_list
+
+    def __initialize_spin_orbit_coupling(self):
+        """ Method to initialize the whole spin-orbit coupling matrix corresponding to the
+         orbitals that participate in the tight-binding model"""
+
+        dimension_h = len(self.configuration['Orbitals'])*2
+        dimension_block = int(dimension_h/2)
+        # We hardcode the whole spin-orbit hamilonian up to d orbitals
+        spin_orbit_hamiltonian = np.zeros([dimension_h, dimension_h], dtype=np.complex_)
+        p_orbital_beginning = 1
+        d_orbital_beginning = 4
+        # p orbitals
+        spin_orbit_hamiltonian[p_orbital_beginning, p_orbital_beginning + 1] = -1j
+        spin_orbit_hamiltonian[p_orbital_beginning, dimension_block + p_orbital_beginning + 2] = 1
+        spin_orbit_hamiltonian[p_orbital_beginning + 1, dimension_block + p_orbital_beginning + 2] = -1j
+        spin_orbit_hamiltonian[p_orbital_beginning + 2, dimension_block + p_orbital_beginning] = -1
+        spin_orbit_hamiltonian[p_orbital_beginning + 2, dimension_block + p_orbital_beginning + 1] = 1j
+        spin_orbit_hamiltonian[dimension_block + p_orbital_beginning, dimension_block + p_orbital_beginning + 1] = 1j
+
+        # d orbitals
+        spin_orbit_hamiltonian[d_orbital_beginning, d_orbital_beginning + 3] = 2j
+        spin_orbit_hamiltonian[d_orbital_beginning, dimension_block + d_orbital_beginning + 1] = -1j
+        spin_orbit_hamiltonian[d_orbital_beginning, dimension_block + d_orbital_beginning + 2] = 1
+        spin_orbit_hamiltonian[d_orbital_beginning + 1, d_orbital_beginning + 2] = -1j
+        spin_orbit_hamiltonian[d_orbital_beginning + 1, dimension_block + d_orbital_beginning] = 1j
+        spin_orbit_hamiltonian[d_orbital_beginning + 1, dimension_block + d_orbital_beginning + 3] = -1j
+        spin_orbit_hamiltonian[d_orbital_beginning + 1, dimension_block + d_orbital_beginning + 4] = math.sqrt(3)
+        spin_orbit_hamiltonian[d_orbital_beginning + 2, dimension_block + d_orbital_beginning] = -1
+        spin_orbit_hamiltonian[d_orbital_beginning + 2, dimension_block + d_orbital_beginning + 3] = 1j
+        spin_orbit_hamiltonian[d_orbital_beginning + 2, dimension_block + d_orbital_beginning + 4] = -1j*math.sqrt(3)
+        spin_orbit_hamiltonian[d_orbital_beginning + 3, dimension_block + d_orbital_beginning + 1] = 1
+        spin_orbit_hamiltonian[d_orbital_beginning + 3, dimension_block + d_orbital_beginning + 2] = 1j
+        spin_orbit_hamiltonian[d_orbital_beginning + 4, dimension_block + d_orbital_beginning + 1] = -math.sqrt(3)
+        spin_orbit_hamiltonian[d_orbital_beginning + 4, dimension_block + d_orbital_beginning + 2] = 1j*math.sqrt(3)
+        spin_orbit_hamiltonian[dimension_block + d_orbital_beginning, dimension_block + d_orbital_beginning + 3] = -2j
+        spin_orbit_hamiltonian[dimension_block + d_orbital_beginning + 1,
+                               dimension_block + d_orbital_beginning + 2] = 1j
+
+        spin_orbit_hamiltonian += np.conj(spin_orbit_hamiltonian.T)
+
+        self.spin_orbit_hamiltonian = spin_orbit_hamiltonian
+
+    def __spin_orbit_h(self):
+        """ Method to obtain the actual spin-orbit hamiltonian that corresponds to the orbitals
+         that participate in the model. Generate spin blocks to append later to the global hamiltonian.
+          Ordering is: self.spin_blocks=[up up, up down, down up, down down] """
+
+        orbitals = self.configuration["Orbitals"]
+        orbitals_indices = np.array([index for index, orbital in enumerate(orbitals) if orbital])
+        dimension_soc_block = len(orbitals_indices)
+
+        self.spin_blocks = []
+
+        for indices in itertools.product([0, 1], [0, 1]):
+            self.spin_blocks.append(self.spin_orbit_hamiltonian[orbitals_indices + indices[0]*dimension_soc_block,
+                                                                orbitals_indices + indices[1]*dimension_soc_block])
 
     def initialize_hamiltonian(self):
         """ Routine to initialize the hamiltonian matrices which describe the system. """
@@ -315,7 +371,7 @@ class Hamiltonian:
         self.__determine_connected_unit_cells()
 
         hamiltonian = []
-        for cell in self.__unit_cell_list:
+        for _ in self.__unit_cell_list:
             hamiltonian.append(np.zeros(([self.dimension, self.dimension]), dtype=np.complex_))
 
         onsite_energies = self.__extend_onsite_vector()
@@ -344,16 +400,32 @@ class Hamiltonian:
                     hamiltonian[h_cell][i, neigh_index*dimension_orbitals + j] += self.__hopping_amplitude(
                                                                                                 position_difference,
                                                                                                 orbital_config)
+        # Check spinless or spinful model and initialize spin-orbit coupling
+        if self.configuration['Spin']:
+            self.dimension = self.dimension * 2
+            for index, cell in enumerate(self.__unit_cell_list):
+                hamiltonian[index] = np.kron(np.eye(2, 2), np.array(hamiltonian[index]))
+
+            if self.configuration['Spin-orbit coupling'] != 0:
+                self.__initialize_spin_orbit_coupling()
+                self.__spin_orbit_h()
 
         self.hamiltonian = hamiltonian
 
     def hamiltonian_k(self, k):
-        """ Add the k dependency of the Bloch Hamiltonian through the complex exponential """
+        """ Add the k dependency of the Bloch Hamiltonian through the complex exponential
+         and adds the spin-orbit term in case it is present """
 
         hamiltonian_k = np.zeros([self.dimension, self.dimension], dtype=np.complex_)
         for cell in self.__unit_cell_list:
             h_cell = self.__unit_cell_list.index(list(cell))
+            print(self.hamiltonian[h_cell])
             hamiltonian_k += self.hamiltonian[h_cell] * cmath.exp(1j*np.dot(k, cell))
+
+        if self.configuration['Spin-orbit coupling'] != 0:
+            for block, indices in enumerate(itertools.product([0, 1], [0, 1])):
+                hamiltonian_k[indices[0]*self.dimension//2:(indices[0] + 1)*self.dimension//2,
+                              indices[1]*self.dimension//2:(indices[1] + 1)*self.dimension//2] += self.spin_blocks[block]
 
         return hamiltonian_k
 
@@ -372,5 +444,4 @@ class Hamiltonian:
 
 
 if __name__ == '__main__':
-
     pass

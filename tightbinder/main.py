@@ -5,7 +5,7 @@
 
 import argparse
 import sys
-import fileparse, hamiltonian, crystal
+from . import fileparse, hamiltonian, crystal
 import time
 
 
