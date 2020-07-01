@@ -5,7 +5,7 @@ import numpy as np
 
 
 class Result:
-    def __init__(self, configuration, eigen_energy=None , eigen_states=None, kpoints=None):
+    def __init__(self, configuration, eigen_energy=None, eigen_states=None, kpoints=None):
         self.configuration = configuration
         self.eigen_energy = eigen_energy
         self.eigen_states = eigen_states
@@ -43,7 +43,11 @@ class Result:
 
         plt.show()
 
+    def write_bands_to_file(self):
+        pass
 
+    def write_states_to_file(self):
+        pass
 
 
 
