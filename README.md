@@ -8,6 +8,8 @@ It is designed to allow band structure calculations of alloys up to two atomic s
 The idea behind the program is to allow calculations simply using the configuration file, without any need to fiddle with the code (although that option is always available).
 Some examples are provided (cube.txt, chain.txt) which show the parameters needed to run a simulation.
 
+* Last Update: Added spin-orbit coupling up to d orbitals
+
 ## Installation
 Usage of a **virtual environment** is recommended to avoid conflicts, specially since this package is still in development so
 it will experiment changes periodically.
