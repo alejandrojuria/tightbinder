@@ -29,8 +29,7 @@ def main():
     # kpoints = crystal.brillouin_zone_mesh(configuration['Mesh'], reciprocal_basis)
 
     crystal_group = crystal.crystallographic_group(configuration['Bravais lattice'])
-    special_points = crystal.high_symmetry_points(crystal_group, reciprocal_basis)
-    labels = [point[0] for point in special_points]
+    special_points, labels = crystal.high_symmetry_points(crystal_group, reciprocal_basis)
     kpoints = crystal.high_symmetry_path(special_points, 100)
 
     square = hamiltonian.Hamiltonian(configuration)

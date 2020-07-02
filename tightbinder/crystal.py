@@ -118,8 +118,8 @@ def brillouin_zone_mesh(mesh, reciprocal_basis):
 def high_symmetry_points(group, reciprocal_basis):
     """ Routine to compute high symmetry points depending on the dimension of the system.
     These symmetry points will be used in order to plot the band structure along the main
-    reciprocal paths of the system. Returns a vector with the principal high symmetry points,
-    and the letter used to name them. """
+    reciprocal paths of the system. Returns a list with the principal high symmetry points,
+    and a list with letter used to name them. """
 
     dimension = len(reciprocal_basis)
     special_points = [['Gamma', np.array([0., 0., 0.])]]
@@ -153,7 +153,13 @@ def high_symmetry_points(group, reciprocal_basis):
             print('High symmetry points not implemented yet')
 
     special_points.append(['Gamma', np.array([0., 0., 0.])])
-    return special_points
+
+    labels = []
+    for n, point in enumerate(special_points):
+        labels.append(point[0])
+        special_points[n] = point[1]
+
+    return special_points, labels
 
 
 def high_symmetry_path(special_points, mesh):
@@ -162,13 +168,11 @@ def high_symmetry_path(special_points, mesh):
     kpoints = []
     number_of_points = len(special_points)
     interval_mesh = int(mesh/number_of_points)
-    previous_point = special_points[0][1]
+    previous_point = special_points[0]
     for point in special_points[1:]:
-        path = np.linspace(previous_point, point[1], interval_mesh)
-        for kpoint in path:
-            kpoints.append(kpoint)
-        previous_point = point[1]
-    kpoints.append([special_points[0][1]])
+        kpoints += list(np.linspace(previous_point, point, interval_mesh))
+        previous_point = point
+    kpoints.append(special_points[0])
 
     return kpoints
 
