@@ -10,7 +10,7 @@ from . import result
 
 # --------------- Constants ---------------
 PI = 3.14159265359
-EPS = 1E-16
+EPS = 0.001 #!!!! To be changed, depends on the precision of the crystal vectors
 
 
 class Hamiltonian:
@@ -66,10 +66,10 @@ class Hamiltonian:
 
         # Determine neighbour distance from one fixed atom
         neigh_distance = 1E100
-        fixed_atom = motif[0][0]
+        fixed_atom = motif[0][:3]
         for cell in near_cells:
             for atom in motif:
-                distance = np.linalg.norm(atom[0] + cell - fixed_atom)
+                distance = np.linalg.norm(atom[:3] + cell - fixed_atom)
                 if distance < neigh_distance and distance != 0: neigh_distance = distance
 
         # Determine list of neighbours for each atom of the motif
@@ -79,7 +79,7 @@ class Hamiltonian:
                 neighbours = []
                 for cell in near_cells:
                     for i, atom in enumerate(motif):
-                        distance = np.linalg.norm(atom[0] + cell - reference_atom[0])
+                        distance = np.linalg.norm(atom[:3] + cell - reference_atom[:3])
                         if abs(distance - neigh_distance) < EPS: neighbours.append([i, cell])
                 neighbours_list.append(neighbours)
 
@@ -117,9 +117,9 @@ class Hamiltonian:
 
         possible_orbitals = {'s': 0, 'p': 1, 'd': 2}
         if possible_orbitals[initial_orbital_type] > possible_orbitals[final_orbital_type]:
-            position_diff = np.array(position_diff)
+            position_diff = np.array(position_diff)*(-1)
             orbitals = [final_orbital, final_species, initial_orbital, initial_species]
-            hopping = self.__hopping_amplitude(-position_diff, orbitals)
+            hopping = self.__hopping_amplitude(position_diff, orbitals)
             return hopping
 
         amplitudes = np.array(amplitudes)
@@ -142,8 +142,8 @@ class Hamiltonian:
             if final_orbital == "s":
                 hopping = Vsss
             elif final_orbital_type == "p":
-                coordinate_initial = final_orbital[1]
-                hopping = direction_cosines[coordinate_initial] * Vsps
+                coordinate_final = final_orbital[1]
+                hopping = direction_cosines[coordinate_final] * Vsps
             elif final_orbital_type == "d" and not special_orbital:
                 first_coordinate = final_orbital[1]
                 second_coordinate = final_orbital[2]
@@ -340,7 +340,7 @@ class Hamiltonian:
 
         spin_orbit_hamiltonian += np.conj(spin_orbit_hamiltonian.T)
 
-        self.spin_orbit_hamiltonian = spin_orbit_hamiltonian
+        self.spin_orbit_hamiltonian = self.configuration['Spin-orbit coupling']*spin_orbit_hamiltonian
 
     def __spin_orbit_h(self):
         """ Method to obtain the actual spin-orbit hamiltonian that corresponds to the orbitals
@@ -348,14 +348,19 @@ class Hamiltonian:
           Ordering is: self.spin_blocks=[up up, up down, down up, down down] """
 
         orbitals = self.configuration["Orbitals"]
+        motif_elements = len(self.configuration['Motif'])
         orbitals_indices = np.array([index for index, orbital in enumerate(orbitals) if orbital])
-        dimension_soc_block = len(orbitals_indices)
+        dimension_soc_block = len(orbitals)
 
         self.spin_blocks = []
 
         for indices in itertools.product([0, 1], [0, 1]):
-            self.spin_blocks.append(self.spin_orbit_hamiltonian[orbitals_indices + indices[0]*dimension_soc_block,
-                                                                orbitals_indices + indices[1]*dimension_soc_block])
+            self.spin_blocks.append(self.spin_orbit_hamiltonian[
+                                        np.ix_(orbitals_indices + indices[0]*dimension_soc_block,
+                                               orbitals_indices + indices[1]*dimension_soc_block)])
+
+        for n, spin_block in enumerate(self.spin_blocks):
+            self.spin_blocks[n] = np.kron(np.eye(motif_elements, motif_elements), spin_block)
 
     def initialize_hamiltonian(self):
         """ Routine to initialize the hamiltonian matrices which describe the system. """
@@ -394,7 +399,7 @@ class Hamiltonian:
                 neigh_position = motif[neigh_index][:3]
                 neigh_species = motif[neigh_index][3]
                 for j, neigh_orbital in enumerate(orbitals):
-                    position_difference = np.array(atom_position) - np.array(neigh_position) - np.array(neigh_unit_cell)
+                    position_difference = -np.array(atom_position) + np.array(neigh_position) + np.array(neigh_unit_cell)
                     orbital_config = [orbital, species, neigh_orbital, neigh_species]
                     h_cell = self.__unit_cell_list.index(neigh_unit_cell)
                     hamiltonian[h_cell][i, neigh_index*dimension_orbitals + j] += self.__hopping_amplitude(
@@ -417,9 +422,8 @@ class Hamiltonian:
          and adds the spin-orbit term in case it is present """
 
         hamiltonian_k = np.zeros([self.dimension, self.dimension], dtype=np.complex_)
-        for cell in self.__unit_cell_list:
-            h_cell = self.__unit_cell_list.index(list(cell))
-            hamiltonian_k += self.hamiltonian[h_cell] * cmath.exp(1j*np.dot(k, cell))
+        for cell_index, cell in enumerate(self.__unit_cell_list):
+            hamiltonian_k += self.hamiltonian[cell_index] * cmath.exp(1j*np.dot(k, cell))
 
         if self.configuration['Spin-orbit coupling'] != 0:
             for block, indices in enumerate(itertools.product([0, 1], [0, 1])):
@@ -435,7 +439,7 @@ class Hamiltonian:
         eigen_states = []
         for n, k in enumerate(kpoints):
             hamiltonian = self.hamiltonian_k(k)
-            results = np.linalg.eig(hamiltonian)
+            results = np.linalg.eigh(hamiltonian)
             eigen_energy[:, n] = results[0]
             eigen_states.append(results[1])
 

@@ -29,13 +29,15 @@ def main():
     # kpoints = crystal.brillouin_zone_mesh(configuration['Mesh'], reciprocal_basis)
 
     crystal_group = crystal.crystallographic_group(configuration['Bravais lattice'])
-    special_points, labels = crystal.high_symmetry_points(crystal_group, reciprocal_basis)
-    kpoints = crystal.high_symmetry_path(special_points, 100)
+    special_points = crystal.high_symmetry_points(crystal_group, reciprocal_basis)
+    special_points = crystal.reorder_special_points(special_points, ["M", r"$\Gamma$", "K", "M"])
+    special_points, labels = crystal.split_labels_from_special_points(special_points)
+    kpoints = crystal.high_symmetry_path(special_points, configuration['Mesh'][0])
 
-    square = hamiltonian.Hamiltonian(configuration)
-    square.initialize_hamiltonian()
+    bi = hamiltonian.Hamiltonian(configuration)
+    bi.initialize_hamiltonian()
 
-    results = square.solve(kpoints)
+    results = bi.solve(kpoints)
     results.plot_along_path(labels)
 
 
