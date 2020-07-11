@@ -12,7 +12,7 @@ import sys
 
 # --------------- Constants ---------------
 PI = 3.141592653589793238
-EPS = 1E-16
+EPS = 0.001
 
 # --------------- Routines ---------------
 
@@ -122,7 +122,8 @@ def high_symmetry_points(group, reciprocal_basis):
     and a list with letter used to name them. """
 
     dimension = len(reciprocal_basis)
-    special_points = [['Gamma', np.array([0., 0., 0.])]]
+    norm = np.linalg.norm(reciprocal_basis[0])
+    special_points = [[r"$\Gamma$", np.array([0., 0., 0.])]]
     if dimension == 1:
         special_points.append(['K', reciprocal_basis[0]/2])
 
@@ -137,8 +138,9 @@ def high_symmetry_points(group, reciprocal_basis):
             special_points.append(['K*', -reciprocal_basis[0]/2 + reciprocal_basis[1]/2])
 
         elif group == 'Hexagonal':
-            special_points.append(['K', reciprocal_basis[0]/2 + reciprocal_basis[1]/2])
-            special_points.append(['K*', -reciprocal_basis[0]/2 + reciprocal_basis[1]/2])
+            #special_points.append(['K', reciprocal_basis[0]/2 + reciprocal_basis[1]/2])
+            special_points.append(['K', norm/math.sqrt(3)*(reciprocal_basis[0]/2 - reciprocal_basis[1]/2)/(
+                                         np.linalg.norm(reciprocal_basis[0]/2 - reciprocal_basis[1]/2))])
 
         else:
             print('High symmetry points not implemented yet')
@@ -152,7 +154,27 @@ def high_symmetry_points(group, reciprocal_basis):
         else:
             print('High symmetry points not implemented yet')
 
-    special_points.append(['Gamma', np.array([0., 0., 0.])])
+    return special_points
+
+
+def reorder_special_points(special_points, labels):
+    """ Routine to reorder the high symmetry points according to a given vector of labels
+     for later representation """
+    points = []
+    for label in labels:
+        appended = False
+        for point in special_points:
+            if appended:
+                continue
+            if label == point[0]:
+                points.append(point)
+                appended = True
+
+    return points
+
+
+def split_labels_from_special_points(special_points):
+    """ Routine to output both labels and array corresponding to high symmetry points """
 
     labels = []
     for n, point in enumerate(special_points):
