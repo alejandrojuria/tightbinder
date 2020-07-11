@@ -16,23 +16,27 @@ it will experiment changes periodically.
 
 * From within the root folder of the repository, install the required packages:
 ```
-cd {path}/tightbinder
-pip install -r requirements.txt
+$ cd {path}/tightbinder
+$ pip install -r requirements.txt
 ```
 * Then install the tightbinder package
 ``` 
-pip install .
+$ pip install .
 ```
 * You can use the application from within the repository, using the ```bin/app.py``` program in the following fashion:
 ``` 
-python bin/app.py {config_file} 
+$ python bin/app.py {config_file} 
 ```
 Or since the library is installed, create your own scripts. For now, usage of the ```app.py``` program is advised.
+
+### Documentation
+To generate the documentation, you must have installed GNU Make previously. To do so, simply ``` $ cd docs/source``` and 
+run ```$ make html```. The documentation will then be created in ```docs/build/html```.
 
 ## Examples
 The folder ```examples/``` contains some basic cases to test that the program is working correcly.
 * One-dimensional chain (1 orbital):
-To run the example do ``` python bin/app.py examples/chain.txt ```
+To run the example do ```$ python bin/app.py examples/chain.txt ```
 
 This model is analytically solvable, its band dispersion relation is:
 <img src="https://latex.codecogs.com/gif.latex?%5Cinline%20%5Cvarepsilon%28k%29%20%3D%20%5Cvarepsilon_0%20-%202t%5Ccos%28ka%29"/> 

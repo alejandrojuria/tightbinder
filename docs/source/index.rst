@@ -14,7 +14,7 @@ tightbinder main
 .. automodule:: tightbinder.main
    :members:
 
-tightbinder Hamiiltonian
+tightbinder Hamiltonian
 =======================================
 .. autoclass:: tightbinder.hamiltonian.Hamiltonian
    :members:
