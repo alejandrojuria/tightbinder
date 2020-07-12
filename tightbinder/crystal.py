@@ -6,6 +6,8 @@
 # constructed from the parameters of the configuration file
 
 import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 from numpy.linalg import LinAlgError
 import math
 import sys
@@ -17,184 +19,239 @@ EPS = 0.001
 # --------------- Routines ---------------
 
 
-def crystallographic_group(bravais_lattice):
-    """ Determines the crystallographic group associated to the material from
-    the configuration file. NOTE: Only the group associated to the Bravais lattice,
-    reduced symmetry due to presence of motif is not taken into account. Its purpose is to
-    provide a path in k-space to plot the band structure.
-    Workflow is the following: First determine length and angles between basis vectors.
-    Then we separate by dimensionality: first we check angles, and then length to
-    determine the crystal group. """
+class Crystal:
+    def __init__(self, configuration):
+        self.name = configuration['System name']
+        self.bravais_lattice = configuration['Bravais lattice']
+        self.motif = configuration['Motif']
+        self.dimension = configuration['Dimensionality']
 
-    dimension = len(bravais_lattice)
-    basis_norm = [np.linalg.norm(vector) for vector in bravais_lattice]
-    group = ''
+        # To be initialized in methods
+        self.group = None
+        self.reciprocal_basis = None
+        self.kpoints = None
+        self.high_symmetry_points = None
 
-    basis_angles = []
-    for i in range(dimension):
-        for j in range(dimension):
-            if j <= i: continue
-            v1 = bravais_lattice[i]
-            v2 = bravais_lattice[j]
-            basis_angles.append(math.acos(np.dot(v1, v2)/(np.linalg.norm(v1)*np.linalg.norm(v2))))
-    
-    if dimension == 2:
-        if abs(basis_angles[0] - PI / 2) < EPS:
-            if abs(basis_norm[0] - basis_norm[1]) < EPS:
-                group += 'Square'
+        # Init methods
+        self.crystallographic_group()
+        self.reciprocal_lattice()
+        self.determine_high_symmetry_points()
+
+    def crystallographic_group(self):
+        """ Determines the crystallographic group associated to the material from
+        the configuration file. NOTE: Only the group associated to the Bravais lattice,
+        reduced symmetry due to presence of motif is not taken into account. Its purpose is to
+        provide a path in k-space to plot the band structure.
+        Workflow is the following: First determine length and angles between basis vectors.
+        Then we separate by dimensionality: first we check angles, and then length to
+        determine the crystal group. """
+
+        basis_norm = [np.linalg.norm(vector) for vector in self.bravais_lattice]
+        group = ''
+
+        basis_angles = []
+        for i in range(self.dimension):
+            for j in range(self.dimension):
+                if j <= i: continue
+                v1 = self.bravais_lattice[i]
+                v2 = self.bravais_lattice[j]
+                basis_angles.append(math.acos(np.dot(v1, v2)/(np.linalg.norm(v1)*np.linalg.norm(v2))))
+
+        if self.dimension == 2:
+            if abs(basis_angles[0] - PI / 2) < EPS:
+                if abs(basis_norm[0] - basis_norm[1]) < EPS:
+                    group += 'Square'
+                else:
+                    group += 'Rectangular'
+
+            elif (abs(basis_angles[0] - PI / 3) < EPS or
+                  abs(basis_angles[0] - 2 * PI / 3) < EPS) and abs(basis_norm[0] - basis_norm[1]) < EPS:
+                group += 'Hexagonal'
+
             else:
-                group += 'Rectangular'
-        
-        elif (abs(basis_angles[0] - PI / 3) < EPS or abs(basis_angles[0] - 2 * PI / 3) < EPS) and abs(basis_norm[0] - basis_norm[1]) < EPS:
-            group += 'Hexagonal'
-        
+                if abs(basis_norm[0] - basis_norm[1]) < EPS:
+                    group += 'Centered rectangular'
+                else:
+                    group += 'Oblique'
+
+        elif self.dimension == 3:
+            print('Work in progress')
+
+        self.group = group
+
+    def reciprocal_lattice(self):
+        """ Routine to compute the reciprocal lattice basis vectors from
+        the Bravais lattice basis. The algorithm is based on the fact that
+        a_i\dot b_j=2PI\delta_ij, which can be written as a linear system of
+        equations to solve for b_j. Resulting vectors have 3 components independently
+        of the dimension of the vector space they span."""
+
+        reciprocal_basis = np.zeros([self.dimension, 3])
+        coefficient_matrix = np.array(self.bravais_lattice)
+
+        if self.dimension == 1:
+            reciprocal_basis = 2*PI*coefficient_matrix/(np.linalg.norm(coefficient_matrix)**2)
+
         else:
-            if abs(basis_norm[0] - basis_norm[1]) < EPS:
-                group += 'Centered rectangular'
+            coefficient_matrix = coefficient_matrix[:, 0:self.dimension]
+            for i in range(self.dimension):
+                coefficient_vector = np.zeros(self.dimension)
+                coefficient_vector[i] = 2*PI
+                try:
+                    reciprocal_vector = np.linalg.solve(coefficient_matrix, coefficient_vector)
+                except LinAlgError:
+                    print('Error: Bravais lattice basis is not linear independent')
+                    sys.exit(1)
+
+                reciprocal_basis[i, 0:self.dimension] = reciprocal_vector
+
+        self.reciprocal_basis = reciprocal_basis
+
+    def brillouin_zone_mesh(self, mesh):
+        """ Routine to compute a mesh of the first Brillouin zone using the
+        Monkhorst-Pack algorithm. Returns a list of k vectors. """
+
+        if len(mesh) != self.dimension:
+            print('Error: Mesh does not match dimension of the system')
+            sys.exit(1)
+
+        kpoints = []
+        mesh_points = []
+        for i in range(self.dimension):
+            mesh_points.append(list(range(0, mesh[i] + 1)))
+
+        mesh_points = np.array(np.meshgrid(*mesh_points)).T.reshape(-1, self.dimension)
+
+        for point in mesh_points:
+            kpoint = 0
+            for i in range(self.dimension):
+                kpoint += (2.*point[i] - mesh[i])/(2*mesh[i])*self.reciprocal_basis[i]
+            kpoints.append(kpoint)
+
+        self.kpoints = np.array(kpoints)
+
+    def determine_high_symmetry_points(self):
+        """ Routine to compute high symmetry points depending on the dimension of the system.
+        These symmetry points will be used in order to plot the band structure along the main
+        reciprocal paths of the system. Returns a list with the principal high symmetry points,
+        and a list with letter used to name them. """
+
+        norm = np.linalg.norm(self.reciprocal_basis[0])
+        special_points = [[r"$\Gamma$", np.array([0., 0., 0.])]]
+        if self.dimension == 1:
+            special_points.append(['K', self.reciprocal_basis[0]/2])
+
+        elif self.dimension == 2:
+            special_points.append(['M', self.reciprocal_basis[0]/2])
+            if self.group == 'Square':
+                special_points.append(['K', self.reciprocal_basis[0]/2 + self.reciprocal_basis[1]/2])
+
+            elif self.group == 'Rectangle':
+                special_points.append(['M*', self.reciprocal_basis[1]/2])
+                special_points.append(['K',  self.reciprocal_basis[0]/2 + self.reciprocal_basis[1]/2])
+                special_points.append(['K*', -self.reciprocal_basis[0]/2 + self.reciprocal_basis[1]/2])
+
+            elif self.group == 'Hexagonal':
+                #special_points.append(['K', reciprocal_basis[0]/2 + reciprocal_basis[1]/2])
+                special_points.append(['K', norm/math.sqrt(3)*(self.reciprocal_basis[0]/2 - self.reciprocal_basis[1]/2)/(
+                                             np.linalg.norm(self.reciprocal_basis[0]/2 - self.reciprocal_basis[1]/2))])
+
             else:
-                group += 'Oblique'
-        
-    elif dimension == 3:
-        print('Work in progress')
-
-    return group
-
-
-def reciprocal_lattice(bravais_lattice):
-    """ Routine to compute the reciprocal lattice basis vectors from
-    the Bravais lattice basis. The algorithm is based on the fact that
-    a_i\dot b_j=2PI\delta_ij, which can be written as a linear system of
-    equations to solve for b_j. Resulting vectors have 3 components independently
-    of the dimension of the vector space they span."""
-
-    dimension = len(bravais_lattice)
-    reciprocal_basis = np.zeros([dimension, 3])
-    coefficient_matrix = np.array(bravais_lattice)
-
-    if dimension == 1:
-        reciprocal_basis = 2*PI*coefficient_matrix/(np.linalg.norm(coefficient_matrix)**2)
-    
-    else:
-        coefficient_matrix = coefficient_matrix[:, 0:dimension]
-        for i in range(dimension):
-            coefficient_vector = np.zeros(dimension)
-            coefficient_vector[i] = 2*PI
-            try:
-                reciprocal_vector = np.linalg.solve(coefficient_matrix, coefficient_vector)
-            except LinAlgError:
-                print('Error: Bravais lattice basis is not linear independent')
-                sys.exit(1)
-            
-            reciprocal_basis[i, 0:dimension] = reciprocal_vector
-
-    return reciprocal_basis
-
-
-def brillouin_zone_mesh(mesh, reciprocal_basis):
-    """ Routine to compute a mesh of the first Brillouin zone using the
-    Monkhorst-Pack algorithm. Returns a list of k vectors. """
-
-    dimension = len(reciprocal_basis)
-    if len(mesh) != dimension:
-        print('Error: Mesh does not match dimension of the system')
-        sys.exit(1)
-
-    kpoints = []
-    mesh_points = []
-    for i in range(dimension):
-        mesh_points.append(list(range(0, mesh[i] + 1)))
-
-    mesh_points = np.array(np.meshgrid(*mesh_points)).T.reshape(-1, dimension)
-
-    for point in mesh_points:
-        kpoint = 0
-        for i in range(dimension):
-            kpoint += (2.*point[i] - mesh[i])/(2*mesh[i])*reciprocal_basis[i]
-        kpoints.append(kpoint)
-
-    return np.array(kpoints)
-
-
-def high_symmetry_points(group, reciprocal_basis):
-    """ Routine to compute high symmetry points depending on the dimension of the system.
-    These symmetry points will be used in order to plot the band structure along the main
-    reciprocal paths of the system. Returns a list with the principal high symmetry points,
-    and a list with letter used to name them. """
-
-    dimension = len(reciprocal_basis)
-    norm = np.linalg.norm(reciprocal_basis[0])
-    special_points = [[r"$\Gamma$", np.array([0., 0., 0.])]]
-    if dimension == 1:
-        special_points.append(['K', reciprocal_basis[0]/2])
-
-    elif dimension == 2:
-        special_points.append(['M', reciprocal_basis[0]/2])
-        if group == 'Square':
-            special_points.append(['K', reciprocal_basis[0]/2 + reciprocal_basis[1]/2])
-
-        elif group == 'Rectangle':
-            special_points.append(['M*', reciprocal_basis[1]/2])
-            special_points.append(['K',  reciprocal_basis[0]/2 + reciprocal_basis[1]/2])
-            special_points.append(['K*', -reciprocal_basis[0]/2 + reciprocal_basis[1]/2])
-
-        elif group == 'Hexagonal':
-            #special_points.append(['K', reciprocal_basis[0]/2 + reciprocal_basis[1]/2])
-            special_points.append(['K', norm/math.sqrt(3)*(reciprocal_basis[0]/2 - reciprocal_basis[1]/2)/(
-                                         np.linalg.norm(reciprocal_basis[0]/2 - reciprocal_basis[1]/2))])
+                print('High symmetry points not implemented yet')
 
         else:
-            print('High symmetry points not implemented yet')
-    
-    else:
-        special_points.append(['M', reciprocal_basis[0]/2])
-        if group == 'Cube':
-            special_points.append(['M*', reciprocal_basis[1]/2])
-            special_points.append(['K', reciprocal_basis[0]/2 + reciprocal_basis[1]/2])
+            special_points.append(['M', self.reciprocal_basis[0]/2])
+            if self.group == 'Cube':
+                special_points.append(['M*', self.reciprocal_basis[1]/2])
+                special_points.append(['K', self.reciprocal_basis[0]/2 + self.reciprocal_basis[1]/2])
 
-        else:
-            print('High symmetry points not implemented yet')
+            else:
+                print('High symmetry points not implemented yet')
 
-    return special_points
+        self.high_symmetry_points = special_points
+
+    def __reorder_high_symmetry_points(self, labels):
+        """ Routine to reorder the high symmetry points according to a given vector of labels
+         for later representation """
+        points = []
+        for label in labels:
+            appended = False
+            for point in self.high_symmetry_points:
+                if appended:
+                    continue
+                if label == point[0]:
+                    points.append(point)
+                    appended = True
+
+        self.high_symmetry_points = points
+
+    def __strip_labels_from_high_symmetry_points(self):
+        """ Routine to output both labels and array corresponding to high symmetry points """
+
+        for n, point in enumerate(self.high_symmetry_points):
+            self.high_symmetry_points[n] = point[1]
+
+    def high_symmetry_path(self, nk, points):
+        """ Routine to generate a path in reciprocal space along the high symmetry points """
+
+        self.__reorder_high_symmetry_points(points)
+        self.__strip_labels_from_high_symmetry_points()
+
+        kpoints = []
+        number_of_points = len(points)
+        interval_mesh = int(nk/number_of_points)
+        previous_point = self.high_symmetry_points[0]
+        for point in self.high_symmetry_points[1:]:
+            kpoints += list(np.linspace(previous_point, point, interval_mesh))
+            previous_point = point
+        kpoints.append(self.high_symmetry_points[0])
+
+        self.kpoints = kpoints
+
+    def plot_crystal(self, cell_number=1):
+        """
+        Method to visualize the crystalline structure (Bravais lattice + motif).
+        Parameters:
+            (optional) cell_number: Number of cells appended in each direction with respect to the origin
+            By default, cell_number = 1 (zero = only motif)
+        """
+
+        bravais_lattice = np.array(self.bravais_lattice)
+        motif = np.array(self.motif)
+
+        fig = plt.figure()
+        ax = Axes3D(fig)
+        bravais_vectors_mesh = []
+        for i in range(self.dimension):
+            bravais_vectors_mesh.append(list(range(-cell_number, cell_number + 1)))
+        bravais_vectors_mesh = np.array(np.meshgrid(*bravais_vectors_mesh)).T.reshape(-1, self.dimension)
+
+        bravais_vectors = np.zeros([len(bravais_vectors_mesh[:, 0]), 3])
+        for n, coefs in enumerate(bravais_vectors_mesh):
+            for i, coef in enumerate(coefs):
+                bravais_vectors[n, :] += coef * bravais_lattice[i]
+
+        all_atoms_list = np.zeros([len(bravais_vectors_mesh)*len(motif), 3])
+        iterator = 0
+        for vector in bravais_vectors:
+            for atom in motif:
+                all_atoms_list[iterator, :] = atom[:3] + vector
+                iterator += 1
+
+        [min_axis, max_axis] = [np.min(all_atoms_list), np.max(all_atoms_list)]
+
+        print(all_atoms_list)
+        for atom in all_atoms_list:
+            ax.scatter(atom[0], atom[1], atom[2], color='y', s=50)
+
+        ax.set_xlabel('x (A)')
+        ax.set_ylabel('y (A)')
+        ax.set_zlabel('z (A)')
+        ax.set_title(self.name + ' crystal')
+        ax.set_xlim3d(min_axis, max_axis)
+        ax.set_ylim3d(min_axis, max_axis)
+        ax.set_zlim3d(min_axis, max_axis)
+        plt.show()
 
 
-def reorder_special_points(special_points, labels):
-    """ Routine to reorder the high symmetry points according to a given vector of labels
-     for later representation """
-    points = []
-    for label in labels:
-        appended = False
-        for point in special_points:
-            if appended:
-                continue
-            if label == point[0]:
-                points.append(point)
-                appended = True
-
-    return points
-
-
-def split_labels_from_special_points(special_points):
-    """ Routine to output both labels and array corresponding to high symmetry points """
-
-    labels = []
-    for n, point in enumerate(special_points):
-        labels.append(point[0])
-        special_points[n] = point[1]
-
-    return special_points, labels
-
-
-def high_symmetry_path(special_points, mesh):
-    """ Routine to generate a path in reciprocal space along the high symmetry points """
-
-    kpoints = []
-    number_of_points = len(special_points)
-    interval_mesh = int(mesh/number_of_points)
-    previous_point = special_points[0]
-    for point in special_points[1:]:
-        kpoints += list(np.linspace(previous_point, point, interval_mesh))
-        previous_point = point
-    kpoints.append(special_points[0])
-
-    return kpoints
 

@@ -25,21 +25,16 @@ def main():
 
     configuration = fileparse.parse_config_file(file)
 
-    reciprocal_basis = crystal.reciprocal_lattice(configuration['Bravais lattice'])
-    # kpoints = crystal.brillouin_zone_mesh(configuration['Mesh'], reciprocal_basis)
-
-    crystal_group = crystal.crystallographic_group(configuration['Bravais lattice'])
-    special_points = crystal.high_symmetry_points(crystal_group, reciprocal_basis)
-    special_points = crystal.reorder_special_points(special_points, ["M", r"$\Gamma$", "K", "M"])
-    special_points, labels = crystal.split_labels_from_special_points(special_points)
-    kpoints = crystal.high_symmetry_path(special_points, configuration['Mesh'][0])
+    lattice = crystal.Crystal(configuration)
+    lattice.plot_crystal(cell_number=1)
+    labels = ["M", r"$\Gamma$", "K", "M"]
+    lattice.high_symmetry_path(200, labels)
 
     bi = hamiltonian.Hamiltonian(configuration)
     bi.initialize_hamiltonian()
 
-    results = bi.solve(kpoints)
+    results = bi.solve(lattice.kpoints)
     results.plot_along_path(labels)
-
 
 if __name__ == "__main__":
     initial_time = time.time()
