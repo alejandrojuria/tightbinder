@@ -240,7 +240,6 @@ class Crystal:
 
         [min_axis, max_axis] = [np.min(all_atoms_list), np.max(all_atoms_list)]
 
-        print(all_atoms_list)
         for atom in all_atoms_list:
             ax.scatter(atom[0], atom[1], atom[2], color='y', s=50)
 
