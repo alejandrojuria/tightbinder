@@ -5,7 +5,7 @@
 
 import argparse
 import sys
-from . import fileparse, hamiltonian, crystal
+import fileparse, hamiltonian, crystal, topology
 import time
 
 
@@ -26,7 +26,7 @@ def main():
     configuration = fileparse.parse_config_file(file)
 
     lattice = crystal.Crystal(configuration)
-    lattice.plot_crystal(cell_number=1)
+    # lattice.plot_crystal(cell_number=1)
     labels = ["M", r"$\Gamma$", "K", "M"]
     lattice.high_symmetry_path(200, labels)
 
@@ -35,6 +35,10 @@ def main():
 
     results = bi.solve(lattice.kpoints)
     results.plot_along_path(labels)
+
+    wccs = topology.calculate_wannier_centre_flow(bi, lattice, filling=10, number_of_points=50)
+    topology.plot_wannier_centre_flow(wccs)
+
 
 if __name__ == "__main__":
     initial_time = time.time()

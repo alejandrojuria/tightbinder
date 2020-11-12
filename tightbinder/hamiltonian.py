@@ -6,7 +6,7 @@ import sys
 import math
 import cmath
 import itertools
-from . import result
+import result
 
 # --------------- Constants ---------------
 PI = 3.14159265359
@@ -443,7 +443,7 @@ class Hamiltonian:
             eigen_energy[:, n] = results[0]
             eigen_states.append(results[1])
 
-        return result.Result(self.configuration, eigen_energy, eigen_states, kpoints)
+        return result.Result(self.configuration, eigen_energy, np.array(eigen_states), kpoints)
 
 
 if __name__ == '__main__':
