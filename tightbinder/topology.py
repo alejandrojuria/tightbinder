@@ -46,7 +46,7 @@ def __generate_path(k_fixed, crystal, nk):
     basis_vector = crystal.reciprocal_basis[0]
     cell_side = crystal.reciprocal_basis[0][0]
     path = []
-    k_list = np.linspace(-cell_side/2, cell_side/2, nk + 1)
+    # k_list = np.linspace(-cell_side/2, cell_side/2, nk + 1)
     for i in range(nk + 1):
         # basis_vector = np.array([k_list[i], 0, 0])
         kpoint = basis_vector*i/nk + k_fixed
@@ -59,10 +59,7 @@ def __generate_path(k_fixed, crystal, nk):
 def __extract_wcc_from_wilson_loop(wilson_loop):
     """ Routine to calculate the Wannier charge centres from the Wilson loop matrix """
     eigval = np.linalg.eigvals(wilson_loop)
-    print(eigval)
-    eigval = np.angle(eigval)/np.pi
-    print(eigval)
-    print("---------------")
+    eigval = np.sort(np.angle(eigval)/np.pi)
 
     return eigval
 
@@ -71,12 +68,12 @@ def calculate_wannier_centre_flow(system, crystal, filling, number_of_points):
     """ Routine to compute the evolution of the Wannier charge centres through Wilson loop calculation """
 
     wcc_results = []
-    cell_side = crystal.high_symmetry_points
-    k_fixed_list = np.linspace(-cell_side/2, cell_side/2, number_of_points)
+    # cell_side = crystal.high_symmetry_points
+    # k_fixed_list = np.linspace(-cell_side/2, cell_side/2, number_of_points)
     for i in range(-number_of_points//2, number_of_points//2 + 1):
-        # k_fixed = crystal.reciprocal_basis[1]*i/number_of_points
-        k_fixed = np.array([0, k_fixed_list[i], 0])
-        path = __generate_path(k_fixed, crystal.reciprocal_basis, nk=100)
+        k_fixed = crystal.reciprocal_basis[1]*i/number_of_points
+        # k_fixed = np.array([0, k_fixed_list[i], 0])
+        path = __generate_path(k_fixed, crystal, nk=100)
         wilson_loop = __wilson_loop(system, path, filling)
         wcc = __extract_wcc_from_wilson_loop(wilson_loop)
 
@@ -85,6 +82,7 @@ def calculate_wannier_centre_flow(system, crystal, filling, number_of_points):
     return np.array(wcc_results)
 
 
+# ---------------------------- Chern number ----------------------------
 def calculate_polarization(wcc):
     """ Routine to compute the polarization from the WCC """
     polarization = np.sum(wcc)
@@ -97,20 +95,69 @@ def calculate_chern_number(wcc_flow):
     wcc_k2pi = wcc_flow[-1, :]
 
     chern_number = calculate_polarization(wcc_k0) - calculate_polarization(wcc_k2pi)
+    chern_number = 0 if chern_number < 1E-16 else chern_number
     return chern_number
 
 
-def plot_wannier_centre_flow(wcc_results):
+# ---------------------------- Z2 invariant ----------------------------
+def __find_wcc_midpoint_gap(wcc):
+    """ Routine to find the midpoint of the biggest gap between WCCs """
+    wcc = np.append(wcc, wcc[0] + 2)
+    gaps = []
+    for i in range(len(wcc) - 1):
+        gaps.append(wcc[i+1] - wcc[i])
+    biggest_gap = np.max(gaps)
+    position_gap = gaps.index(biggest_gap)
+
+    midpoint_gap = biggest_gap/2 + wcc[position_gap]
+    return midpoint_gap, position_gap
+
+
+def calculate_wcc_gap_midpoints(wcc_flow):
+    """ Routine to compute the midpoint of the biggest gap for the WCC flow, and
+     their relative positions to the WCC """
+    midpoints, positions = [], []
+    for wcc in wcc_flow:
+        gap, position = __find_wcc_midpoint_gap(wcc)
+        midpoints.append(gap)
+        positions.append(position)
+
+    return midpoints, positions
+
+
+def calculate_z2_invariant(wcc_flow):
+    """ Routine to compute the z2 invariant from the number of jumps the
+     max gap midpoint does across different WCC bands """
+    nk = len(wcc_flow[:, 0])
+    num_crosses = 0
+    for i in range(nk//2, nk - 1):
+        wcc = wcc_flow[i, :]
+        next_wcc = wcc_flow[i + 1, :]
+        _, position = __find_wcc_midpoint_gap(wcc)
+        _, next_position = __find_wcc_midpoint_gap(next_wcc)
+        num_crosses += next_position - position
+
+    invariant = num_crosses % 2
+    return invariant
+
+
+def plot_wannier_centre_flow(wcc_flow, show_midpoints=False):
     """ Routine to plot the WCC evolution """
+
     plt.figure()
-    for wcc in wcc_results.T:
+    for wcc in wcc_flow.T:
         plt.plot(wcc, 'ob', fillstyle='none')
+
+    if show_midpoints:
+        midpoints, _ = calculate_wcc_gap_midpoints(wcc_flow)
+        plt.plot(midpoints, 'Dr')
 
     plt.title('WCC flow')
     plt.xlabel(r'$k_y$')
     plt.ylabel(r'$\hat{x}_n$')
-    plt.xticks([0, wcc_results.shape[0]], ['0', r'$\pi$'])
+    plt.xticks([0, wcc_flow.shape[0]], [r'$-\pi$', r'$\pi$'])
     plt.show()
+
 
 
 
