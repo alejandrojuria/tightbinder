@@ -132,38 +132,38 @@ class Crystal:
 
     def determine_high_symmetry_points(self):
         """ Routine to compute high symmetry points depending on the dimension of the system.
-        These symmetry points will be used in order to plot the band structure along the main
-        reciprocal paths of the system. Returns a list with the principal high symmetry points,
-        and a list with letter used to name them. """
+        These symmetry points will be used to plot the band structure along the main
+        reciprocal paths of the system (irreducible BZ). Returns a dictionary with pairs
+        {letter denoting high symmetry point: its coordinates} """
 
         norm = np.linalg.norm(self.reciprocal_basis[0])
-        special_points = [[r"$\Gamma$", np.array([0., 0., 0.])]]
+        special_points = {"G": np.array([0., 0., 0.])}
         if self.dimension == 1:
-            special_points.append(['K', self.reciprocal_basis[0]/2])
+            special_points.update({'K': self.reciprocal_basis[0]/2})
 
         elif self.dimension == 2:
-            special_points.append(['M', self.reciprocal_basis[0]/2])
+            special_points.update({'M': self.reciprocal_basis[0]/2})
             if self.group == 'Square':
-                special_points.append(['K', self.reciprocal_basis[0]/2 + self.reciprocal_basis[1]/2])
+                special_points.update({'K', self.reciprocal_basis[0]/2 + self.reciprocal_basis[1]/2})
 
             elif self.group == 'Rectangle':
-                special_points.append(['M*', self.reciprocal_basis[1]/2])
-                special_points.append(['K',  self.reciprocal_basis[0]/2 + self.reciprocal_basis[1]/2])
-                special_points.append(['K*', -self.reciprocal_basis[0]/2 + self.reciprocal_basis[1]/2])
+                special_points.update({'M*', self.reciprocal_basis[1]/2})
+                special_points.update({'K',  self.reciprocal_basis[0]/2 + self.reciprocal_basis[1]/2})
+                special_points.update({'K*', -self.reciprocal_basis[0]/2 + self.reciprocal_basis[1]/2})
 
             elif self.group == 'Hexagonal':
-                #special_points.append(['K', reciprocal_basis[0]/2 + reciprocal_basis[1]/2])
-                special_points.append(['K', norm/math.sqrt(3)*(self.reciprocal_basis[0]/2 - self.reciprocal_basis[1]/2)/(
-                                             np.linalg.norm(self.reciprocal_basis[0]/2 - self.reciprocal_basis[1]/2))])
+                # special_points.update({'K',: reciprocal_basis[0]/2 + reciprocal_basis[1]/2})
+                special_points.update({'K': norm/math.sqrt(3)*(self.reciprocal_basis[0]/2 - self.reciprocal_basis[1]/2)/(
+                                             np.linalg.norm(self.reciprocal_basis[0]/2 - self.reciprocal_basis[1]/2))})
 
             else:
                 print('High symmetry points not implemented yet')
 
         else:
-            special_points.append(['M', self.reciprocal_basis[0]/2])
+            special_points.update({'M': self.reciprocal_basis[0]/2})
             if self.group == 'Cube':
-                special_points.append(['M*', self.reciprocal_basis[1]/2])
-                special_points.append(['K', self.reciprocal_basis[0]/2 + self.reciprocal_basis[1]/2])
+                special_points.update({'M*': self.reciprocal_basis[1]/2})
+                special_points.update({'K': self.reciprocal_basis[0]/2 + self.reciprocal_basis[1]/2})
 
             else:
                 print('High symmetry points not implemented yet')
@@ -172,7 +172,8 @@ class Crystal:
 
     def __reorder_high_symmetry_points(self, labels):
         """ Routine to reorder the high symmetry points according to a given vector of labels
-         for later representation """
+         for later representation.
+         DEPRECATED with the dictionary update """
         points = []
         for label in labels:
             appended = False
@@ -186,7 +187,8 @@ class Crystal:
         self.high_symmetry_points = points
 
     def __strip_labels_from_high_symmetry_points(self):
-        """ Routine to output both labels and array corresponding to high symmetry points """
+        """ Routine to output both labels and array corresponding to high symmetry points
+         DEPRECATED with the dictionary update """
 
         for n, point in enumerate(self.high_symmetry_points):
             self.high_symmetry_points[n] = point[1]
@@ -194,17 +196,18 @@ class Crystal:
     def high_symmetry_path(self, nk, points):
         """ Routine to generate a path in reciprocal space along the high symmetry points """
 
-        self.__reorder_high_symmetry_points(points)
-        self.__strip_labels_from_high_symmetry_points()
+        # self.__reorder_high_symmetry_points(points)
+        # self.__strip_labels_from_high_symmetry_points()
 
         kpoints = []
         number_of_points = len(points)
         interval_mesh = int(nk/number_of_points)
-        previous_point = self.high_symmetry_points[0]
-        for point in self.high_symmetry_points[1:]:
-            kpoints += list(np.linspace(previous_point, point, interval_mesh))
-            previous_point = point
-        kpoints.append(self.high_symmetry_points[0])
+        previous_point = self.high_symmetry_points[points[0]]
+        for point in points[1:]:
+            next_point = self.high_symmetry_points[point]
+            kpoints += list(np.linspace(previous_point, next_point, interval_mesh, endpoint=False))
+            previous_point = next_point
+        kpoints.append(self.high_symmetry_points[points[-1]])
 
         self.kpoints = kpoints
 
