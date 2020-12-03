@@ -27,7 +27,7 @@ def main():
 
     lattice = crystal.Crystal(configuration)
     # lattice.plot_crystal(cell_number=1)
-    labels = ["M", r"$\Gamma$", "K", "M"]
+    labels = ["M", "G", "K", "M"]
     lattice.high_symmetry_path(200, labels)
 
     bi = hamiltonian.Hamiltonian(configuration)
@@ -36,8 +36,9 @@ def main():
     results = bi.solve(lattice.kpoints)
     results.plot_along_path(labels)
 
-    wccs = topology.calculate_wannier_centre_flow(bi, lattice, filling=10, number_of_points=50)
-    topology.plot_wannier_centre_flow(wccs)
+    wcc_flow = topology.calculate_wannier_centre_flow(bi, lattice, filling=10, number_of_points=50)
+    topology.plot_wannier_centre_flow(wcc_flow)
+    print(f"Chern number: {topology.calculate_chern_number(wcc_flow)}")
 
 
 if __name__ == "__main__":
