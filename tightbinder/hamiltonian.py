@@ -32,6 +32,7 @@ class Hamiltonian:
             sys.exit(1)
         self.__boundary = boundary
         self.__spin_blocks = None
+        self.__zeeman = None
 
     # --------------- Methods ---------------
     def first_neighbours(self):
@@ -415,7 +416,15 @@ class Hamiltonian:
                 self.__initialize_spin_orbit_coupling()
                 self.__spin_orbit_h()
 
+            self.__zeeman_term(1E-2)
+
         self.hamiltonian = hamiltonian
+
+    def __zeeman_term(self, intensity):
+        """ Routine to incorporate a Zeeman term to the Hamiltonian """
+        zeeman_h = np.kron(np.array([[1, 0], [0, -1]]), np.eye(self.dimension//2)*intensity)
+
+        self.__zeeman = zeeman_h
 
     def hamiltonian_k(self, k):
         """ Add the k dependency of the Bloch Hamiltonian through the complex exponential
@@ -429,6 +438,8 @@ class Hamiltonian:
             for block, indices in enumerate(itertools.product([0, 1], [0, 1])):
                 hamiltonian_k[indices[0]*self.dimension//2:(indices[0] + 1)*self.dimension//2,
                               indices[1]*self.dimension//2:(indices[1] + 1)*self.dimension//2] += self.spin_blocks[block]
+
+        hamiltonian_k += self.__zeeman
 
         return hamiltonian_k
 
@@ -444,6 +455,19 @@ class Hamiltonian:
             eigen_states.append(results[1])
 
         return result.Result(self.configuration, eigen_energy, np.array(eigen_states), kpoints)
+
+    # IO routines
+    def write_to_file(self, filename):
+        """ Routine to write the Hamiltonian matrix calculated to a file """
+        with open(filename, "w") as file:
+            for matrix in self.hamiltonian_k:
+                pass
+
+
+    def read_from_file(self, filename):
+        """ Routine to read the Hamiltonian matrix from a file """
+        with open(filename, "r") as file:
+            pass
 
 
 if __name__ == '__main__':
