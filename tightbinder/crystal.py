@@ -75,7 +75,12 @@ class Crystal:
                     group += 'Oblique'
 
         elif self.dimension == 3:
-            print('Work in progress')
+            if (basis_angles[0] - PI/2) < EPS and (basis_angles[1] - PI/2) < EPS and (basis_angles[2] - PI/2) < EPS:
+                if abs(basis_norm[0] - basis_norm[1]) < EPS and abs(basis_norm[0] - basis_norm[2]) < EPS and abs(basis_norm[1] - basis_norm[2]) < EPS:
+                    group += 'Cube'
+
+            else:
+                print('Work in progress')
 
         self.group = group
 
@@ -144,12 +149,12 @@ class Crystal:
         elif self.dimension == 2:
             special_points.update({'M': self.reciprocal_basis[0]/2})
             if self.group == 'Square':
-                special_points.update({'K', self.reciprocal_basis[0]/2 + self.reciprocal_basis[1]/2})
+                special_points.update({'K': self.reciprocal_basis[0]/2 + self.reciprocal_basis[1]/2})
 
             elif self.group == 'Rectangle':
-                special_points.update({'M*', self.reciprocal_basis[1]/2})
-                special_points.update({'K',  self.reciprocal_basis[0]/2 + self.reciprocal_basis[1]/2})
-                special_points.update({'K*', -self.reciprocal_basis[0]/2 + self.reciprocal_basis[1]/2})
+                special_points.update({'M*': self.reciprocal_basis[1]/2})
+                special_points.update({'K':  self.reciprocal_basis[0]/2 + self.reciprocal_basis[1]/2})
+                special_points.update({'K*': -self.reciprocal_basis[0]/2 + self.reciprocal_basis[1]/2})
 
             elif self.group == 'Hexagonal':
                 # special_points.update({'K',: reciprocal_basis[0]/2 + reciprocal_basis[1]/2})
