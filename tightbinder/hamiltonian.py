@@ -6,21 +6,21 @@ import sys
 import math
 import cmath
 import itertools
-import result
+from baseclasses import BaseHamiltonian
 
 # --------------- Constants ---------------
 PI = 3.14159265359
-EPS = 0.001 #!!!! To be changed, depends on the precision of the crystal vectors
+EPS = 0.001 # !!!! To be changed, depends on the precision of the crystal vectors
 
 
-class Hamiltonian:
+class Hamiltonian(BaseHamiltonian):
     def __init__(self, configuration, mode='minimal', r=None, boundary="PBC"):
+        super().__init__()
         """ Constructor for Hamiltonian objects """
         self.configuration = configuration
         self.hamiltonian = None
         self.neighbours = None
         self.spin_orbit_hamiltonian = None
-        self.dimension = None
         self.__unit_cell_list = None
         if mode not in ['minimal', 'radius']:
             print('Error: Incorrect mode')
@@ -443,26 +443,12 @@ class Hamiltonian:
 
         return hamiltonian_k
 
-    def solve(self, kpoints):
-        """ Diagonalize the Hamiltonian to obtain the band structure and the eigenstates """
-        nk = len(kpoints)
-        eigen_energy = np.zeros([self.dimension, nk])
-        eigen_states = []
-        for n, k in enumerate(kpoints):
-            hamiltonian = self.hamiltonian_k(k)
-            results = np.linalg.eigh(hamiltonian)
-            eigen_energy[:, n] = results[0]
-            eigen_states.append(results[1])
-
-        return result.Result(self.configuration, eigen_energy, np.array(eigen_states), kpoints)
-
     # IO routines
     def write_to_file(self, filename):
         """ Routine to write the Hamiltonian matrix calculated to a file """
         with open(filename, "w") as file:
             for matrix in self.hamiltonian_k:
                 pass
-
 
     def read_from_file(self, filename):
         """ Routine to read the Hamiltonian matrix from a file """
