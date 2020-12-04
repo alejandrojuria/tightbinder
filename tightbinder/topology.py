@@ -64,14 +64,16 @@ def __extract_wcc_from_wilson_loop(wilson_loop):
     return eigval
 
 
-def calculate_wannier_centre_flow(system, crystal, filling, number_of_points):
+def calculate_wannier_centre_flow(system, crystal, filling, number_of_points, additional_k=None):
     """ Routine to compute the evolution of the Wannier charge centres through Wilson loop calculation """
 
     wcc_results = []
     # cell_side = crystal.high_symmetry_points
     # k_fixed_list = np.linspace(-cell_side/2, cell_side/2, number_of_points)
     for i in range(-number_of_points//2, number_of_points//2 + 1):
-        k_fixed = crystal.reciprocal_basis[1]*i/number_of_points
+        k_fixed = crystal.reciprocal_basis[1]*(i + number_of_points//2)/number_of_points
+        if additional_k is not None:
+            k_fixed += additional_k
         # k_fixed = np.array([0, k_fixed_list[i], 0])
         path = __generate_path(k_fixed, crystal, nk=100)
         wilson_loop = __wilson_loop(system, path, filling)
@@ -102,14 +104,15 @@ def calculate_chern_number(wcc_flow):
 # ---------------------------- Z2 invariant ----------------------------
 def __find_wcc_midpoint_gap(wcc):
     """ Routine to find the midpoint of the biggest gap between WCCs """
-    wcc = np.append(wcc, wcc[0] + 2)
+    # wcc = np.append(wcc, wcc[0] + 2)
+    wcc_extended = np.append(wcc[-1] - 2, wcc)
     gaps = []
-    for i in range(len(wcc) - 1):
-        gaps.append(wcc[i+1] - wcc[i])
+    for i in range(len(wcc_extended) - 1):
+        gaps.append(wcc_extended[i+1] - wcc_extended[i])
     biggest_gap = np.max(gaps)
     position_gap = gaps.index(biggest_gap)
 
-    midpoint_gap = biggest_gap/2 + wcc[position_gap]
+    midpoint_gap = biggest_gap/2 + wcc_extended[position_gap]
     return midpoint_gap, position_gap
 
 
@@ -125,6 +128,16 @@ def calculate_wcc_gap_midpoints(wcc_flow):
     return midpoints, positions
 
 
+def __directed_triangle(phi1, phi2, phi3):
+    """ Routine to determine sign of a directed triangle. Used to determine
+     whether the midpoint jump over the WCC bands. """
+    if abs(phi1 - phi2) < 1E-14:
+        g = 1
+    else:
+        g = np.sin(phi2 - phi1) + np.sin(phi3 - phi2) + np.sin(phi1 - phi3)
+    return g
+
+
 def calculate_z2_invariant(wcc_flow):
     """ Routine to compute the z2 invariant from the number of jumps the
      max gap midpoint does across different WCC bands """
@@ -133,9 +146,17 @@ def calculate_z2_invariant(wcc_flow):
     for i in range(nk//2, nk - 1):
         wcc = wcc_flow[i, :]
         next_wcc = wcc_flow[i + 1, :]
-        _, position = __find_wcc_midpoint_gap(wcc)
-        _, next_position = __find_wcc_midpoint_gap(next_wcc)
-        num_crosses += next_position - position
+        midpoint, position = __find_wcc_midpoint_gap(wcc)
+        next_midpoint, next_position = __find_wcc_midpoint_gap(next_wcc)
+        sign = 1
+        for position in next_wcc:
+            triangle = __directed_triangle(np.pi*midpoint, np.pi*next_midpoint, np.pi*position)
+            sign *= np.sign(triangle)
+        if sign == 1:
+            crosses = 0
+        else:
+            crosses = 1
+        num_crosses += crosses
 
     invariant = num_crosses % 2
     return invariant
@@ -155,9 +176,17 @@ def plot_wannier_centre_flow(wcc_flow, show_midpoints=False):
     plt.title('WCC flow')
     plt.xlabel(r'$k_y$')
     plt.ylabel(r'$\hat{x}_n$')
-    plt.xticks([0, wcc_flow.shape[0]], [r'$-\pi$', r'$\pi$'])
-    plt.show()
+    plt.xticks([0, wcc_flow.shape[0] - 1], [r'$-\pi$', r'$\pi$'])
 
+
+def plot_polarization_flow(wcc_flow):
+    """ Routine to plot the polarization flow used to calculate the Chern number """
+    polarization_array = []
+    for wcc in wcc_flow:
+        polarization_array.append(calculate_polarization(wcc))
+
+    plt.figure()
+    plt.plot(polarization_array)
 
 
 
