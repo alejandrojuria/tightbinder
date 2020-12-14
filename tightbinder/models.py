@@ -4,7 +4,8 @@
 # Note that this models are hard-coded, except for parameters of their Hamiltonians
 
 import numpy as np
-from baseclasses import BaseHamiltonian
+from system import System, FrozenClass
+from crystal import Crystal
 
 
 # Module-level variables
@@ -16,7 +17,7 @@ sigma_z = np.array([[1, 0],
                     [0, -1]], dtype=np.complex_)
 
 
-class BHZ(BaseHamiltonian):
+class BHZ(System, FrozenClass):
     """
     Implementation of generalized BHZ model. The model is based on a
     2D square lattice of side a=1, and is a four band model. The model takes three parameters:
@@ -25,18 +26,14 @@ class BHZ(BaseHamiltonian):
     c = coupling operator "amplitude"
     """
     def __init__(self, g, u, c):
-        super().__init__()
-
-        self.system_name = "BHZ model"
-        self.dimensionality = 2
-        self.dimension = 4
-        self.bravais_lattice = np.array([[1, 0, 0], [0, 1, 0]])
-        self.motif = [0, 0, 0]
-
+        super().__init__(system_name="BHZ model", crystal=Crystal([[1, 0, 0], [0, 1, 0]],
+                                                                  motif=[[0, 0, 0, 0]]))
+        self.num_orbitals = 4
         self.g = g
         self.u = u
         self.c = c
-        super()._init_configuration()
+
+        self._freeze()
 
     def hamiltonian_k(self, k):
         global sigma_x, sigma_y, sigma_z
@@ -52,7 +49,7 @@ class BHZ(BaseHamiltonian):
         return hamiltonian
 
 
-class WilsonFermions2D(BaseHamiltonian):
+class WilsonFermions2D(System, FrozenClass):
     """
     Implementation of Wilson-fermions model. This model takes a 2D square lattice of side a, it is
     a four band model.
@@ -61,18 +58,16 @@ class WilsonFermions2D(BaseHamiltonian):
     m = mass term
     """
     def __init__(self, side=1, t=1, m=1):
-        super().__init__()
+        super().__init__(system_name="Wilson-fermions 2D", crystal=Crystal([[side, 0, 0], [0, side, 0]],
+                                                                           motif=[[0, 0, 0, 0]]))
         self.system_name = "Wilson-fermions model"
-        self.dimensionality = 2
-        self.dimension = 4
-        self.bravais_lattice = np.array([[side, 0, 0], [0, side, 0]])
-        self.motif = np.array([0, 0, 0])
+        self.num_orbitals = 4
 
         self.a = side
         self.t = t
         self.m = m
 
-        super()._init_configuration()
+        self._freeze()
 
     def hamiltonian_k(self, k):
         global sigma_x, sigma_y, sigma_z
@@ -82,12 +77,12 @@ class WilsonFermions2D(BaseHamiltonian):
         beta = np.kron(sigma_z, np.eye(2, dtype=np.complex_))
 
         hamiltonian = self.t*(np.sin(k[0] * self.a) * alpha_x + np.sin(k[1] * self.a) * alpha_y) + (
-                      np.cos(k[0] * self.a) + np.cos(k[1] * self.a) + self.m - 2) * beta
+                      np.cos(k[0] * self.a) + np.cos(k[1] * self.a) + self.m - 3) * beta
 
         return hamiltonian
 
 
-class WilsonFermions3D(BaseHamiltonian):
+class WilsonFermions3D(System, FrozenClass):
     """
     Implementation of Wilson-fermions model. This model takes a 3D square lattice of side a, it is
     a four band model.
@@ -96,18 +91,16 @@ class WilsonFermions3D(BaseHamiltonian):
     m = mass term
     """
     def __init__(self, side=1, t=1, m=1):
-        super().__init__()
-        self.system_name = "Wilson-fermions model"
-        self.dimensionality = 3
-        self.dimension = 4
-        self.bravais_lattice = np.array([[side, 0, 0], [0, side, 0], [0, 0, side]])
-        self.motif = np.array([0, 0, 0])
+        super().__init__(system_name="Wilson-fermions 3D",
+                         crystal=Crystal([[side, 0, 0], [0, side, 0], [0, 0, side]],
+                                         motif=[[0, 0, 0, 0]]))
+        self.num_orbitals = 4
 
         self.a = side
         self.t = t
         self.m = m
 
-        super()._init_configuration()
+        self._freeze()
 
     def hamiltonian_k(self, k):
         global sigma_x, sigma_y, sigma_z
