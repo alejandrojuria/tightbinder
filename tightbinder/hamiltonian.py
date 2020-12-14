@@ -6,17 +6,23 @@ import sys
 import math
 import cmath
 import itertools
-from baseclasses import BaseHamiltonian
-
+from system import System
+from crystal import Crystal
 # --------------- Constants ---------------
 PI = 3.14159265359
 EPS = 0.001 # !!!! To be changed, depends on the precision of the crystal vectors
 
 
-class Hamiltonian(BaseHamiltonian):
-    def __init__(self, configuration, mode='minimal', r=None, boundary="PBC"):
-        super().__init__()
-        """ Constructor for Hamiltonian objects """
+class SKModel(System):
+    def __init__(self, configuration=None, mode='minimal', r=None, boundary="PBC"):
+        if configuration is not None:
+            super().__init__(system_name=configuration["System name"],
+                             bravais_lattice=configuration["Bravais lattice"],
+                             motif=configuration["Motif"])
+        else:
+            super().__init__()
+
+        """ Specific attributes of SKModel """
         self.configuration = configuration
         self.hamiltonian = None
         self.neighbours = None
@@ -261,7 +267,7 @@ class Hamiltonian(BaseHamiltonian):
         for element in itertools.product(motif, orbitals):
             basis.append(element)
 
-        self.dimension = len(basis)
+        self.num_orbitals = len(basis)
         return basis
 
     def __extend_onsite_vector(self):
@@ -378,7 +384,7 @@ class Hamiltonian(BaseHamiltonian):
 
         hamiltonian = []
         for _ in self.__unit_cell_list:
-            hamiltonian.append(np.zeros(([self.dimension, self.dimension]), dtype=np.complex_))
+            hamiltonian.append(np.zeros(([self._num_orbitals, self._num_orbitals]), dtype=np.complex_))
 
         onsite_energies = self.__extend_onsite_vector()
 
@@ -408,21 +414,26 @@ class Hamiltonian(BaseHamiltonian):
                                                                                                 orbital_config)
         # Check spinless or spinful model and initialize spin-orbit coupling
         if self.configuration['Spin']:
-            self.dimension = self.dimension * 2
             for index, cell in enumerate(self.__unit_cell_list):
                 hamiltonian[index] = np.kron(np.eye(2, 2), np.array(hamiltonian[index]))
 
             if self.configuration['Spin-orbit coupling'] != 0:
+                self._num_orbitals *= 2
                 self.__initialize_spin_orbit_coupling()
                 self.__spin_orbit_h()
 
-            self.__zeeman_term(1E-2)
+                for block, indices in enumerate(itertools.product([0, 1], [0, 1])):
+                    hamiltonian[0][indices[0] * self._num_orbitals//2:(indices[0] + 1) * self._num_orbitals//2,
+                                   indices[1] * self._num_orbitals//2:(indices[1] + 1) * self._num_orbitals//2] += self.spin_blocks[block]
+
+                self.__zeeman_term(0.0)
+                hamiltonian[0] += self.__zeeman
 
         self.hamiltonian = hamiltonian
 
     def __zeeman_term(self, intensity):
         """ Routine to incorporate a Zeeman term to the Hamiltonian """
-        zeeman_h = np.kron(np.array([[1, 0], [0, -1]]), np.eye(self.dimension//2)*intensity)
+        zeeman_h = np.kron(np.array([[1, 0], [0, -1]]), np.eye(self._num_orbitals//2)*intensity)
 
         self.__zeeman = zeeman_h
 
@@ -430,30 +441,66 @@ class Hamiltonian(BaseHamiltonian):
         """ Add the k dependency of the Bloch Hamiltonian through the complex exponential
          and adds the spin-orbit term in case it is present """
 
-        hamiltonian_k = np.zeros([self.dimension, self.dimension], dtype=np.complex_)
+        hamiltonian_k = np.zeros([self._num_orbitals, self._num_orbitals], dtype=np.complex_)
         for cell_index, cell in enumerate(self.__unit_cell_list):
             hamiltonian_k += self.hamiltonian[cell_index] * cmath.exp(1j*np.dot(k, cell))
 
-        if self.configuration['Spin-orbit coupling'] != 0:
-            for block, indices in enumerate(itertools.product([0, 1], [0, 1])):
-                hamiltonian_k[indices[0]*self.dimension//2:(indices[0] + 1)*self.dimension//2,
-                              indices[1]*self.dimension//2:(indices[1] + 1)*self.dimension//2] += self.spin_blocks[block]
-
-        hamiltonian_k += self.__zeeman
-
         return hamiltonian_k
 
-    # IO routines
-    def write_to_file(self, filename):
-        """ Routine to write the Hamiltonian matrix calculated to a file """
+    # ---------------------------- IO routines ----------------------------
+    def export_model(self, filename):
+        """ Routine to write the Hamiltonian matrices calculated to a file """
         with open(filename, "w") as file:
-            for matrix in self.hamiltonian_k:
-                pass
+            file.write(str(self._num_orbitals) + '\n')
+            np.savetxt(file, self.bravais_lattice)
+            file.write("#\n")
+            for i, matrix in enumerate(self.hamiltonian):
+                np.savetxt(file, [self.__unit_cell_list[i]])
+                np.savetxt(file, matrix, fmt='%.10f')
+                file.write("#\n")
 
-    def read_from_file(self, filename):
+    @classmethod
+    def import_model(cls, filename):
         """ Routine to read the Hamiltonian matrix from a file """
+        it = 0
         with open(filename, "r") as file:
-            pass
+            num_orbitals = int(file.readline())
+            bravais_lattice_read = False
+            bravais_lattice = []
+            while not bravais_lattice_read:
+                line = file.readline().split()
+                if len(line) == 3:
+                    bravais_lattice.append([float(num) for num in line])
+                elif line[0] == "#":
+                    bravais_lattice_read = True
+                else:
+                    print("Unexpected line found, exiting...")
+                    sys.exit(1)
+
+            unit_cell_list = []
+            hamiltonian = []
+            hamiltonian_matrix = np.zeros([num_orbitals, num_orbitals], dtype=np.complex_)
+            for line in file.readlines():
+                line = line.split()
+                if len(line) == 3:
+                    unit_cell_list.append([float(num) for num in line])
+                elif line[0] == "#":
+                    it = 0
+                    hamiltonian.append(hamiltonian_matrix)
+                    hamiltonian_matrix = np.zeros([num_orbitals, num_orbitals], dtype=np.complex_)
+                else:
+                    print([complex(num) for num in line])
+                    hamiltonian_matrix[it, :] = [complex(num) for num in line]
+                    it += 1
+
+        model = cls()
+        model.system_name = filename
+        model._num_orbitals = num_orbitals
+        model.__unit_cell_list = unit_cell_list
+        model.bravais_lattice = bravais_lattice
+        model.hamiltonian = hamiltonian
+
+        return model
 
 
 if __name__ == '__main__':
