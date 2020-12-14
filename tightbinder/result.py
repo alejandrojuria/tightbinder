@@ -5,15 +5,15 @@ import numpy as np
 
 
 class Result:
-    def __init__(self, configuration, eigen_energy=None, eigen_states=None, kpoints=None):
-        self.configuration = configuration
+    def __init__(self, eigen_energy=None, eigen_states=None, kpoints=None):
         self.eigen_energy = eigen_energy
         self.eigen_states = eigen_states
         self.kpoints = kpoints
 
     def __simplify_kpoints(self):
         """ Routine to reduce the k-points of the mesh from 3d to the corresponding dimension,
-         for later graphical representation """
+         for later graphical representation
+         DEPRECATED """
 
         dimension = self.configuration['Dimensionality']
         new_kpoints = np.zeros([len(self.kpoints), dimension])
@@ -30,7 +30,7 @@ class Result:
 
         return new_kpoints
 
-    def plot(self):
+    def plot(self, title=''):
         """ Method to plot bands from diagonalization in the whole Brillouin zone """
 
         plt.figure()
@@ -39,13 +39,13 @@ class Result:
             for eigen_energy_k in self.eigen_energy:
                 plt.plot(kpoints, eigen_energy_k, 'g-')
 
-        plt.title(f'{self.configuration["System name"]} band structure')
+        plt.title(title + 'band structure')
         plt.xlabel(r'k ($A^{-1}$)')
         plt.ylabel(r'$\epsilon$ $(eV)$')
 
         plt.show()
 
-    def plot_along_path(self, labels):
+    def plot_along_path(self, labels, title=''):
         """ Method to plot the bands along a path in reciprocal space, normally along high symmetry points """
         nk = len(self.kpoints)
         x_points = np.arange(0, nk)
@@ -59,7 +59,7 @@ class Result:
 
         plt.xticks(x_ticks, labels)
         plt.ylabel(r'$\epsilon (eV)$')
-        plt.title(self.configuration['System name'])
+        plt.title(title + " band structure")
 
         plt.show()
 
