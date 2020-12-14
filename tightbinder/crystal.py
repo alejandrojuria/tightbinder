@@ -16,22 +16,69 @@ import sys
 PI = 3.141592653589793238
 EPS = 0.001
 
+
 # --------------- Routines ---------------
-
-
 class Crystal:
-    def __init__(self, configuration):
-        self.name = configuration['System name']
-        self.bravais_lattice = configuration['Bravais lattice']
-        self.motif = configuration['Motif']
-        self.dimension = configuration['Dimensionality']
+    """ Implementation of Crystal class. Defaults to square lattice if no input is given. """
 
+    def __init__(self, bravais_lattice=None, motif=None):
         # To be initialized in methods
         self.group = None
         self.reciprocal_basis = None
-        self.kpoints = None
         self.high_symmetry_points = None
 
+        self.bravais_lattice = bravais_lattice
+        self.motif = motif
+        self._dimension = None
+
+    @property
+    def dimension(self) -> int:
+        return self._dimension
+
+    @property
+    def bravais_lattice(self) -> np.ndarray:
+        return self._bravais_lattice
+
+    @bravais_lattice.setter
+    def bravais_lattice(self, bravais_lattice):
+        if bravais_lattice is None:
+            self._bravais_lattice = None
+        else:
+            assert type(bravais_lattice) == list or type(bravais_lattice) == np.ndarray
+            bravais_lattice = np.array(bravais_lattice)
+            if bravais_lattice.shape[1] != 3:
+                raise Exception("Vectors must have three components")
+            self._bravais_lattice = bravais_lattice
+            self._dimension = len(bravais_lattice)
+            self.update()
+
+    @property
+    def motif(self):
+        return self._motif
+
+    @motif.setter
+    def motif(self, motif):
+        if motif is None:
+            self._motif = None
+        else:
+            assert type(motif) == list
+            for atom in motif:
+                if len(atom) != 4:
+                    raise Exception("Each position must have three components")
+            self._motif = motif
+
+    def add_atom(self, position):
+        assert type(position) == list
+        if len(position) != 3:
+            raise Exception("Vector must have three components")
+        self.motif.append(position)
+
+    def remove_atom(self, index):
+        self.motif.pop(index)
+
+    def update(self):
+        """ Routine to initialize or update the intrinsic attributes of the Crystal class whenever
+        the Bravais lattice is changed """
         # Init methods
         self.crystallographic_group()
         self.reciprocal_lattice()
@@ -165,10 +212,11 @@ class Crystal:
                 print('High symmetry points not implemented yet')
 
         else:
-            special_points.update({'M': self.reciprocal_basis[0]/2})
             if self.group == 'Cube':
-                special_points.update({'M*': self.reciprocal_basis[1]/2})
-                special_points.update({'K': self.reciprocal_basis[0]/2 + self.reciprocal_basis[1]/2})
+                special_points.update({'X': self.reciprocal_basis[0]/2})
+                special_points.update({'M': self.reciprocal_basis[0]/2 + self.reciprocal_basis[1]/2})
+                special_points.update({'R': self.reciprocal_basis[0]/2 + self.reciprocal_basis[1]/2 +
+                                            self.reciprocal_basis[2]/2})
 
             else:
                 print('High symmetry points not implemented yet')
@@ -214,7 +262,7 @@ class Crystal:
             previous_point = next_point
         kpoints.append(self.high_symmetry_points[points[-1]])
 
-        self.kpoints = kpoints
+        return kpoints
 
     def plot_crystal(self, cell_number=1):
         """
