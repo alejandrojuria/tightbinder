@@ -451,15 +451,14 @@ class SKModel(System):
     def export_model(self, filename):
         """ Routine to write the Hamiltonian matrices calculated to a file """
         with open(filename, "w") as file:
-            # Write norbitals and bravais lattice basis vectors
-            file.write(str(self._num_orbitals) + '\n')
+            # Write ndim, norbitals, nmotif and bravais lattice basis vectors
+            file.write(str(self.dimension) + '\t' + str(len(self.motif)) + '\t'
+                       + str(self.num_orbitals) + '\n')
             np.savetxt(file, self.bravais_lattice)
-            file.write("#\n")
 
             # Write motif atoms
             for atom in self.motif:
                 np.savetxt(file, [atom[0:3]])
-            file.write("#\n")
 
             # Write Bloch Hamiltonian matrices containing hopping to different unit cells
             for i, matrix in enumerate(self.hamiltonian):
@@ -472,34 +471,27 @@ class SKModel(System):
         """ Routine to read the Hamiltonian matrix from a file """
         it = 0
         with open(filename, "r") as file:
-            num_orbitals = int(file.readline())
-            bravais_lattice_read = False
+            line = file.readline().split()
+            ndim, nmotif, norbitals = [int(num) for num in line]
             bravais_lattice = []
-            while not bravais_lattice_read:
+            for i in range(ndim):
                 line = file.readline().split()
-                if len(line) == 3:
-                    bravais_lattice.append([float(num) for num in line])
-                elif line[0] == "#":
-                    bravais_lattice_read = True
-                else:
+                if len(line) != 3:
                     print("Unexpected line found, exiting...")
                     sys.exit(1)
+                bravais_lattice.append([float(num) for num in line])
 
-            motif_read = False
             motif = []
-            while not motif_read:
+            for i in range(nmotif):
                 line = file.readline().split()
-                if len(line) == 3:
-                    motif.append([float(num) for num in line])
-                elif line[0] == "#":
-                    motif_read = True
-                else:
+                if len(line) != 3:
                     print("Unexpected line found, exiting...")
                     sys.exit(1)
+                motif.append([float(num) for num in line])
 
             unit_cell_list = []
             hamiltonian = []
-            hamiltonian_matrix = np.zeros([num_orbitals, num_orbitals], dtype=np.complex_)
+            hamiltonian_matrix = np.zeros([norbitals, norbitals], dtype=np.complex_)
             for line in file.readlines():
                 line = line.split()
                 if len(line) == 3:
@@ -507,14 +499,15 @@ class SKModel(System):
                 elif line[0] == "#":
                     it = 0
                     hamiltonian.append(hamiltonian_matrix)
-                    hamiltonian_matrix = np.zeros([num_orbitals, num_orbitals], dtype=np.complex_)
+                    hamiltonian_matrix = np.zeros([norbitals, norbitals], dtype=np.complex_)
                 else:
                     hamiltonian_matrix[it, :] = [complex(num) for num in line]
                     it += 1
 
         model = cls()
         model.system_name = filename
-        model._num_orbitals = num_orbitals
+        model.dimension = ndim
+        model._num_orbitals = norbitals
         model.__unit_cell_list = unit_cell_list
         model.bravais_lattice = bravais_lattice
         model.hamiltonian = hamiltonian

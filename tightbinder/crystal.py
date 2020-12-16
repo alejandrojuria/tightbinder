@@ -27,13 +27,21 @@ class Crystal:
         self.reciprocal_basis = None
         self.high_symmetry_points = None
 
+        self._dimension = None
         self.bravais_lattice = bravais_lattice
         self.motif = motif
-        self._dimension = None
 
     @property
     def dimension(self) -> int:
         return self._dimension
+
+    @dimension.setter
+    def dimension(self, dimension):
+        assert type(dimension) == int
+        if dimension > 3 or dimension < (-1):
+            print("Incorrect dimension for system, exiting...")
+            sys.exit(1)
+        self._dimension = dimension
 
     @property
     def bravais_lattice(self) -> np.ndarray:
