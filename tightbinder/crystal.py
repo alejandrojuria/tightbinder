@@ -27,21 +27,22 @@ class Crystal:
         self.reciprocal_basis = None
         self.high_symmetry_points = None
 
-        self._dimension = None
+        self._ndim = None
+        self.natoms = None
         self.bravais_lattice = bravais_lattice
         self.motif = motif
 
     @property
-    def dimension(self) -> int:
-        return self._dimension
+    def ndim(self) -> int:
+        return self._ndim
 
-    @dimension.setter
-    def dimension(self, dimension):
-        assert type(dimension) == int
-        if dimension > 3 or dimension < (-1):
+    @ndim.setter
+    def ndim(self, ndim):
+        assert type(ndim) == int
+        if ndim > 3 or ndim < (-1):
             print("Incorrect dimension for system, exiting...")
             sys.exit(1)
-        self._dimension = dimension
+        self._ndim = ndim
 
     @property
     def bravais_lattice(self) -> np.ndarray:
@@ -57,7 +58,7 @@ class Crystal:
             if bravais_lattice.shape[1] != 3:
                 raise Exception("Vectors must have three components")
             self._bravais_lattice = bravais_lattice
-            self._dimension = len(bravais_lattice)
+            self._ndim = len(bravais_lattice)
             self.update()
 
     @property
@@ -74,6 +75,7 @@ class Crystal:
                 if len(atom) != 4:
                     raise Exception("Each position must have three components")
             self._motif = motif
+            self.natoms = len(motif)
 
     def add_atom(self, position):
         assert type(position) == list
@@ -105,14 +107,14 @@ class Crystal:
         group = ''
 
         basis_angles = []
-        for i in range(self.dimension):
-            for j in range(self.dimension):
+        for i in range(self.ndim):
+            for j in range(self.ndim):
                 if j <= i: continue
                 v1 = self.bravais_lattice[i]
                 v2 = self.bravais_lattice[j]
                 basis_angles.append(math.acos(np.dot(v1, v2)/(np.linalg.norm(v1)*np.linalg.norm(v2))))
 
-        if self.dimension == 2:
+        if self.ndim == 2:
             if abs(basis_angles[0] - PI / 2) < EPS:
                 if abs(basis_norm[0] - basis_norm[1]) < EPS:
                     group += 'Square'
@@ -129,7 +131,7 @@ class Crystal:
                 else:
                     group += 'Oblique'
 
-        elif self.dimension == 3:
+        elif self.ndim == 3:
             if (basis_angles[0] - PI/2) < EPS and (basis_angles[1] - PI/2) < EPS and (basis_angles[2] - PI/2) < EPS:
                 if abs(basis_norm[0] - basis_norm[1]) < EPS and abs(basis_norm[0] - basis_norm[2]) < EPS and abs(basis_norm[1] - basis_norm[2]) < EPS:
                     group += 'Cube'
@@ -146,16 +148,16 @@ class Crystal:
         equations to solve for b_j. Resulting vectors have 3 components independently
         of the dimension of the vector space they span."""
 
-        reciprocal_basis = np.zeros([self.dimension, 3])
+        reciprocal_basis = np.zeros([self.ndim, 3])
         coefficient_matrix = np.array(self.bravais_lattice)
 
-        if self.dimension == 1:
+        if self.ndim == 1:
             reciprocal_basis = 2*PI*coefficient_matrix/(np.linalg.norm(coefficient_matrix)**2)
 
         else:
-            coefficient_matrix = coefficient_matrix[:, 0:self.dimension]
-            for i in range(self.dimension):
-                coefficient_vector = np.zeros(self.dimension)
+            coefficient_matrix = coefficient_matrix[:, :self.ndim]
+            for i in range(self.ndim):
+                coefficient_vector = np.zeros(self.ndim)
                 coefficient_vector[i] = 2*PI
                 try:
                     reciprocal_vector = np.linalg.solve(coefficient_matrix, coefficient_vector)
@@ -163,7 +165,7 @@ class Crystal:
                     print('Error: Bravais lattice basis is not linear independent')
                     sys.exit(1)
 
-                reciprocal_basis[i, 0:self.dimension] = reciprocal_vector
+                reciprocal_basis[i, 0:self.ndim] = reciprocal_vector
 
         self.reciprocal_basis = reciprocal_basis
 
@@ -171,20 +173,20 @@ class Crystal:
         """ Routine to compute a mesh of the first Brillouin zone using the
         Monkhorst-Pack algorithm. Returns a list of k vectors. """
 
-        if len(mesh) != self.dimension:
+        if len(mesh) != self.ndim:
             print('Error: Mesh does not match dimension of the system')
             sys.exit(1)
 
         kpoints = []
         mesh_points = []
-        for i in range(self.dimension):
+        for i in range(self.ndim):
             mesh_points.append(list(range(0, mesh[i] + 1)))
 
-        mesh_points = np.array(np.meshgrid(*mesh_points)).T.reshape(-1, self.dimension)
+        mesh_points = np.array(np.meshgrid(*mesh_points)).T.reshape(-1, self.ndim)
 
         for point in mesh_points:
             kpoint = 0
-            for i in range(self.dimension):
+            for i in range(self.ndim):
                 kpoint += (2.*point[i] - mesh[i])/(2*mesh[i])*self.reciprocal_basis[i]
             kpoints.append(kpoint)
 
@@ -198,10 +200,10 @@ class Crystal:
 
         norm = np.linalg.norm(self.reciprocal_basis[0])
         special_points = {"G": np.array([0., 0., 0.])}
-        if self.dimension == 1:
+        if self.ndim == 1:
             special_points.update({'K': self.reciprocal_basis[0]/2})
 
-        elif self.dimension == 2:
+        elif self.ndim == 2:
             special_points.update({'M': self.reciprocal_basis[0]/2})
             if self.group == 'Square':
                 special_points.update({'K': self.reciprocal_basis[0]/2 + self.reciprocal_basis[1]/2})
@@ -272,7 +274,7 @@ class Crystal:
 
         return kpoints
 
-    def plot_crystal(self, cell_number=1):
+    def plot_crystal(self, cell_number=1, crystal_name=''):
         """
         Method to visualize the crystalline structure (Bravais lattice + motif).
         Parameters:
@@ -286,9 +288,9 @@ class Crystal:
         fig = plt.figure()
         ax = Axes3D(fig)
         bravais_vectors_mesh = []
-        for i in range(self.dimension):
+        for i in range(self.ndim):
             bravais_vectors_mesh.append(list(range(-cell_number, cell_number + 1)))
-        bravais_vectors_mesh = np.array(np.meshgrid(*bravais_vectors_mesh)).T.reshape(-1, self.dimension)
+        bravais_vectors_mesh = np.array(np.meshgrid(*bravais_vectors_mesh)).T.reshape(-1, self.ndim)
 
         bravais_vectors = np.zeros([len(bravais_vectors_mesh[:, 0]), 3])
         for n, coefs in enumerate(bravais_vectors_mesh):
@@ -310,7 +312,7 @@ class Crystal:
         ax.set_xlabel('x (A)')
         ax.set_ylabel('y (A)')
         ax.set_zlabel('z (A)')
-        ax.set_title(self.name + ' crystal')
+        ax.set_title(crystal_name + ' crystal')
         ax.set_xlim3d(min_axis, max_axis)
         ax.set_ylim3d(min_axis, max_axis)
         ax.set_zlim3d(min_axis, max_axis)

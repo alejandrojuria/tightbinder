@@ -24,16 +24,17 @@ class System(Crystal):
                       "in presence of crystal object")
             super().__init__(crystal.bravais_lattice, crystal.motif)
         self.system_name = system_name
-        self._num_orbitals = None
+        self._norbitals = None
+        self._basisdim = None
 
     @property
-    def num_orbitals(self):
-        return self._num_orbitals
+    def norbitals(self):
+        return self._norbitals
 
-    @num_orbitals.setter
-    def num_orbitals(self, num_orbitals):
-        assert type(num_orbitals) == int
-        self._num_orbitals = num_orbitals
+    @norbitals.setter
+    def norbitals(self, norbitals):
+        assert type(norbitals) == int
+        self._norbitals = norbitals
 
     # To be overwritten by specific implementations of System
     def hamiltonian_k(self, k):
@@ -42,7 +43,7 @@ class System(Crystal):
     def solve(self, kpoints):
         """ Diagonalize the Hamiltonian to obtain the band structure and the eigenstates """
         nk = len(kpoints)
-        eigen_energy = np.zeros([self._num_orbitals, nk])
+        eigen_energy = np.zeros([self._basisdim, nk])
         eigen_states = []
         for n, k in enumerate(kpoints):
             hamiltonian = self.hamiltonian_k(k)

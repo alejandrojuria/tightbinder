@@ -50,22 +50,20 @@ class SKModel(System):
         For amorphous systems the option radius is available to determine neighbours within a given radius R.
         Boundary conditions can also be set, either PBC (default) or OBC."""
 
-        bravais_lattice = np.array(self.configuration['Bravais lattice'])
         motif = self.configuration['Motif']
-        dimension = len(bravais_lattice)
 
         # Prepare unit cells to loop over depending on boundary conditions
         if self.__boundary == "PBC":
             mesh_points = []
-            for i in range(dimension):
+            for i in range(self.ndim):
                 mesh_points.append(list(range(-1, 2)))
-            mesh_points = np.array(np.meshgrid(*mesh_points)).T.reshape(-1, dimension)
+            mesh_points = np.array(np.meshgrid(*mesh_points)).T.reshape(-1, self.ndim)
 
             near_cells = np.zeros([len(mesh_points), 3])
             for n, coefficients in enumerate(mesh_points):
                 cell_vector = np.array([0.0, 0.0, 0.0])
                 for i, coefficient in enumerate(coefficients):
-                    cell_vector += (coefficient * bravais_lattice[i])
+                    cell_vector += (coefficient * self.bravais_lattice[i])
                 near_cells[n, :] = cell_vector
 
         elif self.__boundary == "OBC":
@@ -254,6 +252,7 @@ class SKModel(System):
             if orbital:
                 orbitals_string.append(possible_orbitals[i])
 
+        self.norbitals = len(orbitals_string)
         return orbitals_string
 
     def __create_atomic_orbital_basis(self):
@@ -267,7 +266,7 @@ class SKModel(System):
         for element in itertools.product(motif, orbitals):
             basis.append(element)
 
-        self.num_orbitals = len(basis)
+        self._basisdim = len(basis)
         return basis
 
     def __extend_onsite_vector(self):
@@ -312,10 +311,9 @@ class SKModel(System):
         """ Method to initialize the whole spin-orbit coupling matrix corresponding to the
          orbitals that participate in the tight-binding model"""
 
-        dimension_h = len(self.configuration['Orbitals'])*2
-        dimension_block = int(dimension_h/2)
+        dimension_block = int(len(self.configuration["Orbitals"]))
         # We hardcode the whole spin-orbit hamilonian up to d orbitals
-        spin_orbit_hamiltonian = np.zeros([dimension_h, dimension_h], dtype=np.complex_)
+        spin_orbit_hamiltonian = np.zeros([dimension_block*2, dimension_block*2], dtype=np.complex_)
         p_orbital_beginning = 1
         d_orbital_beginning = 4
         # p orbitals
@@ -355,19 +353,17 @@ class SKModel(System):
           Ordering is: self.spin_blocks=[up up, up down, down up, down down] """
 
         orbitals = self.configuration["Orbitals"]
-        motif_elements = len(self.configuration['Motif'])
+        npossible_orbitals = len(orbitals)
         orbitals_indices = np.array([index for index, orbital in enumerate(orbitals) if orbital])
-        dimension_soc_block = len(orbitals)
 
         self.spin_blocks = []
-
         for indices in itertools.product([0, 1], [0, 1]):
             self.spin_blocks.append(self.spin_orbit_hamiltonian[
-                                        np.ix_(orbitals_indices + indices[0]*dimension_soc_block,
-                                               orbitals_indices + indices[1]*dimension_soc_block)])
+                                        np.ix_(orbitals_indices + indices[0]*npossible_orbitals,
+                                               orbitals_indices + indices[1]*npossible_orbitals)])
 
         for n, spin_block in enumerate(self.spin_blocks):
-            self.spin_blocks[n] = np.kron(np.eye(motif_elements, motif_elements), spin_block)
+            self.spin_blocks[n] = np.kron(np.eye(self.natoms, self.natoms), spin_block)
 
     def initialize_hamiltonian(self):
         """ Routine to initialize the hamiltonian matrices which describe the system. """
@@ -376,30 +372,29 @@ class SKModel(System):
         basis = self.__create_atomic_orbital_basis()
         motif = self.configuration['Motif']
 
-        dimension_orbitals = len(orbitals)
-
         print('Computing first neighbours...\n')
         self.first_neighbours()
         self.__determine_connected_unit_cells()
 
         hamiltonian = []
         for _ in self.__unit_cell_list:
-            hamiltonian.append(np.zeros(([self.num_orbitals, self.num_orbitals]), dtype=np.complex_))
+            hamiltonian.append(np.zeros(([self._basisdim, self._basisdim]), dtype=np.complex_))
 
         onsite_energies = self.__extend_onsite_vector()
 
         for n, atom in enumerate(motif):
             species = atom[3]  # To match list beginning on zero
+            print(self.norbitals)
 
             hamiltonian_atom_block = np.diag(np.array(onsite_energies[species]))
-            hamiltonian[0][dimension_orbitals*n:dimension_orbitals*(n+1),
-                           dimension_orbitals*n:dimension_orbitals*(n+1)] = hamiltonian_atom_block
+            hamiltonian[0][self.norbitals*n:self.norbitals*(n+1),
+                           self.norbitals*n:self.norbitals*(n+1)] = hamiltonian_atom_block
 
         for i, atom in enumerate(basis):
             atom_position = atom[0][:3]
             species = atom[0][3]
             orbital = atom[1]
-            atom_index = int(i/dimension_orbitals)
+            atom_index = int(i/self.norbitals)
             for neighbour in self.neighbours[atom_index]:
                 neigh_index = neighbour[0]
                 neigh_unit_cell = list(neighbour[1])
@@ -409,22 +404,23 @@ class SKModel(System):
                     position_difference = -np.array(atom_position) + np.array(neigh_position) + np.array(neigh_unit_cell)
                     orbital_config = [orbital, species, neigh_orbital, neigh_species]
                     h_cell = self.__unit_cell_list.index(neigh_unit_cell)
-                    hamiltonian[h_cell][i, neigh_index*dimension_orbitals + j] += self.__hopping_amplitude(
+                    hamiltonian[h_cell][i, neigh_index*self.norbitals + j] += self.__hopping_amplitude(
                                                                                                 position_difference,
                                                                                                 orbital_config)
         # Check spinless or spinful model and initialize spin-orbit coupling
         if self.configuration['Spin']:
+            self.norbitals = self.norbitals * 2
+            self._basisdim = self._basisdim * 2
             for index, cell in enumerate(self.__unit_cell_list):
                 hamiltonian[index] = np.kron(np.eye(2, 2), np.array(hamiltonian[index]))
 
             if self.configuration['Spin-orbit coupling'] != 0:
-                self.num_orbitals = self.num_orbitals * 2
                 self.__initialize_spin_orbit_coupling()
                 self.__spin_orbit_h()
 
                 for block, indices in enumerate(itertools.product([0, 1], [0, 1])):
-                    hamiltonian[0][indices[0] * self.num_orbitals//2:(indices[0] + 1) * self.num_orbitals//2,
-                                   indices[1] * self.num_orbitals//2:(indices[1] + 1) * self.num_orbitals//2] += self.spin_blocks[block]
+                    hamiltonian[0][indices[0] * self._basisdim//2:(indices[0] + 1) * self._basisdim//2,
+                                   indices[1] * self._basisdim//2:(indices[1] + 1) * self._basisdim//2] += self.spin_blocks[block]
 
                 self.__zeeman_term(0.0)
                 hamiltonian[0] += self.__zeeman
@@ -433,7 +429,7 @@ class SKModel(System):
 
     def __zeeman_term(self, intensity):
         """ Routine to incorporate a Zeeman term to the Hamiltonian """
-        zeeman_h = np.kron(np.array([[1, 0], [0, -1]]), np.eye(self.num_orbitals//2)*intensity)
+        zeeman_h = np.kron(np.array([[1, 0], [0, -1]]), np.eye(self._basisdim//2)*intensity)
 
         self.__zeeman = zeeman_h
 
@@ -441,7 +437,7 @@ class SKModel(System):
         """ Add the k dependency of the Bloch Hamiltonian through the complex exponential
          and adds the spin-orbit term in case it is present """
 
-        hamiltonian_k = np.zeros([self.num_orbitals, self.num_orbitals], dtype=np.complex_)
+        hamiltonian_k = np.zeros([self._basisdim, self._basisdim], dtype=np.complex_)
         for cell_index, cell in enumerate(self.__unit_cell_list):
             hamiltonian_k += self.hamiltonian[cell_index] * cmath.exp(1j*np.dot(k, cell))
 
@@ -451,9 +447,10 @@ class SKModel(System):
     def export_model(self, filename):
         """ Routine to write the Hamiltonian matrices calculated to a file """
         with open(filename, "w") as file:
-            # Write ndim, norbitals, nmotif and bravais lattice basis vectors
-            file.write(str(self.dimension) + '\t' + str(len(self.motif)) + '\t'
-                       + str(self.num_orbitals) + '\n')
+            # Write ndim, natoms, norbitals, ncells and bravais lattice basis vectors
+            file.write(str(self.ndim) + '\t' + str(self.natoms) + '\t'
+                       + str(self.norbitals) + '\t'
+                       + str(len(self.__unit_cell_list)) + '\n')
             np.savetxt(file, self.bravais_lattice)
 
             # Write motif atoms
@@ -472,7 +469,8 @@ class SKModel(System):
         it = 0
         with open(filename, "r") as file:
             line = file.readline().split()
-            ndim, nmotif, norbitals = [int(num) for num in line]
+            ndim, natoms, norbitals, ncells = [int(num) for num in line]
+            basisdim = norbitals * natoms
             bravais_lattice = []
             for i in range(ndim):
                 line = file.readline().split()
@@ -482,7 +480,7 @@ class SKModel(System):
                 bravais_lattice.append([float(num) for num in line])
 
             motif = []
-            for i in range(nmotif):
+            for i in range(natoms):
                 line = file.readline().split()
                 if len(line) != 3:
                     print("Unexpected line found, exiting...")
@@ -491,7 +489,7 @@ class SKModel(System):
 
             unit_cell_list = []
             hamiltonian = []
-            hamiltonian_matrix = np.zeros([norbitals, norbitals], dtype=np.complex_)
+            hamiltonian_matrix = np.zeros([basisdim, basisdim], dtype=np.complex_)
             for line in file.readlines():
                 line = line.split()
                 if len(line) == 3:
@@ -499,15 +497,21 @@ class SKModel(System):
                 elif line[0] == "#":
                     it = 0
                     hamiltonian.append(hamiltonian_matrix)
-                    hamiltonian_matrix = np.zeros([norbitals, norbitals], dtype=np.complex_)
+                    hamiltonian_matrix = np.zeros([basisdim, basisdim], dtype=np.complex_)
                 else:
                     hamiltonian_matrix[it, :] = [complex(num) for num in line]
                     it += 1
 
+        if ncells != len(unit_cell_list):
+            print("Mismatch between number of Bloch matrices provided and declared, exiting...")
+            sys.exit(1)
+
         model = cls()
         model.system_name = filename
-        model.dimension = ndim
-        model._num_orbitals = norbitals
+        model.ndim = ndim
+        model.norbitals = norbitals
+        model.natoms = natoms
+        model._basisdim = basisdim
         model.__unit_cell_list = unit_cell_list
         model.bravais_lattice = bravais_lattice
         model.hamiltonian = hamiltonian
