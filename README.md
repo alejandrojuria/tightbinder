@@ -43,7 +43,7 @@ This model is analytically solvable, its band dispersion relation is:
 
 ![alt text](screenshots/test_chain_band.png)
 
-* Bi(111) bilayer
+* Bi(111) bilayer:
 To run it: ```$python bin/app.py examples/bi(111).txt```
 In this case we use a four-orbital model (s, px, py and pz). Since we are modelling a real material, we need to input some valid Slater-Koster coefficients as well as the spin-orbit coupling amplitude. These are given in [1, 2].
 
