@@ -43,11 +43,31 @@ This model is analytically solvable, its band dispersion relation is:
 
 ![alt text](screenshots/test_chain_band.png)
 
+* Bi(111) bilayer
+To run it: ```$python bin/app.py examples/bi(111).txt```
+In this case we use a four-orbital model (s, px, py and pz). Since we are modelling a real material, we need to input some valid Slater-Koster coefficients as well as the spin-orbit coupling amplitude. These are given in [1, 2].
+
+The resulting band structure is:
+![alt text](screenshots/bi(111)_w_soc.png)
+
+Bi(111) bilayers are known to be topological insulators. To confirm this, one can use the routines provided in the ```topology``` module to calculate its 
+<img src="http://latex.codecogs.com/svg.latex?\mathbb{Z}_2" title="http://latex.codecogs.com/svg.latex?\mathbb{Z}_2"/> invariant.
+
+To do so, we can compute its hybrid Wannier centre flow, which results to be:
+![alt text](screenshots/wcc_flow_bi(111).png)
+
+The crossing of the red dots indicates that the material is topological. For more complex cases, there is a routine implemented to automatize the counting of crossings, based on [3].
+
 ## Workroad
 The future updates will be:
 - [x] hamiltonian.py: Module for inititializing and solving the Hamiltonian of the system given in the config. file
-- [ ] topology.py: This module will include routines for computing topological invariants of the system
+- [x] topology.py: This module will include routines for computing topological invariants of the system.
+  (19/12/20) Z2 invariant routines added. It remains to fix routines related to Chern invariant.
 - [ ] disorder.py: Module with routines to introduce disorder in the system such as vacancies or impurities
 
-
 A working GUI might be done in the future
+
+## References
+
+
+
