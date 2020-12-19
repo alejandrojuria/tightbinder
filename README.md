@@ -48,12 +48,14 @@ To run it: ```$python bin/app.py examples/bi(111).txt```
 In this case we use a four-orbital model (s, px, py and pz). Since we are modelling a real material, we need to input some valid Slater-Koster coefficients as well as the spin-orbit coupling amplitude. These are given in [1, 2].
 
 The resulting band structure is:
+
 ![alt text](screenshots/bi(111)_w_soc.png)
 
 Bi(111) bilayers are known to be topological insulators. To confirm this, one can use the routines provided in the ```topology``` module to calculate its 
 <img src="http://latex.codecogs.com/svg.latex?\mathbb{Z}_2" title="http://latex.codecogs.com/svg.latex?\mathbb{Z}_2"/> invariant.
 
 To do so, we can compute its hybrid Wannier centre flow, which results to be:
+
 ![alt text](screenshots/wcc_flow_bi(111).png)
 
 The crossing of the red dots indicates that the material is topological. For more complex cases, there is a routine implemented to automatize the counting of crossings, based on [3].
