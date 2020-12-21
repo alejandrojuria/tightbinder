@@ -36,8 +36,45 @@ class System(Crystal):
         assert type(norbitals) == int
         self._norbitals = norbitals
 
-    # To be overwritten by specific implementations of System
+    def reduce(self, **ncells):
+        """ Routine to reduce the dimensionality of the System object along the specified
+         directions, by repeating unit cells along those directions until a given size
+         (number of unit cells) is reached. Thus we make the original system finite along those
+         directions.
+         Input: list ncells """
+        key_to_index = {"nx": 0, "ny": 1, "nz": 2}
+        for key in ncells.keys():
+            if key not in ["nx", "ny", "nz"]:
+                print("Error: Invalid input (must be nx, ny or nz), exiting...")
+                sys.exit(1)
+
+            new_motif = self.motif[:, :3]
+            for n in range(1, ncells[key]):
+                np.append(new_motif, new_motif + n * self.bravais_lattice[key_to_index[key]])
+
+        indices = [0, 1, 2] - [key_to_index[key] for key in ncells.keys()]
+        self.bravais_lattice = self.bravais_lattice[indices]
+
+        return self
+
+    def ribbon(self, width, termination="zigzag"):
+        """ Routine to generate a ribbon for an hexagonal structure """
+        if self.ndim == 2 and self.group == "Hexagonal":
+            if termination == "zigzag":
+                pass
+            elif termination == "armchair":
+                pass
+            else:
+                print("Error: termination must be either zigzag or armchair, exiting...")
+                sys.exit(1)
+
+
+
+
+
     def hamiltonian_k(self, k):
+        """ Generic implementation of hamiltonian_k H(k). To be overwritten
+         by specific implementations of System """
         pass
 
     def solve(self, kpoints):
