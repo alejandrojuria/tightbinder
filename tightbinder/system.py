@@ -42,24 +42,30 @@ class System(Crystal):
          (number of unit cells) is reached. Thus we make the original system finite along those
          directions.
          Input: list ncells """
+        if len(ncells) == 0:
+            print("Error: Reduce method must be called with at least one parameter (nx, ny or nz), exiting...")
+            sys.exit(1)
         key_to_index = {"nx": 0, "ny": 1, "nz": 2}
         for key in ncells.keys():
             if key not in ["nx", "ny", "nz"]:
                 print("Error: Invalid input (must be nx, ny or nz), exiting...")
                 sys.exit(1)
 
-            new_motif = self.motif[:, :3]
-            for n in range(1, ncells[key]):
-                np.append(new_motif, new_motif + n * self.bravais_lattice[key_to_index[key]])
+            motif_copy_displaced = np.copy(self.motif)
+            new_motif = self.motif
+            for n in range(1, ncells[key] + 1):
+                motif_copy_displaced[:, :3] += n * self.bravais_lattice[key_to_index[key]]
+                new_motif = np.append(new_motif, motif_copy_displaced, axis=0)
 
-        indices = [0, 1, 2] - [key_to_index[key] for key in ncells.keys()]
+            self.motif = new_motif
+        indices = [index for index in [0, 1, 2] if index in [key_to_index[key] for key in ncells.keys()]]
         self.bravais_lattice = self.bravais_lattice[indices]
 
         return self
 
     def ribbon(self, width, termination="zigzag"):
         """ Routine to generate a ribbon for an hexagonal structure """
-        if self.ndim == 2 and self.group == "Hexagonal":
+        if self.group == "Hexagonal":
             if termination == "zigzag":
                 pass
             elif termination == "armchair":
@@ -67,10 +73,6 @@ class System(Crystal):
             else:
                 print("Error: termination must be either zigzag or armchair, exiting...")
                 sys.exit(1)
-
-
-
-
 
     def hamiltonian_k(self, k):
         """ Generic implementation of hamiltonian_k H(k). To be overwritten

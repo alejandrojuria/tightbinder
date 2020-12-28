@@ -50,8 +50,6 @@ class SKModel(System):
         For amorphous systems the option radius is available to determine neighbours within a given radius R.
         Boundary conditions can also be set, either PBC (default) or OBC."""
 
-        motif = self.configuration['Motif']
-
         # Prepare unit cells to loop over depending on boundary conditions
         if self.__boundary == "PBC":
             mesh_points = []
@@ -71,19 +69,19 @@ class SKModel(System):
 
         # Determine neighbour distance from one fixed atom
         neigh_distance = 1E100
-        fixed_atom = motif[0][:3]
+        fixed_atom = self.motif[0][:3]
         for cell in near_cells:
-            for atom in motif:
+            for atom in self.motif:
                 distance = np.linalg.norm(atom[:3] + cell - fixed_atom)
                 if distance < neigh_distance and distance != 0: neigh_distance = distance
 
         # Determine list of neighbours for each atom of the motif
         if self.__mode == "minimal":
             neighbours_list = []
-            for n, reference_atom in enumerate(motif):
+            for n, reference_atom in enumerate(self.motif):
                 neighbours = []
                 for cell in near_cells:
-                    for i, atom in enumerate(motif):
+                    for i, atom in enumerate(self.motif):
                         distance = np.linalg.norm(atom[:3] + cell - reference_atom[:3])
                         if abs(distance - neigh_distance) < EPS: neighbours.append([i, cell])
                 neighbours_list.append(neighbours)
@@ -96,10 +94,10 @@ class SKModel(System):
                 print("Warning: Radius smaller than first neighbour distance")
 
             neighbours_list = []
-            for n, reference_atom in enumerate(motif):
+            for n, reference_atom in enumerate(self.motif):
                 neighbours = []
                 for cell in near_cells:
-                    for i, atom in enumerate(motif):
+                    for i, atom in enumerate(self.motif):
                         distance = np.linalg.norm(atom[0] + cell - reference_atom[0])
                         if distance <= self.__r: neighbours.append([i, cell])
                 neighbours.append(neighbours)
@@ -261,9 +259,8 @@ class SKModel(System):
          the atomic position, then the orbital. For fixed atom, we iterate over the possible orbitals """
 
         basis = []
-        motif = self.configuration['Motif']
         orbitals = self.__transform_orbitals_to_string()
-        for element in itertools.product(motif, orbitals):
+        for element in itertools.product(self.motif, orbitals):
             basis.append(element)
 
         self._basisdim = len(basis)
@@ -370,7 +367,6 @@ class SKModel(System):
 
         orbitals = self.__transform_orbitals_to_string()
         basis = self.__create_atomic_orbital_basis()
-        motif = self.configuration['Motif']
 
         print('Computing first neighbours...\n')
         self.first_neighbours()
@@ -382,8 +378,8 @@ class SKModel(System):
 
         onsite_energies = self.__extend_onsite_vector()
 
-        for n, atom in enumerate(motif):
-            species = atom[3]  # To match list beginning on zero
+        for n, atom in enumerate(self.motif):
+            species = int(atom[3])  # To match list beginning on zero
             print(self.norbitals)
 
             hamiltonian_atom_block = np.diag(np.array(onsite_energies[species]))
@@ -392,14 +388,16 @@ class SKModel(System):
 
         for i, atom in enumerate(basis):
             atom_position = atom[0][:3]
-            species = atom[0][3]
+            species = int(atom[0][3])
             orbital = atom[1]
             atom_index = int(i/self.norbitals)
+            print(atom_index)
+            print(len(self.neighbours))
             for neighbour in self.neighbours[atom_index]:
                 neigh_index = neighbour[0]
                 neigh_unit_cell = list(neighbour[1])
-                neigh_position = motif[neigh_index][:3]
-                neigh_species = motif[neigh_index][3]
+                neigh_position = self.motif[neigh_index][:3]
+                neigh_species = int(self.motif[neigh_index][3])
                 for j, neigh_orbital in enumerate(orbitals):
                     position_difference = -np.array(atom_position) + np.array(neigh_position) + np.array(neigh_unit_cell)
                     orbital_config = [orbital, species, neigh_orbital, neigh_species]
