@@ -66,7 +66,9 @@ class System(Crystal):
         return self
 
     def ribbon(self, width, orientation="horizontal"):
-        """ Routine to generate a ribbon for a 2D crystal"""
+        """ Routine to generate a ribbon for a 2D crystal. It is designed to create rectangular ribbons,
+        based on a rectangular lattice. Therefore there must exist a combination of basis vectors such that
+        we can obtain a rectangular supercell. Otherwise the method returns an error. """
         if self.ndim != 2:
             print(f"Ribbons can not be generated for {self.ndim}D structures")
             sys.exit(1)
@@ -98,7 +100,7 @@ class System(Crystal):
                     rectangular_basis[1, :] = vector
 
             if not np.linalg.norm(rectangular_basis, axis=1).any():
-                print("Could not generate a rectangular lattice, exiting...")
+                print("Error: Could not generate a rectangular lattice, use reduce method directly. Exiting...")
                 sys.exit(1)
 
             # Calculate new motif
@@ -108,8 +110,9 @@ class System(Crystal):
                     motif.append(atom)
 
             # Update system attributes
-            self.motif = motif
             self.bravais_lattice = rectangular_basis
+            self.motif = motif
+            print(self.group)
 
             # Reduce system dimensionality
             if orientation == "horizontal":
@@ -123,6 +126,7 @@ class System(Crystal):
             return self
 
     def _restrict_lattice2rectangle(self, vectors):
+        """ TO BE IMPLEMENTED YET (is it really necessary?) """
         atoms = []
         mesh_points = []
         for i in range(self.ndim):
@@ -133,8 +137,6 @@ class System(Crystal):
             vector = n*self.bravais_lattice[0] + m*self.bravais_lattice[1]
             for position in self.motif:
                 atom_position = vector + position
-
-
 
     def hamiltonian_k(self, k):
         """ Generic implementation of hamiltonian_k H(k). To be overwritten

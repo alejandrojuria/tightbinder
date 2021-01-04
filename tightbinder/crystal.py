@@ -30,7 +30,9 @@ class Crystal:
 
         self._ndim = None
         self.natoms = None
+        self._bravais_lattice = None
         self.bravais_lattice = bravais_lattice
+        self._motif = None
         self.motif = motif
 
     @property
@@ -209,7 +211,7 @@ class Crystal:
             if self.group == 'Square':
                 special_points.update({'K': self.reciprocal_basis[0]/2 + self.reciprocal_basis[1]/2})
 
-            elif self.group == 'Rectangle':
+            elif self.group == 'Rectangular':
                 special_points.update({'M*': self.reciprocal_basis[1]/2})
                 special_points.update({'K':  self.reciprocal_basis[0]/2 + self.reciprocal_basis[1]/2})
                 special_points.update({'K*': -self.reciprocal_basis[0]/2 + self.reciprocal_basis[1]/2})
@@ -383,7 +385,6 @@ class Crystal:
 
     def __mousedown(self):
         global drag, initial_position
-        print("Mouse down")
         initial_position = vp.scene.mouse.pos
         drag = True
 
