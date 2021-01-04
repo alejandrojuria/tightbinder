@@ -380,7 +380,6 @@ class SKModel(System):
 
         for n, atom in enumerate(self.motif):
             species = int(atom[3])  # To match list beginning on zero
-            print(self.norbitals)
 
             hamiltonian_atom_block = np.diag(np.array(onsite_energies[species]))
             hamiltonian[0][self.norbitals*n:self.norbitals*(n+1),
@@ -391,8 +390,6 @@ class SKModel(System):
             species = int(atom[0][3])
             orbital = atom[1]
             atom_index = int(i/self.norbitals)
-            print(atom_index)
-            print(len(self.neighbours))
             for neighbour in self.neighbours[atom_index]:
                 neigh_index = neighbour[0]
                 neigh_unit_cell = list(neighbour[1])
