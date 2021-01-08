@@ -39,6 +39,7 @@ class SKModel(System):
         self.__boundary = boundary
         self.__spin_blocks = None
         self.__zeeman = None
+        self.ordering = None
 
     # --------------- Methods ---------------
     def first_neighbours(self):
@@ -354,13 +355,28 @@ class SKModel(System):
         orbitals_indices = np.array([index for index, orbital in enumerate(orbitals) if orbital])
 
         self.spin_blocks = []
+
         for indices in itertools.product([0, 1], [0, 1]):
             self.spin_blocks.append(self.spin_orbit_hamiltonian[
                                         np.ix_(orbitals_indices + indices[0]*npossible_orbitals,
                                                orbitals_indices + indices[1]*npossible_orbitals)])
 
-        for n, spin_block in enumerate(self.spin_blocks):
-            self.spin_blocks[n] = np.kron(np.eye(self.natoms, self.natoms), spin_block)
+        if self.ordering == "atomic":
+            spin_block_size = len(orbitals_indices)
+            spin_orbit_hamiltonian = np.zeros([spin_block_size*2,
+                                               spin_block_size*2], dtype=np.complex_)
+            print(self.natoms)
+            print(spin_block_size)
+            for n, indices in enumerate(itertools.product([0, 1], [0, 1])):
+                spin_orbit_hamiltonian[indices[0] * spin_block_size:
+                                            (indices[0] + 1)*spin_block_size,
+                                            indices[1] * spin_block_size:
+                                            (indices[1] + 1) * spin_block_size] = self.spin_blocks[n]
+                self.spin_orbit_hamiltonian = np.kron(np.eye(self.natoms, self.natoms), spin_orbit_hamiltonian)
+
+        else:
+            for n, spin_block in enumerate(self.spin_blocks):
+                self.spin_blocks[n] = np.kron(np.eye(self.natoms, self.natoms), spin_block)
 
     def initialize_hamiltonian(self):
         """ Routine to initialize the hamiltonian matrices which describe the system. """
@@ -406,16 +422,31 @@ class SKModel(System):
         if self.configuration['Spin']:
             self.norbitals = self.norbitals * 2
             self._basisdim = self._basisdim * 2
+
             for index, cell in enumerate(self.__unit_cell_list):
-                hamiltonian[index] = np.kron(np.eye(2, 2), np.array(hamiltonian[index]))
+                if self.ordering == "atomic":
+                    aux_hamiltonian = np.zeros([self._basisdim, self._basisdim], dtype=np.complex_)
+                    for n in range(self.natoms):
+                        for m in range(self.natoms):
+                            atom_block = np.kron(np.eye(2, 2),
+                                                 hamiltonian[index][n * self.norbitals//2:(n + 1) * self.norbitals//2,
+                                                                    m * self.norbitals//2:(m + 1) * self.norbitals//2])
+                            aux_hamiltonian[n*self.norbitals:(n+1)*self.norbitals,
+                                            m*self.norbitals:(m+1)*self.norbitals] += atom_block
+                    hamiltonian[index] = aux_hamiltonian
+                else:
+                    hamiltonian[index] = np.kron(np.eye(2, 2), hamiltonian[index])
 
             if self.configuration['Spin-orbit coupling'] != 0:
                 self.__initialize_spin_orbit_coupling()
                 self.__spin_orbit_h()
 
-                for block, indices in enumerate(itertools.product([0, 1], [0, 1])):
-                    hamiltonian[0][indices[0] * self._basisdim//2:(indices[0] + 1) * self._basisdim//2,
-                                   indices[1] * self._basisdim//2:(indices[1] + 1) * self._basisdim//2] += self.spin_blocks[block]
+                if self.ordering == "atomic":
+                    hamiltonian[0] += self.spin_orbit_hamiltonian
+                else:
+                    for block, indices in enumerate(itertools.product([0, 1], [0, 1])):
+                        hamiltonian[0][indices[0] * self._basisdim//2:(indices[0] + 1) * self._basisdim//2,
+                                       indices[1] * self._basisdim//2:(indices[1] + 1) * self._basisdim//2] += self.spin_blocks[block]
 
                 self.__zeeman_term(0.0)
                 hamiltonian[0] += self.__zeeman
