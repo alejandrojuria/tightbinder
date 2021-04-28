@@ -13,11 +13,11 @@ llvmlite==0.33.0
 Mako==1.1.3
 Markdown==3.2.2
 MarkupSafe==1.1.1
-matplotlib==3.2.1
+matplotlib~=3.1.1
 numba==0.50.0
-numpy==1.18.5
+numpy~=1.19.1
 packaging==20.4
-Pygments==2.7.4
+Pygments==2.8.1
 pyparsing==2.4.7
 python-dateutil==2.8.1
 pytz==2020.1
@@ -33,3 +33,4 @@ sphinxcontrib-qthelp==1.0.3
 sphinxcontrib-serializinghtml==1.1.4
 tightbinder==0.0.1
 urllib3==1.25.9
+vpython==7.6.1
