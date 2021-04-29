@@ -2,6 +2,7 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
+import math
 
 
 class Result:
@@ -30,14 +31,19 @@ class Result:
 
         return new_kpoints
 
-    def plot(self, title=''):
+    def plot_bands(self, title=''):
         """ Method to plot bands from diagonalization in the whole Brillouin zone """
 
-        plt.figure()
-        if self.configuration['Dimensionality'] == 1:
-            kpoints = self.__simplify_kpoints()
-            for eigen_energy_k in self.eigen_energy:
-                plt.plot(kpoints, eigen_energy_k, 'g-')
+        fig = plt.figure()
+        ax = plt.axes(projection='3d')
+        nk = len(self.kpoints[:, 0])
+        size = int(math.sqrt(nk))
+        x = self.kpoints[:, 0].reshape(size, size)
+        y = self.kpoints[:, 1].reshape(size, size)
+        z = self.kpoints[:, 2].reshape(size, size)
+        for i in range(len(self.eigen_energy[:, 0])):
+            en = self.eigen_energy[i, :].reshape(size, size)
+            ax.plot_surface(x, y, en)
 
         plt.title(title + 'band structure')
         plt.xlabel(r'k ($A^{-1}$)')
@@ -45,7 +51,7 @@ class Result:
 
         plt.show()
 
-    def plot_along_path(self, labels, title=''):
+    def plot_along_path(self, labels, title='', filling=None):
         """ Method to plot the bands along a path in reciprocal space, normally along high symmetry points """
         nk = len(self.kpoints)
         x_points = np.arange(0, nk)
@@ -61,6 +67,26 @@ class Result:
         plt.ylabel(r'$\epsilon (eV)$')
         plt.title(title + " band structure")
 
+        if filling is not None:
+            fermi_energy = self.calculate_fermi_level(filling)
+            plt.axhline(y=fermi_energy, linewidth=2, color='r', label=r"$E_F$")
+
+        plt.legend()
+        plt.xlim([min(x_points), max(x_points)])
+        plt.show()
+
+    def plot_spectrum(self, title=''):
+        """ Routine to plot all the eigenvalues coming from the Bloch Hamiltonian diagonalization
+        in an ordered way.
+         Specially suitable for open systems, although it can be used for periodic systems as well."""
+
+        all_eigenvalues = self.eigen_energy.reshape(-1, 1)
+        all_eigenvalues = np.sort(all_eigenvalues)
+
+        plt.plot(all_eigenvalues, 'g+')
+        plt.title(f"Spectrum of {title}")
+        plt.ylabel(r"$\varepsilon (eV)$")
+        plt.xlabel("n")
         plt.show()
 
     def write_bands_to_file(self):
@@ -68,6 +94,18 @@ class Result:
 
     def write_states_to_file(self):
         pass
+
+    # --------------- Utilities ---------------
+    def calculate_fermi_level(self, filling):
+        """ Routine to compute the Fermi level energy according to the given filling """
+        filling *= self.eigen_energy.shape[1]
+        all_energies = self.eigen_energy.reshape(-1)
+        all_energies = np.sort(all_energies)
+        print(filling)
+        print(len(all_energies))
+        fermi_energy = all_energies[filling - 1]
+
+        return fermi_energy
 
 
 
