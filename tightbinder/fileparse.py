@@ -114,7 +114,7 @@ def shape_arguments(arguments):
             aux_array = []
             for line in arguments[arg]:
                 try:
-                    aux_array.append([float(num) for num in re.split(' |, |,', arguments[arg][0])])
+                    aux_array.append([float(num) for num in re.split(' |, |,', line)])
                 except IndexError as e:
                     print(f'{type(e).__name__}: No onsite energies included')
                     sys.exit(1)
@@ -137,13 +137,18 @@ def shape_arguments(arguments):
             arguments[arg] = aux_array
 
         elif arg == 'Spin':
-            try:
-                arguments[arg] = bool(arguments[arg][0])
-            except IndexError as e:
-                print('Warning: No spin parameter given, defaulting to spinless')
-            except ValueError as e:
-                print(f'{type(e).__name__}: Spin parameter must be True or False (or 1 or 0 respectively)')
+            if arguments[arg][0] == "True":
+                arguments[arg] = True
+            elif arguments[arg][0] == "False":
+                arguments[arg] = False
+            else:
+                print('Error: Spin parameter must be True or False (or 1 or 0 respectively)')
                 sys.exit(1)
+            #except IndexError as e:
+            #    print('Warning: No spin parameter given, defaulting to spinless')
+            #except ValueError as e:
+            #    print(f'{type(e).__name__}: Spin parameter must be True or False (or 1 or 0 respectively)')
+            #    sys.exit(1)
 
         elif arg == 'Spin-orbit coupling':
             try:

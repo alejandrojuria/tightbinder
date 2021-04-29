@@ -151,6 +151,10 @@ class Crystal:
         equations to solve for b_j. Resulting vectors have 3 components independently
         of the dimension of the vector space they span."""
 
+        if self.bravais_lattice is None:
+            self.reciprocal_basis = None
+            return
+
         reciprocal_basis = np.zeros([self.ndim, 3])
         coefficient_matrix = np.array(self.bravais_lattice)
 
@@ -193,7 +197,7 @@ class Crystal:
                 kpoint += (2.*point[i] - mesh[i])/(2*mesh[i])*self.reciprocal_basis[i]
             kpoints.append(kpoint)
 
-        self.kpoints = np.array(kpoints)
+        return np.array(kpoints)
 
     def determine_high_symmetry_points(self):
         """ Routine to compute high symmetry points depending on the dimension of the system.
@@ -202,7 +206,7 @@ class Crystal:
         {letter denoting high symmetry point: its coordinates} """
 
         norm = np.linalg.norm(self.reciprocal_basis[0])
-        special_points = {"G": np.array([0., 0., 0.])}
+        special_points = {r"$\Gamma$": np.array([0., 0., 0.])}
         if self.ndim == 1:
             special_points.update({'K': self.reciprocal_basis[0]/2})
 
@@ -264,6 +268,11 @@ class Crystal:
 
         # self.__reorder_high_symmetry_points(points)
         # self.__strip_labels_from_high_symmetry_points()
+
+        # Transform possible Gamma point to latex
+        for n, point in enumerate(points):
+            if point == "G":
+                points[n] = r"$\Gamma$"
 
         kpoints = []
         number_of_points = len(points)
@@ -338,23 +347,6 @@ class Crystal:
             atom.pos.x, atom.pos.y, atom.pos.z = position[:3]
             atoms.append(atom)
 
-        # Supercell atoms
-        for i in range(self.ndim):
-            mesh_points.append(list(range(-1, 2)))
-        mesh_points = np.array(np.meshgrid(*mesh_points)).T.reshape(-1, self.ndim)
-        for point in mesh_points:
-            unit_cell = np.array([0., 0., 0.])
-            if np.linalg.norm(point) == 0:
-                continue
-            for n in range(self.ndim):
-                unit_cell += point[n]*self.bravais_lattice[n]
-            for position in self.motif:
-                species = int(position[3])
-                atom = vp.sphere(radius=0.1, color=color_list[species])
-                atom.visible = False
-                atom.pos.x, atom.pos.y, atom.pos.z = (position[:3] + unit_cell)
-                extra_atoms.append(atom)
-
         # Unit cell bonds
         for i, neighbours in enumerate(self.neighbours):
             for neighbour in neighbours:
@@ -362,16 +354,35 @@ class Crystal:
                 bond = vp.curve(atoms[i].pos, atoms[neighbour[0]].pos + unit_cell)
                 bonds.append(bond)
 
-        # Supercell bonds
-        for point in mesh_points:
-            unit_cell = np.array(([0., 0., 0.]))
-            for n in range(self.ndim):
-                unit_cell += point[n]*self.bravais_lattice[n]
-            unit_cell = vp.vector(unit_cell[0], unit_cell[1], unit_cell[2])
-            for bond in bonds:
-                supercell_bond = vp.curve(bond.point(0)["pos"] + unit_cell, bond.point(1)["pos"] + unit_cell)
-                supercell_bond.visible = False
-                extra_bonds.append(supercell_bond)
+        if self.bravais_lattice is not None:
+
+            # Supercell atoms
+            for i in range(self.ndim):
+                mesh_points.append(list(range(-1, 2)))
+            mesh_points = np.array(np.meshgrid(*mesh_points)).T.reshape(-1, self.ndim)
+            for point in mesh_points:
+                unit_cell = np.array([0., 0., 0.])
+                if np.linalg.norm(point) == 0:
+                    continue
+                for n in range(self.ndim):
+                    unit_cell += point[n]*self.bravais_lattice[n]
+                for position in self.motif:
+                    species = int(position[3])
+                    atom = vp.sphere(radius=0.1, color=color_list[species])
+                    atom.visible = False
+                    atom.pos.x, atom.pos.y, atom.pos.z = (position[:3] + unit_cell)
+                    extra_atoms.append(atom)
+
+            # Supercell bonds
+            for point in mesh_points:
+                unit_cell = np.array(([0., 0., 0.]))
+                for n in range(self.ndim):
+                    unit_cell += point[n]*self.bravais_lattice[n]
+                unit_cell = vp.vector(unit_cell[0], unit_cell[1], unit_cell[2])
+                for bond in bonds:
+                    supercell_bond = vp.curve(bond.point(0)["pos"] + unit_cell, bond.point(1)["pos"] + unit_cell)
+                    supercell_bond.visible = False
+                    extra_bonds.append(supercell_bond)
 
         vp.button(text="supercell", bind=self.__add_unit_cells)
         vp.button(text="primitive unit cell", bind=self.__remove_unit_cells)
