@@ -10,7 +10,6 @@ from system import System
 from crystal import Crystal
 # --------------- Constants ---------------
 PI = 3.14159265359
-EPS = 0.001 # !!!! To be changed, depends on the precision of the crystal vectors
 
 
 class SKModel(System):
@@ -27,84 +26,19 @@ class SKModel(System):
         self.hamiltonian = None
         self.neighbours = None
         self.spin_orbit_hamiltonian = None
-        self.__unit_cell_list = None
+        self._unit_cell_list = None
         if mode not in ['minimal', 'radius']:
             print('Error: Incorrect mode')
             sys.exit(1)
         self.__mode = mode
         self.__r = r
-        if boundary not in ["PBC", "OBC"]:
-            print('Error: Incorrect boundary option')
-            sys.exit(1)
-        self.__boundary = boundary
+
+        self.boundary = boundary
         self.__spin_blocks = None
         self.__zeeman = None
         self.ordering = None
 
     # --------------- Methods ---------------
-    def first_neighbours(self):
-        """ Given a list of atoms (motif), it returns a list in which each
-        index corresponds to a list of atoms that are first neighbours to that index
-        on the initial atom list.
-        I.e.: Atom list -> List of neighbours/atom.
-        By default it will look for the minimal distance between atoms to determine first neighbours.
-        For amorphous systems the option radius is available to determine neighbours within a given radius R.
-        Boundary conditions can also be set, either PBC (default) or OBC."""
-
-        # Prepare unit cells to loop over depending on boundary conditions
-        if self.__boundary == "PBC":
-            mesh_points = []
-            for i in range(self.ndim):
-                mesh_points.append(list(range(-1, 2)))
-            mesh_points = np.array(np.meshgrid(*mesh_points)).T.reshape(-1, self.ndim)
-
-            near_cells = np.zeros([len(mesh_points), 3])
-            for n, coefficients in enumerate(mesh_points):
-                cell_vector = np.array([0.0, 0.0, 0.0])
-                for i, coefficient in enumerate(coefficients):
-                    cell_vector += (coefficient * self.bravais_lattice[i])
-                near_cells[n, :] = cell_vector
-
-        elif self.__boundary == "OBC":
-            near_cells = np.array([0.0, 0.0, 0.0])
-
-        # Determine neighbour distance from one fixed atom
-        neigh_distance = 1E100
-        fixed_atom = self.motif[0][:3]
-        for cell in near_cells:
-            for atom in self.motif:
-                distance = np.linalg.norm(atom[:3] + cell - fixed_atom)
-                if distance < neigh_distance and distance != 0: neigh_distance = distance
-
-        # Determine list of neighbours for each atom of the motif
-        if self.__mode == "minimal":
-            neighbours_list = []
-            for n, reference_atom in enumerate(self.motif):
-                neighbours = []
-                for cell in near_cells:
-                    for i, atom in enumerate(self.motif):
-                        distance = np.linalg.norm(atom[:3] + cell - reference_atom[:3])
-                        if abs(distance - neigh_distance) < EPS: neighbours.append([i, cell])
-                neighbours_list.append(neighbours)
-
-        elif self.__mode == "radius":
-            if self.__r is None:
-                print('Radius not defined in "radius" mode, exiting...')
-                sys.exit(1)
-            elif self.__r < neigh_distance:
-                print("Warning: Radius smaller than first neighbour distance")
-
-            neighbours_list = []
-            for n, reference_atom in enumerate(self.motif):
-                neighbours = []
-                for cell in near_cells:
-                    for i, atom in enumerate(self.motif):
-                        distance = np.linalg.norm(atom[0] + cell - reference_atom[0])
-                        if distance <= self.__r: neighbours.append([i, cell])
-                neighbours.append(neighbours)
-
-        self.neighbours = neighbours_list
-
     def __hopping_amplitude(self, position_diff, *orbitals):
         """ Routine to compute the hopping amplitude from one atom to another depending on the
         participating orbitals, following the Slater-Koster approxiamtion """
@@ -274,13 +208,13 @@ class SKModel(System):
 
         onsite_energies = self.configuration['Onsite energy']
         orbitals = self.__transform_orbitals_to_string()
-
-        onsite_list = []
         onsite_full_list = []
-        reduced_orbitals = []
-        onsite_orbital_dictionary = {}
-        count = 0
+
         for element in range(self.configuration['Species']):
+            onsite_list = []
+            reduced_orbitals = []
+            onsite_orbital_dictionary = {}
+            count = 0
             for orbital in orbitals:
                 if orbital[0] not in reduced_orbitals:
                     reduced_orbitals.append(orbital[0])
@@ -291,19 +225,6 @@ class SKModel(System):
             onsite_full_list.append(onsite_list)
 
         return onsite_full_list
-
-    def __determine_connected_unit_cells(self):
-        """ Method to calculate which unit cells connect with the origin from the neighbour list """
-
-        neighbours_list = self.neighbours
-        unit_cell_list = [[0.0, 0.0, 0.0]]
-        for neighbour_list in neighbours_list:
-            for neighbour in neighbour_list:
-                unit_cell = list(neighbour[1])
-                if unit_cell not in unit_cell_list:
-                    unit_cell_list.append(unit_cell)
-
-        self.__unit_cell_list = unit_cell_list
 
     def __initialize_spin_orbit_coupling(self):
         """ Method to initialize the whole spin-orbit coupling matrix corresponding to the
@@ -365,8 +286,7 @@ class SKModel(System):
             spin_block_size = len(orbitals_indices)
             spin_orbit_hamiltonian = np.zeros([spin_block_size*2,
                                                spin_block_size*2], dtype=np.complex_)
-            print(self.natoms)
-            print(spin_block_size)
+
             for n, indices in enumerate(itertools.product([0, 1], [0, 1])):
                 spin_orbit_hamiltonian[indices[0] * spin_block_size:
                                             (indices[0] + 1)*spin_block_size,
@@ -386,10 +306,10 @@ class SKModel(System):
 
         print('Computing first neighbours...\n')
         self.first_neighbours()
-        self.__determine_connected_unit_cells()
+        self._determine_connected_unit_cells()
 
         hamiltonian = []
-        for _ in self.__unit_cell_list:
+        for _ in self._unit_cell_list:
             hamiltonian.append(np.zeros(([self._basisdim, self._basisdim]), dtype=np.complex_))
 
         onsite_energies = self.__extend_onsite_vector()
@@ -414,7 +334,7 @@ class SKModel(System):
                 for j, neigh_orbital in enumerate(orbitals):
                     position_difference = -np.array(atom_position) + np.array(neigh_position) + np.array(neigh_unit_cell)
                     orbital_config = [orbital, species, neigh_orbital, neigh_species]
-                    h_cell = self.__unit_cell_list.index(neigh_unit_cell)
+                    h_cell = self._unit_cell_list.index(neigh_unit_cell)
                     hamiltonian[h_cell][i, neigh_index*self.norbitals + j] += self.__hopping_amplitude(
                                                                                                 position_difference,
                                                                                                 orbital_config)
@@ -423,7 +343,7 @@ class SKModel(System):
             self.norbitals = self.norbitals * 2
             self._basisdim = self._basisdim * 2
 
-            for index, cell in enumerate(self.__unit_cell_list):
+            for index, cell in enumerate(self._unit_cell_list):
                 if self.ordering == "atomic":
                     aux_hamiltonian = np.zeros([self._basisdim, self._basisdim], dtype=np.complex_)
                     for n in range(self.natoms):
@@ -437,6 +357,10 @@ class SKModel(System):
                 else:
                     hamiltonian[index] = np.kron(np.eye(2, 2), hamiltonian[index])
 
+            # Add Zeeman term
+            self.__zeeman_term(1E-7)
+            hamiltonian[0] += self.__zeeman
+
             if self.configuration['Spin-orbit coupling'] != 0:
                 self.__initialize_spin_orbit_coupling()
                 self.__spin_orbit_h()
@@ -448,14 +372,15 @@ class SKModel(System):
                         hamiltonian[0][indices[0] * self._basisdim//2:(indices[0] + 1) * self._basisdim//2,
                                        indices[1] * self._basisdim//2:(indices[1] + 1) * self._basisdim//2] += self.spin_blocks[block]
 
-                self.__zeeman_term(0.0)
-                hamiltonian[0] += self.__zeeman
-
         self.hamiltonian = hamiltonian
 
     def __zeeman_term(self, intensity):
         """ Routine to incorporate a Zeeman term to the Hamiltonian """
-        zeeman_h = np.kron(np.array([[1, 0], [0, -1]]), np.eye(self._basisdim//2)*intensity)
+        if self.ordering == "atomic":
+            zeeman = np.kron(np.array([[1, 0], [0, -1]]), np.eye(self.norbitals//2))
+            zeeman_h = np.kron(np.eye(self.natoms), zeeman) * intensity
+        else:
+            zeeman_h = np.kron(np.array([[1, 0], [0, -1]]), np.eye(self._basisdim // 2) * intensity)
 
         self.__zeeman = zeeman_h
 
@@ -464,7 +389,7 @@ class SKModel(System):
          and adds the spin-orbit term in case it is present """
 
         hamiltonian_k = np.zeros([self._basisdim, self._basisdim], dtype=np.complex_)
-        for cell_index, cell in enumerate(self.__unit_cell_list):
+        for cell_index, cell in enumerate(self._unit_cell_list):
             hamiltonian_k += self.hamiltonian[cell_index] * cmath.exp(1j*np.dot(k, cell))
 
         return hamiltonian_k
@@ -476,7 +401,7 @@ class SKModel(System):
             # Write ndim, natoms, norbitals, ncells and bravais lattice basis vectors
             file.write(str(self.ndim) + '\t' + str(self.natoms) + '\t'
                        + str(self.norbitals) + '\t'
-                       + str(len(self.__unit_cell_list)) + '\n')
+                       + str(len(self._unit_cell_list)) + '\n')
             np.savetxt(file, self.bravais_lattice)
 
             # Write motif atoms
@@ -485,7 +410,7 @@ class SKModel(System):
 
             # Write Bloch Hamiltonian matrices containing hopping to different unit cells
             for i, matrix in enumerate(self.hamiltonian):
-                np.savetxt(file, [self.__unit_cell_list[i]])
+                np.savetxt(file, [self._unit_cell_list[i]])
                 np.savetxt(file, matrix, fmt='%.10f')
                 file.write("#\n")
 
@@ -538,7 +463,7 @@ class SKModel(System):
         model.norbitals = norbitals
         model.natoms = natoms
         model._basisdim = basisdim
-        model.__unit_cell_list = unit_cell_list
+        model._unit_cell_list = unit_cell_list
         model.bravais_lattice = bravais_lattice
         model.hamiltonian = hamiltonian
 

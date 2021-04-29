@@ -27,6 +27,12 @@ class System(Crystal):
         self.system_name = system_name
         self._norbitals = None
         self._basisdim = None
+        self._filling = None
+        self._boundary = None
+        self.neighbours = None
+        self._unit_cell_list = None
+        self.hamiltonian = None
+        self.first_neighbour_distance = None
 
     @property
     def norbitals(self):
@@ -37,12 +43,40 @@ class System(Crystal):
         assert type(norbitals) == int
         self._norbitals = norbitals
 
-    def reduce(self, **ncells):
-        """ Routine to reduce the dimensionality of the System object along the specified
-         directions, by repeating unit cells along those directions until a given size
-         (number of unit cells) is reached. Thus we make the original system finite along those
-         directions.
-         Input: int n1, n2 or n3 """
+    @property
+    def filling(self):
+        return self._filling
+
+    @filling.setter
+    def filling(self, filling):
+        if filling > 1 or filling < 0:
+            print("Error: filling attribute must be betweem 0 and 1")
+        else:
+            self._filling = filling
+
+    @property
+    def boundary(self):
+        return self._boundary
+
+    @boundary.setter
+    def boundary(self, boundary):
+        if boundary not in ["PBC", "OBC"]:
+            print('Error: Incorrect boundary option')
+            sys.exit(1)
+        self._boundary = boundary
+
+    @property
+    def basisdim(self):
+        return self._basisdim
+
+    def supercell(self, update=True, **ncells):
+        """ Routine to generate a supercell for a system using the number of cells
+         along each Bravais vectors specified in ncells.
+         Input:
+         update: Boolean parameter to update all of Crystal class atributes.
+         Defaults to True, only set to false when used inside other routines (reduce)
+         int nx, ny and/or nz """
+
         if len(ncells) == 0:
             print("Error: Reduce method must be called with at least one parameter (nx, ny or nz), exiting...")
             sys.exit(1)
@@ -51,6 +85,8 @@ class System(Crystal):
             if key not in ["n1", "n2", "n3"]:
                 print("Error: Invalid input (must be n1, n2 or n3), exiting...")
                 sys.exit(1)
+            if key_to_index[key] > self.ndim:
+                print(f"Error: Axis {key} to reduce along not present (higher than system dimension)")
 
             new_motif = self.motif
             for n in range(1, ncells[key]):
@@ -58,10 +94,33 @@ class System(Crystal):
                 motif_copy_displaced[:, :3] += n * self.bravais_lattice[key_to_index[key]]
                 new_motif = np.append(new_motif, motif_copy_displaced, axis=0)
 
+            # Update Bravais lattice and motif
+            self.bravais_lattice[key_to_index[key]] *= ncells[key]
             self.motif = new_motif
-        indices = [index for index in list(range(self.ndim)) \
+
+        if update:
+            self.update()
+
+        self._basisdim = self.norbitals * len(self.motif)
+
+        return self
+
+    def reduce(self, **ncells):
+        """ Routine to reduce the dimensionality of the System object along the specified
+         directions, by repeating unit cells along those directions until a given size
+         (number of unit cells) is reached. Thus we make the original system finite along those
+         directions.
+         Input: int n1, n2 or n3 """
+
+        key_to_index = {"n1": 0, "n2": 1, "n3": 2}
+        self.supercell(update=False, **ncells)
+        indices = [index for index in list(range(self.ndim))
                    if index not in [key_to_index[key] for key in ncells.keys()]]
-        self.bravais_lattice = self.bravais_lattice[indices]
+        if not indices:
+            self.bravais_lattice = None
+            self.boundary = "OBC"
+        else:
+            self.bravais_lattice = self.bravais_lattice[indices]
 
         return self
 
@@ -112,7 +171,6 @@ class System(Crystal):
             # Update system attributes
             self.bravais_lattice = rectangular_basis
             self.motif = motif
-            print(self.group)
 
             # Reduce system dimensionality
             if orientation == "horizontal":
@@ -138,16 +196,126 @@ class System(Crystal):
             for position in self.motif:
                 atom_position = vector + position
 
+    def first_neighbours(self, mode="minimal", r=None):
+        """ Given a list of atoms (motif), it returns a list in which each
+        index corresponds to a list of atoms that are first neighbours to that index
+        on the initial atom list.
+        I.e.: Atom list -> List of neighbours/atom.
+        By default it will look for the minimal distance between atoms to determine first neighbours.
+        For amorphous systems the option radius is available to determine neighbours within a given radius R.
+        Boundary conditions can also be set, either PBC (default) or OBC."""
+        EPS = 1E-4
+
+        if mode is "radius" and r is None:
+            print("Error: Search mode is radius but no r given, exiting...")
+            sys.exit(1)
+        elif mode is "minimal" and r is not None:
+            print("Search mode is minimal but a radius was given (will not be used)")
+
+        # Prepare unit cells to loop over depending on boundary conditions
+        if self.boundary == "OBC":
+            near_cells = np.array([[0.0, 0.0, 0.0]])
+        else:
+            mesh_points = []
+            for i in range(self.ndim):
+                mesh_points.append(list(range(-1, 2)))
+            mesh_points = np.array(np.meshgrid(*mesh_points)).T.reshape(-1, self.ndim)
+
+            near_cells = np.zeros([len(mesh_points), 3])
+            for n, coefficients in enumerate(mesh_points):
+                cell_vector = np.array([0.0, 0.0, 0.0])
+                for i, coefficient in enumerate(coefficients):
+                    cell_vector += (coefficient * self.bravais_lattice[i])
+                near_cells[n, :] = cell_vector
+
+        # Determine neighbour distance from one fixed atom
+        neigh_distance = self.compute_first_neighbour_distance(near_cells)
+
+        # Determine list of neighbours for each atom of the motif
+        if mode == "minimal":
+            neighbours_list = []
+            for n, reference_atom in enumerate(self.motif):
+                neighbours = []
+                for cell in near_cells:
+                    for i, atom in enumerate(self.motif):
+                        distance = np.linalg.norm(atom[:3] + cell - reference_atom[:3])
+                        if abs(distance - neigh_distance) < EPS: neighbours.append([i, cell])
+                neighbours_list.append(neighbours)
+
+        elif mode == "radius":
+            if r is None:
+                print('Radius not defined in "radius" mode, exiting...')
+                sys.exit(1)
+            elif r < neigh_distance:
+                print("Warning: Radius smaller than first neighbour distance")
+
+            neighbours_list = []
+            for n, reference_atom in enumerate(self.motif):
+                neighbours = []
+                for cell in near_cells:
+                    for i, atom in enumerate(self.motif):
+                        distance = np.linalg.norm(atom[:3] + cell - reference_atom[:3])
+                        if distance <= r:
+                            if i == n and np.array_equal(cell, [0, 0, 0]):
+                                continue
+                            neighbours.append([i, cell])
+                neighbours_list.append(neighbours)
+
+        self.neighbours = neighbours_list
+
+    def compute_first_neighbour_distance(self, near_cells=None):
+
+        if near_cells is None:
+            mesh_points = []
+            for i in range(self.ndim):
+                mesh_points.append(list(range(-1, 2)))
+            mesh_points = np.array(np.meshgrid(*mesh_points)).T.reshape(-1, self.ndim)
+
+            near_cells = np.zeros([len(mesh_points), 3])
+            for n, coefficients in enumerate(mesh_points):
+                cell_vector = np.array([0.0, 0.0, 0.0])
+                for i, coefficient in enumerate(coefficients):
+                    cell_vector += (coefficient * self.bravais_lattice[i])
+                near_cells[n, :] = cell_vector
+
+        neigh_distance = 1E100
+        fixed_atom = self.motif[0][:3]
+        for cell in near_cells:
+            for atom in self.motif:
+                distance = np.linalg.norm(atom[:3] + cell - fixed_atom)
+                if distance < neigh_distance and distance != 0: neigh_distance = distance
+        self.first_neighbour_distance = neigh_distance
+
+        return neigh_distance
+
+    def _determine_connected_unit_cells(self):
+        """ Method to calculate which unit cells connect with the origin from the neighbour list """
+
+        neighbours_list = self.neighbours
+        unit_cell_list = [[0.0, 0.0, 0.0]]
+        if self.boundary == "PBC":
+            for neighbour_list in neighbours_list:
+                for neighbour in neighbour_list:
+                    unit_cell = list(neighbour[1])
+                    if unit_cell not in unit_cell_list:
+                        unit_cell_list.append(unit_cell)
+
+        self._unit_cell_list = unit_cell_list
+
     def hamiltonian_k(self, k):
         """ Generic implementation of hamiltonian_k H(k). To be overwritten
          by specific implementations of System """
         pass
 
-    def solve(self, kpoints):
+    def solve(self, kpoints=None):
         """ Diagonalize the Hamiltonian to obtain the band structure and the eigenstates """
+        if kpoints is None:
+            kpoints = np.array([[0., 0., 0.]])
+
         nk = len(kpoints)
         eigen_energy = np.zeros([self._basisdim, nk])
         eigen_states = []
+
         for n, k in enumerate(kpoints):
             hamiltonian = self.hamiltonian_k(k)
             results = np.linalg.eigh(hamiltonian)
