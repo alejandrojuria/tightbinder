@@ -4,14 +4,16 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+import sys
 
 
-def __wilson_loop(system, path, filling):
+def __wilson_loop(system, path):
     """ Routine to calculate the wilson loop matrix for a system along a given path. Returns a matrix
      of size Nocc x Nocc """
 
     result = system.solve(path)
 
+    filling = int(system.filling * system.basisdim)
     wilson_loop = np.eye(filling)
     for i in range(len(path) - 1):
         overlap_matrix = np.dot(np.conj(np.transpose(result.eigen_states[i][:, :filling])),
@@ -58,16 +60,18 @@ def __extract_wcc_from_wilson_loop(wilson_loop):
      NOTE: We truncate the eigenvalues up to a given precision to avoid numerical error due to floating point
      when computing the midpoints """
     eigval = np.linalg.eigvals(wilson_loop)
-    eigval = np.sort(np.angle(eigval)/np.pi).round(decimals=5)
+    eigval = (np.angle(eigval)/np.pi).round(decimals=5)
 
     eigval[eigval == -1] = 1  # Enforce interval (-1, 1], NOTE: it breaks partial polarization!
+    eigval = np.sort(eigval)
 
     return eigval
 
 
-def calculate_wannier_centre_flow(system, filling, number_of_points, additional_k=None):
+def calculate_wannier_centre_flow(system, number_of_points, additional_k=None, nk_subpath=50):
     """ Routine to compute the evolution of the Wannier charge centres through Wilson loop calculation """
 
+    print("Computing Wannier centre flow...")
     wcc_results = []
     # cell_side = crystal.high_symmetry_points
     # k_fixed_list = np.linspace(-cell_side/2, cell_side/2, number_of_points)
@@ -76,8 +80,8 @@ def calculate_wannier_centre_flow(system, filling, number_of_points, additional_
         if additional_k is not None:
             k_fixed += additional_k
         # k_fixed = np.array([0, k_fixed_list[i], 0])
-        path = __generate_path(k_fixed, system, nk=100)
-        wilson_loop = __wilson_loop(system, path, filling)
+        path = __generate_path(k_fixed, system, nk_subpath)
+        wilson_loop = __wilson_loop(system, path)
         wcc = __extract_wcc_from_wilson_loop(wilson_loop)
 
         wcc_results.append(wcc)
@@ -188,6 +192,143 @@ def plot_polarization_flow(wcc_flow):
 
     plt.figure()
     plt.plot(polarization_array)
+
+
+# ---------------------------- Entanglement entropy ----------------------------
+def __truncate_eigenvectors(eigenvectors, sector, system):
+    """ Routine to truncate the eigenvectors according to the filling and the
+    atoms that are on a specific partition, accounting for orbitals and spin structure """
+    filling = int(system.filling * system.norbitals * len(system.motif))
+    basisdim = len(system.motif) * system.norbitals
+    if system.ordering == "atomic" or system.configuration["Spin"] == "False":
+        sector = sector * system.norbitals
+        orbitals = np.copy(sector)
+        for n in range(1, system.norbitals):
+            orbitals = np.concatenate((orbitals, sector + n))
+        orbitals = np.sort(orbitals)
+
+    else:
+        sector = sector * (system.norbitals//2)
+        orbitals = np.copy(sector)
+        orbitals = np.concatenate((orbitals, sector + basisdim//2))
+        for n in range(1, system.norbitals//2):
+            orbitals = np.concatenate((orbitals, sector + n))
+            orbitals = np.concatenate((orbitals, sector + basisdim//2 + n))
+        orbitals = np.sort(orbitals)
+
+    truncated_eigenvectors = eigenvectors[orbitals]
+    truncated_eigenvectors = truncated_eigenvectors[:, :filling]
+
+    return truncated_eigenvectors
+
+
+def __density_matrix(truncated_eigenvectors):
+    """ Routine to calculate the one-particle reduced density matrix for the half-system. """
+    density_matrix = np.dot(truncated_eigenvectors, np.conj(truncated_eigenvectors.T))
+
+    return density_matrix
+
+
+def __specify_partition(system, plane):
+    """ Routine to specify a real-space partition of the atoms of the system based on a given
+    plane.
+    Input: plane Array [A,B,C,D] <-> Ax + By + Cz + D = 0
+    Returns: indices of atoms on a side Array """
+    sector = []
+    plane_normal_vector = plane[:3]
+    plane_coefficient = plane[3]
+
+    for i, atom in enumerate(system.motif):
+        atom_position = atom[:3]
+        side = np.dot(atom_position, plane_normal_vector) - plane_coefficient
+        if np.sign(side) == -1:
+            sector.append(i)
+
+    if not sector or len(sector) == len(system.motif):
+        print("Error: Could not find atoms with specified plane, exiting...")
+        sys.exit(1)
+
+    return np.array(sector)
+
+
+def entanglement_spectrum(system, plane, kpoints=None):
+    """ Routine to obtain the eigenvalues from the correlation/density matrix, which is directly
+     related with the entangled Hamiltonian. Should be computable for both PBC and OBC """
+    if kpoints is None and system.boundary != "OBC":
+        print("Error: kpoints argument must be given when using PBC. Exiting...")
+        sys.exit(1)
+    if system.boundary == "OBC":
+        if kpoints is not None:
+            print("Warning: kpoints argument given but system uses OBC")
+            print("Defaulting kpoints to origin...")
+        kpoints = [[0., 0., 0.]]
+
+    nk = len(kpoints)
+    sector = __specify_partition(system, plane)
+    results = system.solve(kpoints)
+
+    spectrum = np.zeros([len(sector) * system.norbitals, nk])
+    for i in range(len(kpoints)):
+        truncated_eigenvectors = __truncate_eigenvectors(results.eigen_states[i],
+                                                         sector, system)
+        density_matrix = __density_matrix(truncated_eigenvectors)
+        eigenvalues, eigenvectors = np.linalg.eigh(density_matrix)
+
+        spectrum[:, i] = eigenvalues
+
+    return spectrum
+
+
+def entanglement_entropy(spectrum):
+    """ Routine to compute the entanglement entropy from the entanglement spectrum """
+    entropy = 0
+    for eigval in spectrum.T:
+        entropy -= np.dot(eigval, np.log(eigval)) + np.dot(1 - eigval, np.log(1 - eigval))
+    entropy /= len(spectrum.T)
+
+    return entropy
+
+
+def write_entanglement_spectrum_to_file(spectrum, file, n=None, shift=0):
+    """ Routine to write the entanglement spectrum to a text file. If n is given,
+      only n eigenvalues are written to file.
+      The algorithm is as follows: first we search for the eigenvalue that is closer to 0.5, and then
+      we write the n/2 eigenvalues to its left and right. """
+
+    print("Writing entanglement spectrum to file...")
+    eigenvalues = np.sort(spectrum.reshape(-1,))
+    if n > len(eigenvalues):
+        print("Error: n is bigger than overall number of eigenvalues")
+        sys.exit(1)
+    if n is None:
+        n = len(eigenvalues)
+
+    for i, eigval in enumerate(eigenvalues):
+        if eigval <= 0.5 and eigenvalues[i+1] > 0.5:
+            central_index = i
+            break
+
+    with open(file, "w") as textfile:
+        for i in range(central_index - n//2 + shift, central_index + n//2 + shift):
+            textfile.write(f"{eigenvalues[i]}\n")
+
+
+def plot_entanglement_spectrum(spectrum, system):
+    """ Routine to plot the entanglement spectrum as a function of k.
+     CAREFUL: This routine is not made to deal with any set of kpoints, rather it is intended
+     to be used with a set of kpoints along a given line (1D). """
+    if system.boundary == "OBC":
+        plt.plot(spectrum, 'g+')
+    else:
+        for entanglement_band in spectrum:
+            plt.plot(entanglement_band, 'g+')
+
+    plt.title(f"Entanglement spectrum of {system.system_name}")
+    plt.xlabel("kpoints")
+    plt.ylabel("Eigenvalues")
+
+    plt.show()
+
 
 
 
