@@ -60,7 +60,7 @@ def __extract_wcc_from_wilson_loop(wilson_loop):
      NOTE: We truncate the eigenvalues up to a given precision to avoid numerical error due to floating point
      when computing the midpoints """
     eigval = np.linalg.eigvals(wilson_loop)
-    eigval = (np.angle(eigval)/np.pi).round(decimals=5)
+    eigval = (np.angle(eigval)/np.pi).round(decimals=3)
 
     eigval[eigval == -1] = 1  # Enforce interval (-1, 1], NOTE: it breaks partial polarization!
     eigval = np.sort(eigval)
@@ -75,8 +75,8 @@ def calculate_wannier_centre_flow(system, number_of_points, additional_k=None, n
     wcc_results = []
     # cell_side = crystal.high_symmetry_points
     # k_fixed_list = np.linspace(-cell_side/2, cell_side/2, number_of_points)
-    for i in range(-number_of_points//2, number_of_points//2 + 1):
-        k_fixed = system.reciprocal_basis[1]*i/number_of_points
+    for i in range(number_of_points):
+        k_fixed = system.reciprocal_basis[1]*i/(2*number_of_points)
         if additional_k is not None:
             k_fixed += additional_k
         # k_fixed = np.array([0, k_fixed_list[i], 0])
@@ -114,8 +114,9 @@ def __find_wcc_midpoint_gap(wcc):
     gaps = []
     for i in range(len(wcc_extended) - 1):
         gaps.append(wcc_extended[i+1] - wcc_extended[i])
+    gaps = np.array(gaps).round(decimals=2)
     biggest_gap = np.max(gaps)
-    position_gap = gaps.index(biggest_gap)
+    position_gap = np.where(gaps == biggest_gap)[0][0]
 
     midpoint_gap = biggest_gap/2 + wcc_extended[position_gap]
     return midpoint_gap, position_gap
@@ -148,7 +149,7 @@ def calculate_z2_invariant(wcc_flow):
      max gap midpoint does across different WCC bands """
     nk = len(wcc_flow[:, 0])
     num_crosses = 0
-    for i in range(nk//2, nk - 1):
+    for i in range(nk - 1):
         wcc = wcc_flow[i, :]
         next_wcc = wcc_flow[i + 1, :]
         midpoint, position = __find_wcc_midpoint_gap(wcc)
@@ -181,7 +182,7 @@ def plot_wannier_centre_flow(wcc_flow, show_midpoints=False, title=''):
     plt.title('WCC flow ' + title)
     plt.xlabel(r'$k_y$')
     plt.ylabel(r'$\hat{x}_n$')
-    plt.xticks([0, wcc_flow.shape[0] - 1], [r'$-\pi$', r'$\pi$'])
+    plt.xticks([0, wcc_flow.shape[0] - 1], ["0", r'$\pi$'])
 
 
 def plot_polarization_flow(wcc_flow):
