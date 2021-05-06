@@ -73,7 +73,6 @@ class Result:
 
         plt.legend()
         plt.xlim([min(x_points), max(x_points)])
-        plt.show()
 
     def plot_spectrum(self, title=''):
         """ Routine to plot all the eigenvalues coming from the Bloch Hamiltonian diagonalization
@@ -101,11 +100,18 @@ class Result:
         filling *= self.eigen_energy.shape[1]
         all_energies = self.eigen_energy.reshape(-1)
         all_energies = np.sort(all_energies)
-        print(filling)
-        print(len(all_energies))
         fermi_energy = all_energies[filling - 1]
 
         return fermi_energy
+
+    def calculate_gap(self, filling):
+        """ Routine to compute the gap of a material based on its Fermi level/filling """
+        valence_band = self.eigen_energy[filling - 1, :]
+        conduction_band = self.eigen_energy[filling, :]
+        gap = np.min(conduction_band - valence_band)
+
+        return gap
+
 
 
 

@@ -72,6 +72,7 @@ def amorphize(system, spread=0.1, distribution="uniform", planar=False):
     always uniform, U(0, spread). If we choose gaussian, then the spread acts as the
     variance of the distribution in the radial direction N(0, spread),
     the angles are still given by uniform dist.
+    Also "gaussian_cartesian", which adds gaussian noise to each cartesian component directly
     :param planar: Optional parameter to enforce atom displacement happening only in the
     plane defining a 2D system. """
 
@@ -81,6 +82,18 @@ def amorphize(system, spread=0.1, distribution="uniform", planar=False):
         radius_array = np.random.uniform(0, max_displacement, system.natoms)
     elif distribution is "gaussian":
         radius_array = np.random.normal(0, max_displacement, system.natoms)
+    elif distribution is "gaussian_cartesian":
+        # To be rewritten, two return points for function are bad practice
+        x = np.random.normal(0, spread, system.natoms)
+        y = np.random.normal(0, spread, system.natoms)
+        z = np.random.normal(0, spread, system.natoms)
+        displacements = np.array([x, y, z]).T
+
+        new_motif = np.asfarray(np.copy(system.motif))
+        new_motif[:, :3] += displacements
+        system.motif = new_motif
+
+        return system
     else:
         print("Error: Incorrect distribution specified in amorphize, it has to be " +
               "either uniform or gaussian")
@@ -104,3 +117,37 @@ def amorphize(system, spread=0.1, distribution="uniform", planar=False):
 
 
 # ----------------------------- Listing routines -----------------------------
+def remove_atoms(system, indices):
+    """ Routine to remove atoms from the system motif (i.e. create vacancies) according to
+     a list of indices provided
+      :param indices: List with indices of those atoms we want to remove, following the same
+      ordering as those atoms in the motif
+      :param system: Crystal class or subclass derived from it (typically System) """
+    all_atoms = list(range(len(system.natoms)))
+    remaining_atoms = [index for index in all_atoms if index not in indices]
+    system.motif = system.motif[remaining_atoms]
+
+    return system
+
+
+def set_impurities(system, indices, energy=0.1):
+    """ Routine to set impurities on the system on the atoms specified by the list provided
+     :param system: System class or derived subclass. Must have Hamiltonian initialized
+     :param indices: List with indices of those atoms we want to transform into impurities. The indices
+     are referred to the order in the motif
+     :param energy: On-site energy for the impurities. Defaults to 0.1 """
+    if system.hamiltonian is None:
+        print("Error: Hamiltonian must be initialized before calling introduce_impurities routine")
+        sys.exit(1)
+
+    for i in indices:
+        atom_interval = np.arange(system.norbitals*i, system.norbitals*(i+1))
+        system.hamiltonian[0][atom_interval, atom_interval] = energy * np.ones(system.norbitals)
+
+    return system
+
+
+
+
+
+
