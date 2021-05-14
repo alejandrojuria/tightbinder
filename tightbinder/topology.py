@@ -75,7 +75,7 @@ def calculate_wannier_centre_flow(system, number_of_points, additional_k=None, n
     wcc_results = []
     # cell_side = crystal.high_symmetry_points
     # k_fixed_list = np.linspace(-cell_side/2, cell_side/2, number_of_points)
-    for i in range(number_of_points):
+    for i in range(number_of_points + 1):
         k_fixed = system.reciprocal_basis[1]*i/(2*number_of_points)
         if additional_k is not None:
             k_fixed += additional_k
@@ -256,8 +256,7 @@ def entanglement_spectrum(system, plane, kpoints=None):
     """ Routine to obtain the eigenvalues from the correlation/density matrix, which is directly
      related with the entangled Hamiltonian. Should be computable for both PBC and OBC """
     if kpoints is None and system.boundary != "OBC":
-        print("Error: kpoints argument must be given when using PBC. Exiting...")
-        sys.exit(1)
+        raise Exception("Error: kpoints argument must be given when using PBC. Exiting...")
     if system.boundary == "OBC":
         if kpoints is not None:
             print("Warning: kpoints argument given but system uses OBC")
@@ -318,7 +317,8 @@ def plot_entanglement_spectrum(spectrum, system):
     """ Routine to plot the entanglement spectrum as a function of k.
      CAREFUL: This routine is not made to deal with any set of kpoints, rather it is intended
      to be used with a set of kpoints along a given line (1D). """
-    if system.boundary == "OBC":
+    plt.figure()
+    if system.boundary == "OBC" or spectrum.shape[1] == 1:
         plt.plot(spectrum, 'g+')
     else:
         for entanglement_band in spectrum:
@@ -327,8 +327,6 @@ def plot_entanglement_spectrum(spectrum, system):
     plt.title(f"Entanglement spectrum of {system.system_name}")
     plt.xlabel("kpoints")
     plt.ylabel("Eigenvalues")
-
-    plt.show()
 
 
 
