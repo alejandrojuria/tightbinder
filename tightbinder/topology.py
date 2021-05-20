@@ -62,7 +62,17 @@ def __extract_wcc_from_wilson_loop(wilson_loop):
     eigval = np.linalg.eigvals(wilson_loop)
     eigval = (np.angle(eigval)/np.pi).round(decimals=3)
 
-    eigval[eigval == -1] = 1  # Enforce interval (-1, 1], NOTE: it breaks partial polarization!
+    # eigval[eigval == -1] = 1  # Enforce interval (-1, 1], NOTE: it breaks partial polarization!
+
+    # Extra care to ensure that the eigenvalues are not doubled, either at -1 or 1
+    if np.max(np.abs(eigval)) == 1:
+        one_indices = np.where(eigval == 1)[0]
+        if len(one_indices) == 2:
+            eigval[one_indices[0]] = -1
+        elif len(one_indices) == 0:
+            minus_one_indices = np.where(eigval == -1)[0]
+            eigval[minus_one_indices[0]] = 1
+
     eigval = np.sort(eigval)
 
     return eigval
@@ -144,25 +154,43 @@ def __directed_triangle(phi1, phi2, phi3):
     return g
 
 
+def count_crossings(wcc, midpoint, next_midpoint):
+    """ Routine to compute the number of WCC that lie between one midpoint and the
+     next one """
+    higher_midpoint = max(midpoint, next_midpoint)
+    lower_midpoint = min(midpoint, next_midpoint)
+    crossings = 0
+    for center in wcc:
+        if lower_midpoint <= center < higher_midpoint:
+            crossings += 1
+
+    return crossings
+
+
 def calculate_z2_invariant(wcc_flow):
     """ Routine to compute the z2 invariant from the number of jumps the
      max gap midpoint does across different WCC bands """
     nk = len(wcc_flow[:, 0])
     num_crosses = 0
     for i in range(nk - 1):
-        wcc = wcc_flow[i, :]
+        wcc = np.copy(wcc_flow[i, :])
         next_wcc = wcc_flow[i + 1, :]
         midpoint, position = __find_wcc_midpoint_gap(wcc)
         next_midpoint, next_position = __find_wcc_midpoint_gap(next_wcc)
         sign = 1
-        for position in next_wcc:
-            triangle = __directed_triangle(np.pi*midpoint, np.pi*next_midpoint, np.pi*position)
-            sign *= np.sign(triangle)
-        if sign == 1:
-            crosses = 0
-        else:
-            crosses = 1
-        num_crosses += crosses
+        num_crosses += count_crossings(next_wcc, midpoint, next_midpoint)
+        print(num_crosses)
+
+        # Do same trick as in find midpoints to ensure all crosses are correctly found
+        # next_wcc = np.append(next_wcc[-1] - 2, next_wcc)
+        # for position in next_wcc:
+        #    triangle = __directed_triangle(np.pi*midpoint, np.pi*next_midpoint, np.pi*position)
+        #    sign *= np.sign(triangle)
+        # if sign == 1:
+        #    crosses = 0
+        # else:
+        #    crosses = 1
+        # num_crosses += crosses
 
     invariant = num_crosses % 2
     return invariant
@@ -183,6 +211,7 @@ def plot_wannier_centre_flow(wcc_flow, show_midpoints=False, title=''):
     plt.xlabel(r'$k_y$')
     plt.ylabel(r'$\hat{x}_n$')
     plt.xticks([0, wcc_flow.shape[0] - 1], ["0", r'$\pi$'])
+    plt.ylim(bottom=-1, top=1)
 
 
 def plot_polarization_flow(wcc_flow):
