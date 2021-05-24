@@ -129,6 +129,8 @@ def __find_wcc_midpoint_gap(wcc):
     position_gap = np.where(gaps == biggest_gap)[0][0]
 
     midpoint_gap = biggest_gap/2 + wcc_extended[position_gap]
+    midpoint_gap = round(midpoint_gap, 2)
+
     return midpoint_gap, position_gap
 
 
@@ -177,9 +179,7 @@ def calculate_z2_invariant(wcc_flow):
         next_wcc = wcc_flow[i + 1, :]
         midpoint, position = __find_wcc_midpoint_gap(wcc)
         next_midpoint, next_position = __find_wcc_midpoint_gap(next_wcc)
-        sign = 1
         num_crosses += count_crossings(next_wcc, midpoint, next_midpoint)
-        print(num_crosses)
 
         # Do same trick as in find midpoints to ensure all crosses are correctly found
         # next_wcc = np.append(next_wcc[-1] - 2, next_wcc)
@@ -292,15 +292,19 @@ def entanglement_spectrum(system, plane, kpoints=None):
             print("Defaulting kpoints to origin...")
         kpoints = [[0., 0., 0.]]
 
+    print("Computing entanglement spectrum...")
     nk = len(kpoints)
     sector = __specify_partition(system, plane)
+    print("Diagonalizing system...")
     results = system.solve(kpoints)
 
     spectrum = np.zeros([len(sector) * system.norbitals, nk])
     for i in range(len(kpoints)):
         truncated_eigenvectors = __truncate_eigenvectors(results.eigen_states[i],
                                                          sector, system)
+        print("Computing density matrix...")
         density_matrix = __density_matrix(truncated_eigenvectors)
+        print("Computing entanglement spectrum...")
         eigenvalues, eigenvectors = np.linalg.eigh(density_matrix)
 
         spectrum[:, i] = eigenvalues

@@ -10,8 +10,12 @@
 import numpy as np
 from crystal import Crystal
 import result
-from utils import angle_between
 import sys
+from multiprocessing import cpu_count, Pool
+from itertools import product
+
+
+num_cores = cpu_count()
 
 
 class System(Crystal):
@@ -183,6 +187,29 @@ class System(Crystal):
 
             return self
 
+    def stack(self, height, layers=1):
+        """ Method to stack layers of a two-dimensional material vertically.
+        The returned system is still two-dimensional.
+        :param height: Distance in the z axis between two contiguous layers, measured
+        from one fixed atom of the motif. Units are those used in the lattice.
+        :param layers: Number of layers to stack. Defaults to 1. """
+        if self.ndim != 2:
+            raise Exception("Error: System dimension must be 2 to stack, exiting...")
+        if layers <= 0 or type(layers) != int:
+            raise Exception("Error: Layers must be a positive integer")
+        if height < 0:
+            raise Exception("Error: Height must be strictly positive ")
+
+        motif = np.copy(self.motif)
+        for layer in range(1, layers + 1):
+            displaced_layer = np.copy(motif)
+            displaced_layer[:, :3] += np.array([0., 0., -height*layer])
+            motif = np.append(motif, displaced_layer, axis=0)
+
+        self.motif = motif
+
+        return self
+
     def _restrict_lattice2rectangle(self, vectors):
         """ TO BE IMPLEMENTED YET (is it really necessary?) """
         atoms = []
@@ -204,11 +231,10 @@ class System(Crystal):
         By default it will look for the minimal distance between atoms to determine first neighbours.
         For amorphous systems the option radius is available to determine neighbours within a given radius R.
         Boundary conditions can also be set, either PBC (default) or OBC."""
-        EPS = 1E-4
+        eps = 1E-4
 
         if mode is "radius" and r is None:
-            print("Error: Search mode is radius but no r given, exiting...")
-            sys.exit(1)
+            raise Exception("Error: Search mode is radius but no r given, exiting...")
         elif mode is "minimal" and r is not None:
             print("Search mode is minimal but a radius was given (will not be used)")
 
@@ -216,74 +242,46 @@ class System(Crystal):
         if self.boundary == "OBC":
             near_cells = np.array([[0.0, 0.0, 0.0]])
         else:
-            mesh_points = []
-            for i in range(self.ndim):
-                mesh_points.append(list(range(-1, 2)))
-            mesh_points = np.array(np.meshgrid(*mesh_points)).T.reshape(-1, self.ndim)
-
-            near_cells = np.zeros([len(mesh_points), 3])
-            for n, coefficients in enumerate(mesh_points):
-                cell_vector = np.array([0.0, 0.0, 0.0])
-                for i, coefficient in enumerate(coefficients):
-                    cell_vector += (coefficient * self.bravais_lattice[i])
-                near_cells[n, :] = cell_vector
+            near_cells = generate_near_cells(self.bravais_lattice)
 
         # Determine neighbour distance from one fixed atom
         neigh_distance = self.compute_first_neighbour_distance(near_cells)
+        if mode is "radius" and r < neigh_distance:
+            print("Warning: Radius smaller than first neighbour distance")
 
         # Determine list of neighbours for each atom of the motif
-        if mode == "minimal":
-            neighbours_list = []
-            for n, reference_atom in enumerate(self.motif):
-                neighbours = []
-                for cell in near_cells:
-                    for i, atom in enumerate(self.motif):
-                        distance = np.linalg.norm(atom[:3] + cell - reference_atom[:3])
-                        if abs(distance - neigh_distance) < EPS: neighbours.append([i, cell])
-                neighbours_list.append(neighbours)
+        neighbours_list = []
+        index = 0
+        atoms = np.copy(self.motif)
+        for reference_atom in self.motif:
+            neighbours = []
+            for cell in near_cells:
+                distance = np.linalg.norm(atoms[index:, :3] + cell - reference_atom[:3], axis=1)
+                neigh_atoms_indices_max = np.where(distance <= r)[0]
+                if mode == "minimal":
+                    neigh_atoms_indices_min = np.where(r - eps < distance)[0]
+                else:
+                    neigh_atoms_indices_min = np.where(eps < distance)[0]
+                neigh_atoms_indices = np.intersect1d(neigh_atoms_indices_max, neigh_atoms_indices_min)
+                neighbours += [[i + index, cell] for i in neigh_atoms_indices]
+            neighbours_list.append(neighbours)
+            index += 1
 
-        elif mode == "radius":
-            if r is None:
-                print('Radius not defined in "radius" mode, exiting...')
-                sys.exit(1)
-            elif r < neigh_distance:
-                print("Warning: Radius smaller than first neighbour distance")
-
-            neighbours_list = []
-            for n, reference_atom in enumerate(self.motif):
-                neighbours = []
-                for cell in near_cells:
-                    for i, atom in enumerate(self.motif):
-                        distance = np.linalg.norm(atom[:3] + cell - reference_atom[:3])
-                        if distance <= r:
-                            if i == n and np.array_equal(cell, [0, 0, 0]):
-                                continue
-                            neighbours.append([i, cell])
-                neighbours_list.append(neighbours)
-
+        print("Done")
         self.neighbours = neighbours_list
 
     def compute_first_neighbour_distance(self, near_cells=None):
 
         if near_cells is None:
-            mesh_points = []
-            for i in range(self.ndim):
-                mesh_points.append(list(range(-1, 2)))
-            mesh_points = np.array(np.meshgrid(*mesh_points)).T.reshape(-1, self.ndim)
-
-            near_cells = np.zeros([len(mesh_points), 3])
-            for n, coefficients in enumerate(mesh_points):
-                cell_vector = np.array([0.0, 0.0, 0.0])
-                for i, coefficient in enumerate(coefficients):
-                    cell_vector += (coefficient * self.bravais_lattice[i])
-                near_cells[n, :] = cell_vector
+            near_cells = generate_near_cells(self.bravais_lattice)
 
         neigh_distance = 1E100
         fixed_atom = self.motif[0][:3]
-        for cell in near_cells:
-            for atom in self.motif:
-                distance = np.linalg.norm(atom[:3] + cell - fixed_atom)
-                if distance < neigh_distance and distance != 0: neigh_distance = distance
+        for atom, cell in product(self.motif, near_cells):
+            distance = np.linalg.norm(atom[:3] + cell - fixed_atom)
+            if distance < neigh_distance:
+                neigh_distance = distance
+
         self.first_neighbour_distance = neigh_distance
 
         return neigh_distance
@@ -336,5 +334,54 @@ class FrozenClass:
 
     def _freeze(self):
         self._is_frozen = True
+
+
+def search_neighbour(reference_atom, i, atom, cell, radius):
+    """ Auxiliary routine to parallelize search for all hoppings (neighbours) within a given
+     system"""
+    eps = 1E-14
+    distance = np.linalg.norm(atom[:3] + cell - reference_atom[:3])
+    if distance <= radius:
+        print(i, cell)
+        if not np.array_equal(reference_atom, atom) and not np.array_equal(cell, [0, 0, 0]):
+            return [i, cell]
+        else:
+            return
+
+
+def generate_combinations(ndim):
+    """ Auxiliary routine to generate an array of combinations of possible neighbouring
+     unit cells. NB: It only generates half of them, since we are going to use hermiticity to
+     generate the Hamiltonian """
+    mesh_points = []
+    for i in range(ndim):
+        mesh_points.append(list(range(-1, 2)))
+    mesh_points = np.array(np.meshgrid(*mesh_points)).T.reshape(-1, ndim)
+
+    # Eliminate vectors that are the inverse of others
+    points = []
+    for point in mesh_points:
+        if list(-point) not in points:
+            points.append(list(point))
+
+    return points
+
+
+def generate_near_cells(bravais_lattice):
+    """ Auxiliary routine to generate the Bravais vectors corresponding to unit cells
+     neighbouring the origin one. NB: It only generates half of them, since we are going to use hermiticity to
+     generate the Hamiltonian """
+    ndim = len(bravais_lattice)
+    mesh_points = generate_combinations(ndim)
+    near_cells = np.zeros([len(mesh_points), 3])
+    for n, coefficients in enumerate(mesh_points):
+        cell_vector = np.array([0.0, 0.0, 0.0])
+        for i, coefficient in enumerate(coefficients):
+            cell_vector += (coefficient * bravais_lattice[i])
+        near_cells[n, :] = cell_vector
+
+    return near_cells
+
+
 
 
