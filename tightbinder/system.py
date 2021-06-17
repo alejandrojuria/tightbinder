@@ -279,7 +279,7 @@ class System(Crystal):
         fixed_atom = self.motif[0][:3]
         for atom, cell in product(self.motif, near_cells):
             distance = np.linalg.norm(atom[:3] + cell - fixed_atom)
-            if distance < neigh_distance:
+            if 1E-4 < distance < neigh_distance:
                 neigh_distance = distance
 
         self.first_neighbour_distance = neigh_distance

@@ -3,3 +3,5 @@ venv/
 __pycache__/
 tightbinder/__pycache__/
 docs/build/
+Entanglement/
+plots/
