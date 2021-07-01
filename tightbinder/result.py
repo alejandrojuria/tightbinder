@@ -3,6 +3,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import math
+import sys
+from utils import condense_vector
 
 
 class Result:
@@ -95,6 +97,32 @@ class Result:
         pass
 
     # --------------- Utilities ---------------
+    @staticmethod
+    def is_edge_state(state, norbitals, edge_indices, penetration=0.1):
+        orbital_probabilities = np.abs(state) ** 2
+        amplitudes = condense_vector(orbital_probabilities, norbitals)
+        edge_density = np.sum(amplitudes[edge_indices])
+
+        is_edge_state = False
+        if edge_density > (1 - penetration):
+            is_edge_state = True
+
+        return is_edge_state
+
+    def identify_edge_states(self, crystal, penetration=0.1):
+        """ Routine to identify edge states according to a given penetration parameter """
+        if self.eigen_states.shape[0] != 1:
+            print("Error: identify_edge_states can only be used with OBC, exiting...")
+            sys.exit(1)
+        edge_indices = crystal.identify_edges()
+        norbitals = len(self.eigen_states[0][:, 0])//len(crystal.motif)
+        edge_states = []
+        for n, state in enumerate(self.eigen_states[0].T):
+            if self.is_edge_state(state, norbitals, edge_indices, penetration):
+                edge_states.append(n)
+
+        return edge_states
+
     def calculate_fermi_level(self, filling):
         """ Routine to compute the Fermi level energy according to the given filling """
         filling *= self.eigen_energy.shape[1]
