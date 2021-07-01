@@ -2,9 +2,7 @@
 # the input file. Config file can have blank spaces or comments starting with "!" 
 # (without commas) which are ommited at parsing
 
-import sys
 import re
-import numpy as np
 
 
 def parse_raw_arguments(file):
@@ -39,8 +37,7 @@ def check_arguments(arguments, required_arguments):
 
     for arg in required_arguments:
         if arg not in arguments.keys():
-            print(f'{arg} not present in input file')
-            sys.exit(1)
+            raise KeyError(f"{arg} not present in input file")
 
 
 def shape_arguments(arguments):
@@ -52,17 +49,17 @@ def shape_arguments(arguments):
                 arguments[arg] = arguments[arg][0]
             except IndexError as e:
                 print(f'{type(e).__name__}: No system name given')
-                sys.exit(1)
+                raise
 
         elif arg in ['Dimensionality', 'Species']:
             try:
                 arguments[arg] = int(arguments[arg][0])
             except IndexError as e:
                 print(f'{type(e).__name__}: No {arg} given')
-                sys.exit(1)
+                raise
             except ValueError as e:
                 print(f'{type(e).__name__}: {arg} has to be an integer')
-                sys.exit(1)
+                raise
 
         elif arg == 'Bravais lattice':
             aux_array = []
@@ -71,10 +68,10 @@ def shape_arguments(arguments):
                     aux_array.append([float(num) for num in re.split(' |, |,', line)])
                 except IndexError as e:
                     print(f'{type(e).__name__}: No {arg} vectors given given')
-                    sys.exit(1)
+                    raise
                 except ValueError as e:
                     print(f'{type(e).__name__}: {arg} vectors have to be numbers')
-                    sys.exit(1)
+                    raise
             arguments[arg] = aux_array
 
         elif arg == 'Motif':
@@ -95,13 +92,13 @@ def shape_arguments(arguments):
                 orbitals = re.split(' |, |,', arguments[arg][0])
             except IndexError as e:
                 print(f'{type(e).__name__}: No orbitals included')
-                sys.exit(1)
+                raise
             else:
                 # Check that all are correctly written
                 for orbital in orbitals:
                     if orbital not in possible_orbitals:
                         print('Error: Incorrect orbital specified')
-                        sys.exit(1)
+                        raise
                 # Label with true or false
                 for orbital in possible_orbitals:
                     if orbital in orbitals:
@@ -117,10 +114,10 @@ def shape_arguments(arguments):
                     aux_array.append([float(num) for num in re.split(' |, |,', line)])
                 except IndexError as e:
                     print(f'{type(e).__name__}: No onsite energies included')
-                    sys.exit(1)
+                    raise
                 except ValueError as e:
                     print(f'{type(e).__name__}: Onsite energies must be numbers')
-                    sys.exit(1)
+                    raise
             arguments[arg] = aux_array
 
         elif arg == 'SK amplitudes':
@@ -130,10 +127,10 @@ def shape_arguments(arguments):
                     aux_array.append([float(num) for num in re.split(' |, |,|; |;', line)])
                 except IndexError as e:
                     print(f'{type(e).__name__}: No Slater-Koster amplitudes given')
-                    sys.exit(1)
+                    raise
                 except ValueError as e:
                     print(f'{type(e).__name__}: Slater-Koster amplitudes must be numbers')
-                    sys.exit(1)
+                    raise
             arguments[arg] = aux_array
 
         elif arg == 'Spin':
@@ -143,7 +140,7 @@ def shape_arguments(arguments):
                 arguments[arg] = False
             else:
                 print('Error: Spin parameter must be True or False (or 1 or 0 respectively)')
-                sys.exit(1)
+                raise
             #except IndexError as e:
             #    print('Warning: No spin parameter given, defaulting to spinless')
             #except ValueError as e:
@@ -158,17 +155,17 @@ def shape_arguments(arguments):
                 arguments[arg] = 0.0
             except ValueError as e:
                 print(f'{type(e).__name__}: Spin-orbit coupling must be a number')
-                sys.exit(1)
+                raise
 
         elif arg == 'Mesh':
             try:
                 arguments[arg] = [int(num) for num in re.split(' |, |,', arguments[arg][0])]
             except IndexError as e:
                 print(f'{type(e).__name__}: No mesh given')
-                sys.exit(1)
+                raise
             except ValueError as e:
                 print(f'{type(e).__name__}: Mesh must be integer numbers')
-                sys.exit(1)
+                raise
 
     return arguments
 
@@ -179,28 +176,23 @@ def check_coherence(arguments):
     # --------------- Model ---------------
     # Check dimensions
     if arguments['Dimensionality'] > 3 or arguments['Dimensionality'] < 0:
-        print('Error: Invalid dimension!')
-        sys.exit(1)
-    
+        raise ValueError('Error: Invalid dimension!')
+
     # Check species
     if arguments['Species'] < 0:
-        print('Error: Species has to be a positive number (1 or 2)')
-        sys.exit(1)
+        raise ValueError('Error: Species has to be a positive number (1 or 2)')
     elif arguments['Species'] > 2:
-        print('Error: Species has to be a positive number (1 or 2)')
-        sys.exit(1)
+        raise ValueError('Error: Species has to be a positive number (1 or 2)')
 
     # Check vector basis
     if arguments['Dimensionality'] != len(arguments['Bravais lattice']):
-        print('Error: Dimension and number of basis vectors do not match')
-        sys.exit(1)
+        raise AssertionError('Error: Dimension and number of basis vectors do not match')
 
     # Check length of vector basis
     for vector in arguments['Bravais lattice']:
         if len(vector) != 3:
-            print('Error: Bravais vectors must have three components')
-            sys.exit(1)
-    
+            raise ValueError('Error: Bravais vectors must have three components')
+
     # Check that motif has elements specified if num. of species = 2
     if arguments['Species'] == 2:
         for atom in arguments['Motif']:
@@ -208,24 +200,20 @@ def check_coherence(arguments):
                 atom_element = atom[3]  # Try to access
             except IndexError:
                 print('Error: Atomic species not specified in motif')
-                sys.exit(1)
+                raise
 
             if atom_element > arguments['Species']:
-                print('Error: Incorrect species labeling in motif')
-                sys.exit(1)
+                raise AssertionError('Error: Incorrect species labeling in motif')
 
     # Check onsite energies are present for all species
     if len(arguments['Onsite energy']) != arguments['Species']:
-        print('Error: Missing onsite energies for both atomic species')
-        sys.exit(1)
+        raise AssertionError('Error: Missing onsite energies for both atomic species')
 
     # Check SK coefficients are present for all species
     if len(arguments['SK amplitudes']) < arguments['Species']:
-        print('Error: Missing SK coefficients for both atomic species')
-        sys.exit(1)
+        raise AssertionError('Error: Missing SK coefficients for both atomic species')
     elif len(arguments['SK amplitudes']) > arguments['Species']:
-        print('Error: Expected only one row of SK coefficients')
-        sys.exit(1)
+        raise AssertionError('Error: Expected only one row of SK coefficients')
 
     if arguments['Spin-orbit coupling'] != 0 and not arguments['Spin']:
         print('Warning: Spin-orbit coupling is non-zero but spin was set to False. ')
@@ -253,21 +241,18 @@ def check_coherence(arguments):
     # Check onsite energy for all orbitals
     for onsite_energies in arguments['Onsite energy']:
         if diff_orbitals != len(onsite_energies):
-            print('Error: Mismatch between number of onsite energies and orbitals')
-            sys.exit(1)
+            raise AssertionError('Error: Mismatch between number of onsite energies and orbitals')
 
     # Check whether all necessary SK coefs are present for all orbitals
     for species_coefs in arguments['SK amplitudes']:
         if len(species_coefs) != needed_SK_coefs:
-            print('Error: Mismatch between orbitals and required SK amplitudes')
-            sys.exit(1)
+            raise AssertionError('Error: Mismatch between orbitals and required SK amplitudes')
 
     # ---------------- Simulation ----------------
     # Check mesh matches dimension
     if len(arguments['Mesh']) != arguments['Dimensionality']:
-        print('Error: Mesh dimension does not match system dimension')
-        sys.exit(1)
-    
+        raise AssertionError('Error: Mesh dimension does not match system dimension')
+
     return None
 
 
@@ -296,8 +281,8 @@ def transform_sk_coefficients(configuration):
         elif True in orbitals[4:]:  # d
             amplitudes[7:] = coefs
         else:
-            print('Error: No orbitals given')
-            sys.exit(1)
+            raise ValueError('Error: No orbitals given')
+
         amplitudes_list.append(amplitudes)
     
     configuration['SK amplitudes'] = amplitudes_list
