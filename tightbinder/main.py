@@ -36,10 +36,13 @@ def main():
     results = bi.solve(lattice.kpoints)
     results.plot_along_path(labels)
 
-    wcc_flow = topology.calculate_wannier_centre_flow(bi, lattice, filling=10, number_of_points=50)
+    wcc_flow = topology.calculate_wannier_centre_flow(bi, number_of_points=10)
     topology.plot_wannier_centre_flow(wcc_flow, show_midpoints=True)
     print(f"Chern number: {topology.calculate_chern_number(wcc_flow)}")
     print(f"Z2 invariant: {topology.calculate_z2_invariant(wcc_flow)}")
+
+    topology.plot_wannier_centre_flow(wcc_flow)
+    topology.calculate_chern(wcc_flow)
 
 
 if __name__ == "__main__":

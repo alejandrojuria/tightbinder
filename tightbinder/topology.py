@@ -214,6 +214,18 @@ def plot_wannier_centre_flow(wcc_flow, show_midpoints=False, title=''):
     plt.ylim(bottom=-1, top=1)
 
 
+def calculate_chern(wannier_centre_flow):
+    """ Routine to compute explicitly the first Chern number from the WCC flow calculation """
+    polarization_flow = np.sum(wannier_centre_flow, axis=1)
+    plt.plot(polarization_flow)
+    plt.show()
+
+
+def calculate_z2(wannier_centre_flow):
+    """ Routine to compute explicitly the Z2 invariant from the WCC flow calculation """
+    pass
+
+
 def plot_polarization_flow(wcc_flow):
     """ Routine to plot the polarization flow used to calculate the Chern number """
     polarization_array = []

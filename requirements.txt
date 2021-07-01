@@ -34,3 +34,4 @@ sphinxcontrib-serializinghtml==1.1.4
 tightbinder==0.0.1
 urllib3==1.25.9
 vpython==7.6.1
+scipy~=1.7.0
