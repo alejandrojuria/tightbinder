@@ -6,7 +6,7 @@
 ! Beware: Leaving a blank space at the beginning of a line will result in it being skipped
 ! -------------------------- Material parameters -------------------------
 #System name
-Bi(111) bilayer w/o SOC
+Bi(111) bilayer w/ SOC
 
 #Dimensionality
 2

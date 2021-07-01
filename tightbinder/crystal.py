@@ -6,12 +6,13 @@
 # constructed from the parameters of the configuration file
 
 import numpy as np
+from scipy.spatial import ConvexHull
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from numpy.linalg import LinAlgError
 import math
 import sys
-import vpython as vp
+import viewer
 
 # --------------- Constants ---------------
 PI = 3.141592653589793238
@@ -286,6 +287,33 @@ class Crystal:
 
         return kpoints
 
+    def identify_edges(self):
+        """ Method to obtain the atoms that correspond to the edges of the system.
+         This method uses directly the ConvexHull method from Scipy to identify the outmost points
+         of the motif. Compute the ConvexHull three times, each time removing the points detected in the
+         previous iteration.
+          Returns: Indices of atoms belonging to edges of motif """
+
+        atoms_coordinates = np.copy(self.motif[:, :3])
+        hull = ConvexHull(atoms_coordinates)
+        edge_indices = hull.vertices
+        max_x = np.max(atoms_coordinates[:, 0])
+        min_x = np.min(atoms_coordinates[:, 0])
+        max_y = np.max(atoms_coordinates[:, 1])
+        min_y = np.min(atoms_coordinates[:, 1])
+        midpoint = np.array([(max_x - min_x)/2, (max_y - min_y)/2, 0])
+        for index in edge_indices:
+            atoms_coordinates[index, :] = midpoint
+        hull = ConvexHull(atoms_coordinates)
+        edge_indices = np.concatenate((edge_indices, hull.vertices))
+        for index in hull.vertices:
+            atoms_coordinates[index, :] = midpoint
+        hull = ConvexHull(atoms_coordinates)
+        edge_indices = np.concatenate((edge_indices, hull.vertices))
+
+        print(edge_indices)
+        return edge_indices
+
     def plot_crystal(self, cell_number=1, crystal_name=''):
         """
         Method to visualize the crystalline structure (Bravais lattice + motif).
@@ -328,130 +356,8 @@ class Crystal:
         ax.set_xlim3d(min_axis, max_axis)
         ax.set_ylim3d(min_axis, max_axis)
         ax.set_zlim3d(min_axis, max_axis)
+        plt.axis('off')
         plt.show()
 
     def visualize(self):
-        global atoms, extra_atoms
-        global bonds, extra_bonds
-        atoms = []
-        extra_atoms = []
-        bonds = []
-        extra_bonds = []
-        mesh_points = []
-        vp.scene.background = vp.color.white
-        color_list = [vp.color.yellow, vp.color.red]
-        # Unit cell atoms
-        for position in self.motif:
-            species = int(position[3])
-            atom = vp.sphere(radius=0.1, color=color_list[species])
-            atom.pos.x, atom.pos.y, atom.pos.z = position[:3]
-            atoms.append(atom)
-
-        # Unit cell bonds
-        for i, neighbours in enumerate(self.neighbours):
-            for neighbour in neighbours:
-                unit_cell = vp.vector(neighbour[1][0], neighbour[1][1], neighbour[1][2])
-                bond = vp.curve(atoms[i].pos, atoms[neighbour[0]].pos + unit_cell)
-                bonds.append(bond)
-
-        if self.bravais_lattice is not None:
-
-            # Supercell atoms
-            for i in range(self.ndim):
-                mesh_points.append(list(range(-1, 2)))
-            mesh_points = np.array(np.meshgrid(*mesh_points)).T.reshape(-1, self.ndim)
-            for point in mesh_points:
-                unit_cell = np.array([0., 0., 0.])
-                if np.linalg.norm(point) == 0:
-                    continue
-                for n in range(self.ndim):
-                    unit_cell += point[n]*self.bravais_lattice[n]
-                for position in self.motif:
-                    species = int(position[3])
-                    atom = vp.sphere(radius=0.1, color=color_list[species])
-                    atom.visible = False
-                    atom.pos.x, atom.pos.y, atom.pos.z = (position[:3] + unit_cell)
-                    extra_atoms.append(atom)
-
-            # Supercell bonds
-            for point in mesh_points:
-                unit_cell = np.array(([0., 0., 0.]))
-                for n in range(self.ndim):
-                    unit_cell += point[n]*self.bravais_lattice[n]
-                unit_cell = vp.vector(unit_cell[0], unit_cell[1], unit_cell[2])
-                for bond in bonds:
-                    supercell_bond = vp.curve(bond.point(0)["pos"] + unit_cell, bond.point(1)["pos"] + unit_cell)
-                    supercell_bond.visible = False
-                    extra_bonds.append(supercell_bond)
-
-        vp.button(text="supercell", bind=self.__add_unit_cells)
-        vp.button(text="primitive unit cell", bind=self.__remove_unit_cells)
-        vp.button(text="remove bonds", bind=self.__remove_bonds)
-        vp.button(text="show bonds", bind=self.__show_bonds)
-        vp.button(text="draw cell boundary", bind=self.__draw_boundary)
-        vp.button(text="remove cell boundary", bind=self.__remove_boundary)
-        vp.scene.bind("mousedown", self.__mousedown)
-        vp.scene.bind("mousemove", self.__mousemove)
-        vp.scene.bind("mouseup", self.__mouseup)
-
-    def __mousedown(self):
-        global drag, initial_position
-        initial_position = vp.scene.mouse.pos
-        drag = True
-
-    def __mousemove(self):
-        global drag, initial_position
-        if drag:
-            increment = vp.scene.mouse.pos - initial_position
-            initial_position = vp.scene.mouse.pos
-            vp.scene.camera.pos -= increment
-
-    def __mouseup(self):
-        global drag, initial_position
-        pass
-
-    def __add_unit_cells(self):
-        for atom in extra_atoms:
-            atom.visible = True
-
-    def __show_bonds(self):
-        for bond in bonds:
-            bond.visible = True
-        if extra_atoms[0].visible:
-            for bond in extra_bonds:
-                bond.visible = True
-
-    def __remove_unit_cells(self):
-        for atom in extra_atoms:
-            atom.visible = False
-        if extra_bonds[0].visible:
-            for bond in extra_bonds:
-                bond.visible = False
-
-    def __remove_bonds(self):
-        for bond in bonds:
-            bond.visible = False
-        for bond in extra_bonds:
-            bond.visible = False
-
-    def __draw_boundary(self):
-        global cell_boundary
-        global cell_vectors
-        cell_vectors = []
-        mid_point = np.array([0., 0., 0.])
-        size_vector = [0., 0., 0.]
-        for n in range(self.ndim):
-            mid_point += self.bravais_lattice[n]/2
-            size_vector[n] = self.bravais_lattice[n][n]
-        cell_boundary = vp.box(pos=vp.vector(mid_point[0], mid_point[1], mid_point[2]),
-                               size=vp.vector(size_vector[0], size_vector[1], size_vector[2]), opacity=0.5)
-        for basis_vector in self.bravais_lattice:
-            unit_cell = vp.vector(basis_vector[0], basis_vector[1], basis_vector[2])
-            vector = vp.arrow(pos=vp.vector(0, 0, 0), axis=unit_cell, color=vp.color.green, shaftwidth=0.1)
-            cell_vectors.append(vector)
-
-    def __remove_boundary(self):
-        cell_boundary.visible = False
-        for vector in cell_vectors:
-            vector.visible = False
-
+        viewer.Viewer(self).visualize()
