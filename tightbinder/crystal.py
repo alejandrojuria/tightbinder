@@ -12,7 +12,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from numpy.linalg import LinAlgError
 import math
 import sys
-import viewer
+import crystalview
 
 # --------------- Constants ---------------
 PI = 3.141592653589793238
@@ -360,4 +360,4 @@ class Crystal:
         plt.show()
 
     def visualize(self):
-        viewer.Viewer(self).visualize()
+        crystalview.CrystalView(self).visualize()
