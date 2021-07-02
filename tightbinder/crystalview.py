@@ -3,7 +3,7 @@ import numpy as np
 from utils import generate_basis_combinations
 
 
-class Viewer:
+class CrystalView:
     def __init__(self, crystal):
         self.bravais_lattice = crystal.bravais_lattice
         self.motif = crystal.motif
