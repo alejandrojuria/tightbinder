@@ -5,3 +5,7 @@ tightbinder/__pycache__/
 docs/build/
 Entanglement/
 plots/
+results/
+results/Plots/
+scripts/wilson_amorphous/
+plot/

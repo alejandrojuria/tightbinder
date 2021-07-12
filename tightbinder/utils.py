@@ -34,4 +34,16 @@ def condense_vector(vector, step):
         atom_amplitudes = vector[i*step:(i+1)*step]
         reduced_vector.append(np.sum(atom_amplitudes))
 
-    return reduced_vector
+    return np.array(reduced_vector)
+
+
+def scale_array(array, max_value=1000):
+    """ Routine to scale a vector by a factor max_value/max(vector), where max_value is the new maximum value.
+    :param array
+    :param max_value (double)
+    :return scaled_vector """
+
+    array = np.array(array)
+    array *= max_value/np.max(array)
+
+    return array

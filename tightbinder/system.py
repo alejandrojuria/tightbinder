@@ -320,7 +320,7 @@ class System(Crystal):
             eigen_energy[:, n] = results[0]
             eigen_states.append(results[1])
 
-        return result.Result(eigen_energy, np.array(eigen_states), kpoints)
+        return result.Spectrum(eigen_energy, np.array(eigen_states), kpoints, self)
 
 
 class FrozenClass:

@@ -4,14 +4,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math
 import sys
-from utils import condense_vector
+from utils import condense_vector, scale_array
 
 
-class Result:
-    def __init__(self, eigen_energy=None, eigen_states=None, kpoints=None):
+class Spectrum:
+    def __init__(self, eigen_energy=None, eigen_states=None, kpoints=None, system=None):
         self.eigen_energy = eigen_energy
         self.eigen_states = eigen_states
         self.kpoints = kpoints
+        self.system = system
 
     def __simplify_kpoints(self):
         """ Routine to reduce the k-points of the mesh from 3d to the corresponding dimension,
@@ -139,6 +140,97 @@ class Result:
         gap = np.min(conduction_band - valence_band)
 
         return gap
+
+    def calculate_ipr(self):
+        """ Method to compute the inverse participation ratio (IPR) from the eigenvectors.
+         :returns: list with all ipr for all states """
+        eigen_states = np.copy(self.eigen_states.reshape(self.system.basisdim, -1).T)
+        ipr_array = []
+        for eigenvector in eigen_states:
+            state = State(eigenvector, self.system)
+            ipr_array.append(state.compute_ipr())
+
+        return ipr_array
+
+    def calculate_average_ipr(self, states):
+        """ Method to compute the average IPR associated to a group of states
+         :param states: list with the eigenvectors of the states
+         :returns: Average IPR of the given states """
+        average_ipr = 0
+        for eigenvector in states:
+            state = State(eigenvector, self.system)
+            average_ipr += state.compute_ipr()
+
+        average_ipr /= len(states)
+        return average_ipr
+
+    def plot_ipr(self, ipr, sort=False):
+        """ Method to plot the IPR previously computed """
+        plt.figure()
+        x = np.arange(0, len(ipr))
+        if sort:
+            ipr = np.sort(ipr)
+        plt.bar(x, ipr, width=1)
+        plt.title(fr"IPR $M=${self.system.m}")
+        plt.ylabel("IPR")
+        plt.xlabel("Sorted states")
+
+
+class State:
+    def __init__(self, eigenvector, system):
+        self.eigenvector = eigenvector
+        self.motif = system.motif
+        self.norbitals = system.norbitals
+        self.hoppings = system.neighbours
+
+        self.amplitude = self.atomic_amplitude()
+
+    def atomic_amplitude(self):
+        """ Method to obtain the probability amplitude corresponding to each atom.
+         Returns:
+             array amplitude [len(eigenvector)/norbitals] """
+        amplitude = np.abs(self.eigenvector) ** 2
+        return condense_vector(amplitude, self.norbitals)
+
+    def plot_amplitude(self):
+        """ Method to plot the atomic amplitude of the state on top of the crystalline positions"""
+        amplitude = np.array(self.atomic_amplitude())
+        amplitude = scale_array(amplitude)
+
+        atoms = self.motif[:, :3]
+        # plt.scatter(atoms[:, 0], atoms[:, 1])
+        plt.figure()
+        for n, neighbours in enumerate(self.hoppings):
+            x0, y0 = atoms[n, :2]
+            for atom in neighbours:
+                xneigh, yneigh = atoms[atom[0], :2]
+                plt.plot([x0, xneigh], [y0, yneigh], "-k")
+        plt.scatter(atoms[:, 0], atoms[:, 1], c="b", alpha=0.5, s=amplitude)
+        plt.axis('off')
+        plt.show()
+
+    def compute_ipr(self):
+        """ Method to compute the inverse participation ratio (IPR) for the state """
+        squared_amplitude = self.amplitude ** 2
+        n = len(self.amplitude)
+        ipr = np.sum(squared_amplitude)/n
+
+        return ipr
+
+    def compute_spin_projection(self, axis):
+        """ Method to compute the expected value of any of the three spin operators Sx, Sy or Sz.
+        All calculations are done supposing that the original atomic basis for the tight-binding is written
+        using the z projection of the spin (if the calculation is spinful).
+        Parameters:
+            char axis: 'x', 'y' or 'z'
+        Returns:
+             float spin  """
+
+        axis_list = ["x", "y", "z"]
+        if axis not in axis_list:
+            raise KeyError("Axis must be x, y or z")
+
+        pass  # //////// TO DO
 
 
 

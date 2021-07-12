@@ -349,7 +349,7 @@ def write_entanglement_spectrum_to_file(spectrum, file, n=None, shift=0):
         n = len(eigenvalues)
 
     for i, eigval in enumerate(eigenvalues):
-        if eigval <= 0.5 and eigenvalues[i+1] > 0.5:
+        if eigval <= 0.5 < eigenvalues[i + 1]:
             central_index = i
             break
 

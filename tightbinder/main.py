@@ -5,8 +5,9 @@
 
 import argparse
 import sys
-import fileparse, hamiltonian, crystal, topology
+import fileparse, crystal, topology
 import time
+from models import SKModel
 
 
 def main():
@@ -30,7 +31,7 @@ def main():
     labels = ["M", "G", "K", "M"]
     lattice.high_symmetry_path(200, labels)
 
-    bi = hamiltonian.Hamiltonian(configuration)
+    bi = SKModel(configuration)
     bi.initialize_hamiltonian()
 
     results = bi.solve(lattice.kpoints)
