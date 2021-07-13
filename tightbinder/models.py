@@ -1,8 +1,8 @@
 # Module with all the models declarations, from the Slater-Koster tight-binding model
 # to toy models such as the BHZ model or Wilson fermions.
 
-from system import System, FrozenClass
-from crystal import Crystal
+from .system import System, FrozenClass
+from .crystal import Crystal
 import numpy as np
 import sys
 import math

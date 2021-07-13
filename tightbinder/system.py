@@ -7,9 +7,9 @@
 # from it
 # System has the basic functionality for the other models to derive from it.
 
+from .crystal import Crystal
+from .result import Spectrum
 import numpy as np
-from crystal import Crystal
-import result
 import sys
 from multiprocessing import cpu_count, Pool
 from itertools import product
@@ -320,7 +320,7 @@ class System(Crystal):
             eigen_energy[:, n] = results[0]
             eigen_states.append(results[1])
 
-        return result.Spectrum(eigen_energy, np.array(eigen_states), kpoints, self)
+        return Spectrum(eigen_energy, np.array(eigen_states), kpoints, self)
 
 
 class FrozenClass:

@@ -13,7 +13,7 @@ from numpy.linalg import LinAlgError
 import math
 import sys
 import vpython as vp
-from utils import generate_basis_combinations
+from .utils import generate_basis_combinations
 
 
 # --------------- Constants ---------------

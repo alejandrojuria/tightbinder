@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math
 import sys
-from utils import condense_vector, scale_array
+from .utils import condense_vector, scale_array
 
 
 class Spectrum:
@@ -192,28 +192,28 @@ class State:
         amplitude = np.abs(self.eigenvector) ** 2
         return condense_vector(amplitude, self.norbitals)
 
-    def plot_amplitude(self):
+    def plot_amplitude(self, ax=None):
         """ Method to plot the atomic amplitude of the state on top of the crystalline positions"""
         amplitude = np.array(self.atomic_amplitude())
         amplitude = scale_array(amplitude)
 
+        if ax is None:
+            ax = plt.figure()
+
         atoms = self.motif[:, :3]
         # plt.scatter(atoms[:, 0], atoms[:, 1])
-        plt.figure()
         for n, neighbours in enumerate(self.hoppings):
             x0, y0 = atoms[n, :2]
             for atom in neighbours:
                 xneigh, yneigh = atoms[atom[0], :2]
-                plt.plot([x0, xneigh], [y0, yneigh], "-k")
-        plt.scatter(atoms[:, 0], atoms[:, 1], c="b", alpha=0.5, s=amplitude)
-        plt.axis('off')
-        plt.show()
+                ax.plot([x0, xneigh], [y0, yneigh], "-k")
+        ax.scatter(atoms[:, 0], atoms[:, 1], c="b", alpha=0.5, s=amplitude)
+        ax.axis('off')
 
     def compute_ipr(self):
         """ Method to compute the inverse participation ratio (IPR) for the state """
         squared_amplitude = self.amplitude ** 2
-        n = len(self.amplitude)
-        ipr = np.sum(squared_amplitude)/n
+        ipr = np.sum(squared_amplitude)
 
         return ipr
 
