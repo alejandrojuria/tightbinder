@@ -223,14 +223,17 @@ class System(Crystal):
             for position in self.motif:
                 atom_position = vector + position
 
-    def first_neighbours(self, mode="minimal", r=None):
+    def find_neighbours(self, mode="minimal", r=None):
         """ Given a list of atoms (motif), it returns a list in which each
         index corresponds to a list of atoms that are first neighbours to that index
         on the initial atom list.
         I.e.: Atom list -> List of neighbours/atom.
         By default it will look for the minimal distance between atoms to determine first neighbours.
         For amorphous systems the option radius is available to determine neighbours within a given radius R.
-        Boundary conditions can also be set, either PBC (default) or OBC."""
+        Boundary conditions can also be set, either PBC (default) or OBC.
+        :param mode: Search mode, can be either 'minimal' or 'radius'. Defaults to 'minimal'.
+        :param r: Value for radius sphere to detect neighbours
+        """
         eps = 1E-4
 
         if mode is "radius" and r is None:
@@ -267,8 +270,44 @@ class System(Crystal):
             neighbours_list.append(neighbours)
             index += 1
 
-        print("Done")
+        print(neighbours_list)
         self.neighbours = neighbours_list
+        print("Done")
+
+    def __reconstruct_all_neighbours(self):
+        """ Method to obtain all neighbours for all atoms since the find_neighbours method
+         only computes one-way hoppings (i.e. i->j and not j->i) """
+        all_neighbours = [[] for _ in range(len(self.motif))]
+        for n, neighbours in enumerate(self.neighbours):
+            if not neighbours:
+                continue
+            all_neighbours[n] += neighbours
+            for index, cell in neighbours:
+                all_neighbours[index] += [[n, -cell]]
+
+        return all_neighbours
+
+    def coordination_number(self):
+        all_neighbours = self.__reconstruct_all_neighbours()
+        coordination = 0
+        for neighbours in all_neighbours:
+            coordination += len(neighbours)
+
+        coordination /= self.natoms
+        return coordination
+
+    def find_lowest_coordination_atoms(self):
+        all_neighbours = self.__reconstruct_all_neighbours()
+        coordination = self.coordination_number()
+        atoms = []
+        for index, neigh in enumerate(all_neighbours):
+            atom_coordination = len(neigh)
+            if coordination > 3 and atom_coordination <= 3:
+                atoms.append(index)
+            elif coordination < 3 and atom_coordination <= 2:
+                atoms.append(index)
+
+        return atoms
 
     def compute_first_neighbour_distance(self, near_cells=None):
 
@@ -311,6 +350,7 @@ class System(Crystal):
             kpoints = np.array([[0., 0., 0.]])
 
         nk = len(kpoints)
+        eig_num = 1000
         eigen_energy = np.zeros([self._basisdim, nk])
         eigen_states = []
 

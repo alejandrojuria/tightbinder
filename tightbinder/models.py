@@ -314,7 +314,7 @@ class SKModel(System):
         basis = self.__create_atomic_orbital_basis()
 
         print('Computing first neighbours...\n')
-        self.first_neighbours()
+        self.find_neighbours()
         self._determine_connected_unit_cells()
 
         hamiltonian = []
@@ -650,18 +650,18 @@ class WilsonAmorphous(System):
     def initialize_hamiltonian(self):
         """ Routine to initialize the matrices that compose the Bloch Hamiltonian """
         print("Computing neighbours...")
-        self.first_neighbours(mode="radius", r=self.r)
+        self.find_neighbours(mode="radius", r=self.r)
         self._determine_connected_unit_cells()
 
         hamiltonian = []
         for _ in self._unit_cell_list:
-            hamiltonian.append(np.zeros(([self._basisdim, self._basisdim]), dtype=np.complex_))
+            hamiltonian.append(np.zeros([self._basisdim, self._basisdim], dtype=np.complex_))
 
         hamiltonian_atom_block = np.diag(np.array([-3 + self.m, -3 + self.m,
                                                    3 - self.m, 3 - self.m])*0.5)
         for n, atom in enumerate(self.motif):
             hamiltonian[0][self.norbitals * n:self.norbitals * (n + 1),
-            self.norbitals * n:self.norbitals * (n + 1)] = hamiltonian_atom_block
+                           self.norbitals * n:self.norbitals * (n + 1)] = hamiltonian_atom_block
 
         for i, atom in enumerate(self.motif):
             for neighbour in self.neighbours[i]:
@@ -686,7 +686,7 @@ class WilsonAmorphous(System):
         """
 
         dimension = len(self.hamiltonian[0])
-        hamiltonian_k = np.zeros([dimension, dimension], dtype=np.complex_)
+        hamiltonian_k = sc.bsr_matrix((dimension, dimension), dtype=np.complex_)
         for cell_index, cell in enumerate(self._unit_cell_list):
             hamiltonian_k += (self.hamiltonian[cell_index] * cmath.exp(1j * np.dot(k, cell)))
 

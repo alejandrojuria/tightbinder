@@ -313,7 +313,6 @@ class Crystal:
         hull = ConvexHull(atoms_coordinates)
         edge_indices = np.sort(np.concatenate((edge_indices, hull.vertices)))
 
-        print(edge_indices)
         return edge_indices
 
     def plot_crystal(self, cell_number=1, crystal_name=''):
