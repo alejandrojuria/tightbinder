@@ -83,14 +83,34 @@ class Crystal:
             self._motif = motif
             self.natoms = len(motif)
 
-    def add_atom(self, position):
-        assert type(position) == list
+    def add_atom(self, position, species=0):
+        """ Method to add one atom from some numbered species into a specific position.
+        Parameters:
+            array position: len(3)
+            int species: Used to number the species. Defaults to 0 """
+        assert type(position) == list or type(position) == np.ndarray
         if len(position) != 3:
             raise Exception("Vector must have three components")
+
         self.motif.append(position)
+
+    def add_atoms(self, atoms, species=None):
+        """ Method to add a list of atoms of specified species at some positions.
+         Built on top of method add_atom.
+         Parameters:
+             matrix atoms: natoms x 3 (each row are the coordinates of an atom)
+             list species: list of size natoms """
+        if species is None:
+            species = np.zeros(len(atoms))
+        for n, atom in enumerate(atoms):
+            self.add_atom(atom, species[n])
 
     def remove_atom(self, index):
         self.motif.pop(index)
+
+    def remove_atoms(self, indices):
+        for index in indices:
+            self.remove_atom(index)
 
     def update(self):
         """ Routine to initialize or update the intrinsic attributes of the Crystal class whenever
@@ -508,3 +528,24 @@ class CrystalView:
         self.cell_boundary.visible = False
         for vector in self.cell_vectors:
             vector.visible = False
+
+
+def bethe_lattice(z=3, depth=3, length=1):
+    """ Routine to generate a Bethe lattice
+     :param z: Coordination number. Defaults to 3
+     :param depth: Number of shells of the lattice (central atom is depth 0)
+     :param length: Float to specify length of bonds
+     :return: Motif: list of all atoms' positions """
+
+    motif = [[0., 0., 0., 0]]
+    distance = length
+    for i in range(1, depth + 1):
+        natoms_in_shell = z*(z - 1)**(i - 1)
+        angles = np.linspace(0, 2*np.pi, natoms_in_shell)
+        for angle in angles:
+            atom = distance*np.array([np.cos(angle), np.sin(angle), 0, 0])
+            motif.append(atom)
+
+        previous_angles = angles
+
+

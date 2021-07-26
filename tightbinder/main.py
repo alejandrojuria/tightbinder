@@ -5,9 +5,11 @@
 
 import argparse
 import sys
-import fileparse, crystal, topology
+from tightbinder.fileparse import parse_config_file
+from tightbinder.topology import calculate_wannier_centre_flow, calculate_z2_invariant, plot_wannier_centre_flow
 import time
-from models import SKModel
+from tightbinder.models import SKModel
+import matplotlib.pyplot as plt
 
 
 def main():
@@ -24,26 +26,23 @@ def main():
         print('Error: Input file does not exist')
         sys.exit(1)
 
-    configuration = fileparse.parse_config_file(file)
-
-    lattice = crystal.Crystal(configuration)
+    configuration = parse_config_file(file)
+    bi = SKModel(configuration)
     # lattice.plot_crystal(cell_number=1)
     labels = ["M", "G", "K", "M"]
-    lattice.high_symmetry_path(200, labels)
-
-    bi = SKModel(configuration)
+    kpoints = bi.high_symmetry_path(200, labels)
     bi.initialize_hamiltonian()
 
-    results = bi.solve(lattice.kpoints)
+    results = bi.solve(kpoints)
     results.plot_along_path(labels)
 
-    wcc_flow = topology.calculate_wannier_centre_flow(bi, number_of_points=10)
-    topology.plot_wannier_centre_flow(wcc_flow, show_midpoints=True)
-    print(f"Chern number: {topology.calculate_chern_number(wcc_flow)}")
-    print(f"Z2 invariant: {topology.calculate_z2_invariant(wcc_flow)}")
+    bi.filling = 5./8.
+    wcc_flow = calculate_wannier_centre_flow(bi, number_of_points=10)
+    plot_wannier_centre_flow(wcc_flow, show_midpoints=True)
+    print(f"Z2 invariant: {calculate_z2_invariant(wcc_flow)}")
 
-    topology.plot_wannier_centre_flow(wcc_flow)
-    topology.calculate_chern(wcc_flow)
+    plot_wannier_centre_flow(wcc_flow)
+    plt.show()
 
 
 if __name__ == "__main__":

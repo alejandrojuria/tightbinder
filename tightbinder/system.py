@@ -19,6 +19,10 @@ num_cores = cpu_count()
 
 
 class System(Crystal):
+    """ System class provides all basic functionality to create any type of model. This class
+     serves as a base class for the actual models to inherit from. By itself it does not solve
+     any system as it lacks specific implementation of the Hamiltonian, which has to be provided
+     in the actual model implementation. """
     def __init__(self, system_name=None, bravais_lattice=None, motif=None, crystal=None):
         if crystal is None:
             super().__init__(bravais_lattice, motif)
@@ -33,10 +37,14 @@ class System(Crystal):
         self._basisdim = None
         self._filling = None
         self._boundary = None
-        self.neighbours = None
+        self.bonds = []
         self._unit_cell_list = None
         self.hamiltonian = None
         self.first_neighbour_distance = None
+
+    # ####################################################################################
+    # #################################### Properties ####################################
+    # ####################################################################################
 
     @property
     def norbitals(self):
@@ -72,6 +80,159 @@ class System(Crystal):
     @property
     def basisdim(self):
         return self._basisdim
+
+    # ####################################################################################
+    # ################################# Bonds/Neighbours #################################
+    # ####################################################################################
+
+    def add_bond(self, initial, final, cell=(0., 0., 0.)):
+        """ Method to add a hopping between two atoms of the motif.
+        NB: The hopping has a specified direction, from initial to final. Since the final
+        Hamiltonian is computed taking into account hermiticity, it is not necessary to specify the hopping
+        in the other direction.
+         Parameters:
+             int initial, final: Indices of the atoms in the motif
+             array cell: Bravais vector connecting the cells of the two atoms. Defaults to zero """
+        hopping_info = [initial, final, cell]
+        self.bonds.append(hopping_info)
+
+    def add_bonds(self, initial, final, cells=None):
+        """ Same method as add_hopping but we input a list of hoppings at once.
+        Parameters:
+             list hoppings: list of size nhop
+             list initial, final: list of indices
+             matrix cells: Each row denotes the Bravais vector connecting two cells. Defaults to None """
+        if len(initial) != len(final):
+            raise ValueError("Initial and final lists do not have same size")
+        if cells is None:
+            cells = np.zeros([len(initial), 3])
+        else:
+            self.boundary = "PBC"
+            cells = np.array(cells)
+        for bond in zip(initial, final, cells):
+            self.add_bond(bond[0], bond[1], bond[2])
+
+    def find_neighbours(self, mode="minimal", r=None):
+        """ Given a list of atoms (motif), it returns a list in which each
+        index corresponds to a list of atoms that are first neighbours to that index
+        on the initial atom list.
+        I.e.: Atom list -> List of neighbours/atom.
+        By default it will look for the minimal distance between atoms to determine first neighbours.
+        For amorphous systems the option radius is available to determine neighbours within a given radius R.
+        Boundary conditions can also be set, either PBC (default) or OBC.
+        :param mode: Search mode, can be either 'minimal' or 'radius'. Defaults to 'minimal'.
+        :param r: Value for radius sphere to detect neighbours
+        """
+        eps = 1E-4
+
+        if mode is "radius" and r is None:
+            raise Exception("Error: Search mode is radius but no r given, exiting...")
+        elif mode is "minimal" and r is not None:
+            print("Search mode is minimal but a radius was given (will not be used)")
+
+        # Prepare unit cells to loop over depending on boundary conditions
+        if self.boundary == "OBC":
+            near_cells = np.array([[0.0, 0.0, 0.0]])
+        else:
+            near_cells = generate_near_cells(self.bravais_lattice)
+
+        # Determine neighbour distance from one fixed atom
+        neigh_distance = self.compute_first_neighbour_distance(near_cells)
+        if mode is "radius" and r < neigh_distance:
+            print("Warning: Radius smaller than first neighbour distance")
+        elif mode is "minimal":
+            r = neigh_distance + eps
+
+        # Determine list of neighbours for each atom of the motif
+        index = 0
+        atoms = np.copy(self.motif)
+        for n, reference_atom in enumerate(self.motif):
+            for cell in near_cells:
+                distance = np.linalg.norm(atoms[index:, :3] + cell - reference_atom[:3], axis=1)
+                print(distance)
+                neigh_atoms_indices_max = np.where(distance <= r)[0]
+                if mode == "minimal":
+                    neigh_atoms_indices_min = np.where(r - eps < distance)[0]
+                else:
+                    neigh_atoms_indices_min = np.where(eps < distance)[0]
+                neigh_atoms_indices = np.intersect1d(neigh_atoms_indices_max, neigh_atoms_indices_min)
+                for i in neigh_atoms_indices:
+                    self.add_bond(n, i, cell)
+            index += 1
+
+        print("Done")
+
+    def __reconstruct_all_bonds(self):
+        """ Method to obtain all neighbours for all atoms since the find_neighbours method
+         only computes one-way hoppings (i.e. i->j and not j->i) """
+        all_bonds = self.bonds[:]
+        for bond in self.bonds:
+            initial, final, cell = bond
+            all_bonds.append([final, initial, cell])
+
+        return np.array(all_bonds)
+
+    @staticmethod
+    def atom_coordination_number(index, bonds):
+        """ Method to find the coordination number for a specific atom in the crystal """
+        neighbours = np.where(bonds[:, 0] == index)[0]
+
+        return len(neighbours)
+
+    def coordination_number(self):
+        """ Method to find the coordination number of the solid """
+        bonds = self.__reconstruct_all_bonds()
+        coordination = 0
+        for index in range(self.natoms):
+            coordination += self.atom_coordination_number(index, bonds)
+
+        coordination /= self.natoms
+        return coordination
+
+    def find_lowest_coordination_atoms(self):
+        bonds = self.__reconstruct_all_bonds()
+        coordination = self.coordination_number()
+        atoms = []
+        for index in range(self.natoms):
+            atom_coordination = self.atom_coordination_number(index, bonds)
+            if coordination > 3 and atom_coordination <= 3:
+                atoms.append(index)
+            elif coordination < 3 and atom_coordination <= 2:
+                atoms.append(index)
+
+        return atoms
+
+    def compute_first_neighbour_distance(self, near_cells=None):
+
+        if near_cells is None:
+            near_cells = generate_near_cells(self.bravais_lattice)
+
+        neigh_distance = 1E100
+        fixed_atom = self.motif[0][:3]
+        for atom, cell in product(self.motif, near_cells):
+            distance = np.linalg.norm(atom[:3] + cell - fixed_atom)
+            if 1E-4 < distance < neigh_distance:
+                neigh_distance = distance
+
+        self.first_neighbour_distance = neigh_distance
+
+        return neigh_distance
+
+    def _determine_connected_unit_cells(self):
+        """ Method to calculate which unit cells connect with the origin from the neighbour list """
+
+        unit_cell_list = [[0.0, 0.0, 0.0]]
+        if self.boundary == "PBC":
+            for bond in self.bonds:
+                unit_cell = list(bond[2])
+                if unit_cell not in unit_cell_list:
+                    unit_cell_list.append(unit_cell)
+
+        self._unit_cell_list = unit_cell_list
+
+    # ####################################################################################
+    # ############################### System modifications ###############################
+    # ####################################################################################
 
     def supercell(self, update=True, **ncells):
         """ Routine to generate a supercell for a system using the number of cells
@@ -223,126 +384,19 @@ class System(Crystal):
             for position in self.motif:
                 atom_position = vector + position
 
-    def find_neighbours(self, mode="minimal", r=None):
-        """ Given a list of atoms (motif), it returns a list in which each
-        index corresponds to a list of atoms that are first neighbours to that index
-        on the initial atom list.
-        I.e.: Atom list -> List of neighbours/atom.
-        By default it will look for the minimal distance between atoms to determine first neighbours.
-        For amorphous systems the option radius is available to determine neighbours within a given radius R.
-        Boundary conditions can also be set, either PBC (default) or OBC.
-        :param mode: Search mode, can be either 'minimal' or 'radius'. Defaults to 'minimal'.
-        :param r: Value for radius sphere to detect neighbours
-        """
-        eps = 1E-4
+    # ####################################################################################
+    # ################################### Hamiltonian ####################################
+    # ####################################################################################
 
-        if mode is "radius" and r is None:
-            raise Exception("Error: Search mode is radius but no r given, exiting...")
-        elif mode is "minimal" and r is not None:
-            print("Search mode is minimal but a radius was given (will not be used)")
-
-        # Prepare unit cells to loop over depending on boundary conditions
-        if self.boundary == "OBC":
-            near_cells = np.array([[0.0, 0.0, 0.0]])
-        else:
-            near_cells = generate_near_cells(self.bravais_lattice)
-
-        # Determine neighbour distance from one fixed atom
-        neigh_distance = self.compute_first_neighbour_distance(near_cells)
-        if mode is "radius" and r < neigh_distance:
-            print("Warning: Radius smaller than first neighbour distance")
-
-        # Determine list of neighbours for each atom of the motif
-        neighbours_list = []
-        index = 0
-        atoms = np.copy(self.motif)
-        for reference_atom in self.motif:
-            neighbours = []
-            for cell in near_cells:
-                distance = np.linalg.norm(atoms[index:, :3] + cell - reference_atom[:3], axis=1)
-                neigh_atoms_indices_max = np.where(distance <= r)[0]
-                if mode == "minimal":
-                    neigh_atoms_indices_min = np.where(r - eps < distance)[0]
-                else:
-                    neigh_atoms_indices_min = np.where(eps < distance)[0]
-                neigh_atoms_indices = np.intersect1d(neigh_atoms_indices_max, neigh_atoms_indices_min)
-                neighbours += [[i + index, cell] for i in neigh_atoms_indices]
-            neighbours_list.append(neighbours)
-            index += 1
-
-        print(neighbours_list)
-        self.neighbours = neighbours_list
-        print("Done")
-
-    def __reconstruct_all_neighbours(self):
-        """ Method to obtain all neighbours for all atoms since the find_neighbours method
-         only computes one-way hoppings (i.e. i->j and not j->i) """
-        all_neighbours = [[] for _ in range(len(self.motif))]
-        for n, neighbours in enumerate(self.neighbours):
-            if not neighbours:
-                continue
-            all_neighbours[n] += neighbours
-            for index, cell in neighbours:
-                all_neighbours[index] += [[n, -cell]]
-
-        return all_neighbours
-
-    def coordination_number(self):
-        all_neighbours = self.__reconstruct_all_neighbours()
-        coordination = 0
-        for neighbours in all_neighbours:
-            coordination += len(neighbours)
-
-        coordination /= self.natoms
-        return coordination
-
-    def find_lowest_coordination_atoms(self):
-        all_neighbours = self.__reconstruct_all_neighbours()
-        coordination = self.coordination_number()
-        atoms = []
-        for index, neigh in enumerate(all_neighbours):
-            atom_coordination = len(neigh)
-            if coordination > 3 and atom_coordination <= 3:
-                atoms.append(index)
-            elif coordination < 3 and atom_coordination <= 2:
-                atoms.append(index)
-
-        return atoms
-
-    def compute_first_neighbour_distance(self, near_cells=None):
-
-        if near_cells is None:
-            near_cells = generate_near_cells(self.bravais_lattice)
-
-        neigh_distance = 1E100
-        fixed_atom = self.motif[0][:3]
-        for atom, cell in product(self.motif, near_cells):
-            distance = np.linalg.norm(atom[:3] + cell - fixed_atom)
-            if 1E-4 < distance < neigh_distance:
-                neigh_distance = distance
-
-        self.first_neighbour_distance = neigh_distance
-
-        return neigh_distance
-
-    def _determine_connected_unit_cells(self):
-        """ Method to calculate which unit cells connect with the origin from the neighbour list """
-
-        neighbours_list = self.neighbours
-        unit_cell_list = [[0.0, 0.0, 0.0]]
-        if self.boundary == "PBC":
-            for neighbour_list in neighbours_list:
-                for neighbour in neighbour_list:
-                    unit_cell = list(neighbour[1])
-                    if unit_cell not in unit_cell_list:
-                        unit_cell_list.append(unit_cell)
-
-        self._unit_cell_list = unit_cell_list
+    def initialize_hamiltonian(self):
+        """ Generic implementation of initialization of the Hamiltonian. To be overwritten
+            by specific implementations of System """
+        raise Exception("Has to be implemented by child class")
 
     def hamiltonian_k(self, k):
         """ Generic implementation of hamiltonian_k H(k). To be overwritten
-         by specific implementations of System """
-        pass
+            by specific implementations of System """
+        raise Exception("Has to be implemented by child class")
 
     def solve(self, kpoints=None):
         """ Diagonalize the Hamiltonian to obtain the band structure and the eigenstates """

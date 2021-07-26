@@ -326,27 +326,26 @@ class SKModel(System):
         for n, atom in enumerate(self.motif):
             species = int(atom[3])  # To match list beginning on zero
 
-            hamiltonian_atom_block = np.diag(np.array(onsite_energies[species]))
+            hamiltonian_atom_block = np.diag(np.array(onsite_energies[species])/2)
             hamiltonian[0][self.norbitals*n:self.norbitals*(n+1),
                            self.norbitals*n:self.norbitals*(n+1)] = hamiltonian_atom_block
 
-        for i, atom in enumerate(basis):
-            atom_position = atom[0][:3]
-            species = int(atom[0][3])
-            orbital = atom[1]
-            atom_index = int(i/self.norbitals)
-            for neighbour in self.neighbours[atom_index]:
-                neigh_index = neighbour[0]
-                neigh_unit_cell = list(neighbour[1])
-                neigh_position = self.motif[neigh_index][:3]
-                neigh_species = int(self.motif[neigh_index][3])
-                for j, neigh_orbital in enumerate(orbitals):
-                    position_difference = -np.array(atom_position) + np.array(neigh_position) + np.array(neigh_unit_cell)
-                    orbital_config = [orbital, species, neigh_orbital, neigh_species]
-                    h_cell = self._unit_cell_list.index(neigh_unit_cell)
-                    hamiltonian[h_cell][i, neigh_index*self.norbitals + j] += self.__hopping_amplitude(
-                                                                                                position_difference,
-                                                                                                orbital_config)
+        for bond in self.bonds:
+            initial_atom_index, final_atom_index, cell = bond
+            initial_atom = self.motif[initial_atom_index][:3]
+            initial_atom_species = self.motif[initial_atom_index][3]
+            final_atom = self.motif[final_atom_index][:3]
+            final_atom_species = self.motif[final_atom_index][3]
+            for i, initial_orbital in enumerate(orbitals):
+                for j, final_orbital in enumerate(orbitals):
+                    position_difference = np.array(final_atom) + np.array(cell) - np.array(initial_atom)
+                    orbital_config = [initial_orbital, initial_atom_species, final_orbital, final_atom_species]
+                    h_cell = self._unit_cell_list.index(list(cell))
+                    hamiltonian[h_cell][initial_atom_index * self.norbitals + i,
+                                        final_atom_species * self.norbitals + j] += self.__hopping_amplitude(
+                                                                                    position_difference,
+                                                                                    orbital_config)
+
         # Check spinless or spinful model and initialize spin-orbit coupling
         if self.configuration['Spin']:
             self.norbitals = self.norbitals * 2
@@ -663,15 +662,15 @@ class WilsonAmorphous(System):
             hamiltonian[0][self.norbitals * n:self.norbitals * (n + 1),
                            self.norbitals * n:self.norbitals * (n + 1)] = hamiltonian_atom_block
 
-        for i, atom in enumerate(self.motif):
-            for neighbour in self.neighbours[i]:
-                atom_position = atom[:3]
-                neigh_index = neighbour[0]
-                neigh_unit_cell = list(neighbour[1])
-                neigh_position = np.array(self.motif[neigh_index][:3]) + np.array(neigh_unit_cell)
-                h_cell = self._unit_cell_list.index(neigh_unit_cell)
-                hamiltonian[h_cell][4 * i:4 * (i + 1), 4 * neigh_index:4 * (neigh_index + 1)] = \
-                    self._hopping_matrix(atom_position, neigh_position, self.parameters)
+        for bond in self.bonds:
+            initial_atom_index, final_atom_index, cell = bond
+            initial_atom = self.motif[initial_atom_index][:3]
+            final_atom = self.motif[final_atom_index][:3]
+            neigh_position = np.array(final_atom) + np.array(cell)
+            h_cell = self._unit_cell_list.index(list(cell))
+            hamiltonian[h_cell][4 * initial_atom_index:4 * (initial_atom_index + 1),
+                                4 * final_atom_index:4 * (final_atom_index + 1)] = \
+                self._hopping_matrix(initial_atom, neigh_position, self.parameters)
 
         self.hamiltonian = hamiltonian
 
@@ -686,7 +685,7 @@ class WilsonAmorphous(System):
         """
 
         dimension = len(self.hamiltonian[0])
-        hamiltonian_k = sc.bsr_matrix((dimension, dimension), dtype=np.complex_)
+        hamiltonian_k = np.zeros((dimension, dimension), dtype=np.complex_)
         for cell_index, cell in enumerate(self._unit_cell_list):
             hamiltonian_k += (self.hamiltonian[cell_index] * cmath.exp(1j * np.dot(k, cell)))
 
@@ -703,25 +702,6 @@ class RSmodel(System):
         self.hoppings = None
         self.boundary = "OBC"
 
-    def add_atom(self, position, species=0):
-        """ Method to add one atom from some numered species into a specific position.
-        Parameters:
-            array position: len(3)
-            int species: Used to number the species. Defaults to 0 """
-        atom = np.append(position, species)
-        self.motif = np.concatenate([self.motif, atom], axis=0)
-
-    def add_atoms(self, atoms, species=None):
-        """ Method to add a list of atoms of specified species at some positions.
-         Built on top of method add_atom.
-         Parameters:
-             matrix atoms: natoms x 3 (each row are the coordinates of an atom)
-             list species: list of size natoms """
-        if species is None:
-            species = np.zeros(len(atoms))
-        for n, atom in enumerate(atoms):
-            self.add_atom(atom, species[n])
-
     def add_hopping(self, hopping, initial, final, cell=(0., 0., 0.)):
         """ Method to add a hopping between two atoms of the motif.
         NB: The hopping has a specified direction, from initial to final. Since the final
@@ -731,8 +711,14 @@ class RSmodel(System):
              complex hopping
              int initial, final: Indices of the atoms in the motif
              array cell: Bravais vector connecting the cells of the two atoms. Defaults to zero """
-        hopping_info = [hopping, initial, final, cell]
-        self.hoppings.append(hopping_info)
+
+        assert type(initial) == int, "initial must be an integer"
+        assert type(final)   == int, "initial must be an integer"
+        assert type(hopping) != str, "hopping must be a complex number"
+
+        self.add_bond(initial, final, cell)
+        bond_index = len(self.bonds) - 1
+        self.hoppings.append([bond_index, hopping])
 
     def add_hoppings(self, hoppings, initial, final, cells=None):
         """ Same method as add_hopping but we input a list of hoppings at once.
@@ -740,9 +726,13 @@ class RSmodel(System):
              list hoppings: list of size nhop
              list initial, final: list of indices
              matrix cells: Each row denotes the Bravais vector connecting two cells. Defaults to None """
+        if len(hoppings) != len(initial) or len(initial) != len(final):
+            raise ValueError("Provided list must have the same length")
+
         if cells is None:
             cells = np.zeros([len(hoppings), 3])
         else:
+            self.boundary = "PBC"
             cells = np.array(cells)
         for n, hopping in enumerate(hoppings):
             self.add_hopping(hopping, initial[n], final[n], cells[n, :])
@@ -750,10 +740,19 @@ class RSmodel(System):
     def initialize_hamiltonian(self):
         """ Method to set up the matrices that compose the Hamiltonian, either the Bloch Hamiltonian
         or the real-space one """
+        unit_cell_list = [[0., 0., 0.]]
+        hamiltonian = []
+        for _ in range(self.unit_cell_list):
+            hamiltonian.append(np.zeros((self.natoms, self.natoms), dtype=np.complex))
         for hopping in self.hoppings:
-            cell = hopping[3]
-            if np.linalg.norm(cell) != 0:
-                self.boundary = "PBC"
-                break
+            bond_index, amplitude = hopping
+            bond = self.bonds[bond_index]
+            initial_atom_index, final_atom_index, cell = bond
+
+
+
+
+
+
 
 
