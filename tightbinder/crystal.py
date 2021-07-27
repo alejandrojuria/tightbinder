@@ -530,22 +530,3 @@ class CrystalView:
             vector.visible = False
 
 
-def bethe_lattice(z=3, depth=3, length=1):
-    """ Routine to generate a Bethe lattice
-     :param z: Coordination number. Defaults to 3
-     :param depth: Number of shells of the lattice (central atom is depth 0)
-     :param length: Float to specify length of bonds
-     :return: Motif: list of all atoms' positions """
-
-    motif = [[0., 0., 0., 0]]
-    distance = length
-    for i in range(1, depth + 1):
-        natoms_in_shell = z*(z - 1)**(i - 1)
-        angles = np.linspace(0, 2*np.pi, natoms_in_shell)
-        for angle in angles:
-            atom = distance*np.array([np.cos(angle), np.sin(angle), 0, 0])
-            motif.append(atom)
-
-        previous_angles = angles
-
-

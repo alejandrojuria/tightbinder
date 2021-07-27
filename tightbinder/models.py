@@ -646,10 +646,12 @@ class WilsonAmorphous(System):
 
         return hopping
 
-    def initialize_hamiltonian(self):
+    def initialize_hamiltonian(self, find_bonds=True):
         """ Routine to initialize the matrices that compose the Bloch Hamiltonian """
-        print("Computing neighbours...")
-        self.find_neighbours(mode="radius", r=self.r)
+        self._basisdim = self.natoms * self.norbitals
+        if find_bonds:
+            print("Computing neighbours...")
+            self.find_neighbours(mode="radius", r=self.r)
         self._determine_connected_unit_cells()
 
         hamiltonian = []
@@ -750,6 +752,38 @@ class RSmodel(System):
             initial_atom_index, final_atom_index, cell = bond
 
 
+def bethe_lattice(z=3, depth=3, length=1):
+    """ Routine to generate a Bethe lattice
+     :param z: Coordination number. Defaults to 3
+     :param depth: Number of shells of the lattice (central atom is depth 0)
+     :param length: Float to specify length of bonds
+     :return: Motif: list of all atoms' positions """
+
+    motif_previous_shell = [[0., 0., 0., 0]]
+    motif = [[0., 0., 0., 0]]
+    cell = [0., 0., 0.]
+    bonds = []
+    previous_angles = [0]
+    bond_length = length
+    atom_index = 1
+    for i in range(1, depth + 1):
+        natoms_in_shell = z*(z - 1)**(i - 1)
+        angles = np.linspace(0, 2*np.pi, natoms_in_shell + 1)
+        angle_between = angles[1] - angles[0]
+        angles += angle_between/2 + previous_angles[0]
+        for angle in angles[:-1]:
+            atom = bond_length*np.array([np.cos(angle), np.sin(angle), 0, 0])
+            motif.append(atom)
+            distance = np.linalg.norm(atom[:3] - np.array(motif_previous_shell)[:, :3], axis=1)
+            neighbour = np.where(distance == np.min(distance))[0][0]
+            bonds.append([atom_index, neighbour, cell])
+            atom_index += 1
+
+        motif_previous_shell = np.copy(motif)
+        bond_length += length
+        previous_angles = angles
+
+    return motif, bonds
 
 
 

@@ -181,7 +181,7 @@ class State:
         self.eigenvector = eigenvector
         self.motif = system.motif
         self.norbitals = system.norbitals
-        self.hoppings = system.neighbours
+        self.hoppings = system.bonds
 
         self.amplitude = self.atomic_amplitude()
 
@@ -192,22 +192,23 @@ class State:
         amplitude = np.abs(self.eigenvector) ** 2
         return condense_vector(amplitude, self.norbitals)
 
-    def plot_amplitude(self, ax=None):
+    def plot_amplitude(self, ax=None, title=""):
         """ Method to plot the atomic amplitude of the state on top of the crystalline positions"""
         amplitude = np.array(self.atomic_amplitude())
         amplitude = scale_array(amplitude)
 
         if ax is None:
-            ax = plt.figure()
+            fig = plt.figure(figsize=(5, 5))
+            ax = fig.add_subplot(111)
 
-        atoms = self.motif[:, :3]
+        atoms = np.array(self.motif)[:, :3]
         # plt.scatter(atoms[:, 0], atoms[:, 1])
-        for n, neighbours in enumerate(self.hoppings):
-            x0, y0 = atoms[n, :2]
-            for atom in neighbours:
-                xneigh, yneigh = atoms[atom[0], :2]
-                ax.plot([x0, xneigh], [y0, yneigh], "-k")
+        for n, bond in enumerate(self.hoppings):
+            x0, y0 = atoms[bond[0], :2]
+            xneigh, yneigh = atoms[bond[1], :2]
+            ax.plot([x0, xneigh], [y0, yneigh], "-k")
         ax.scatter(atoms[:, 0], atoms[:, 1], c="b", alpha=0.5, s=amplitude)
+        ax.set_title(title)
         ax.axis('off')
 
     def compute_ipr(self):
