@@ -3,6 +3,8 @@ from tightbinder.disorder import amorphize
 import matplotlib.pyplot as plt
 import numpy as np
 
+# WARNING: Script broken due to change from neighbours to bonds
+
 
 def main():
     mass = 2
@@ -19,7 +21,7 @@ def main():
     atoms = wilson.motif[:, :3]
     # plt.scatter(atoms[:, 0], atoms[:, 1])
     fig, ax = plt.subplots()
-    for n, neighbours in enumerate(wilson.neighbours):
+    for n, neighbours in enumerate(wilson.bonds):
         x0, y0 = atoms[n, :2]
         for atom in neighbours:
             xneigh, yneigh = atoms[atom[0], :2]
