@@ -141,15 +141,15 @@ class System(Crystal):
         if mode is "radius" and r < neigh_distance:
             print("Warning: Radius smaller than first neighbour distance")
         elif mode is "minimal":
-            r = neigh_distance + eps
+            r = neigh_distance
 
         # Determine list of neighbours for each atom of the motif
         index = 0
         atoms = np.copy(self.motif)
+        print(atoms)
         for n, reference_atom in enumerate(self.motif):
             for cell in near_cells:
                 distance = np.linalg.norm(atoms[index:, :3] + cell - reference_atom[:3], axis=1)
-                print(distance)
                 neigh_atoms_indices_max = np.where(distance <= r)[0]
                 if mode == "minimal":
                     neigh_atoms_indices_min = np.where(r - eps < distance)[0]
@@ -157,7 +157,7 @@ class System(Crystal):
                     neigh_atoms_indices_min = np.where(eps < distance)[0]
                 neigh_atoms_indices = np.intersect1d(neigh_atoms_indices_max, neigh_atoms_indices_min)
                 for i in neigh_atoms_indices:
-                    self.add_bond(n, i, cell)
+                    self.add_bond(n, i + index, cell)
             index += 1
 
         print("Done")
