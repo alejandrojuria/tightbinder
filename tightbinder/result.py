@@ -164,16 +164,34 @@ class Spectrum:
         average_ipr /= len(states)
         return average_ipr
 
-    def plot_ipr(self, ipr, sort=False):
-        """ Method to plot the IPR previously computed """
-        plt.figure()
-        x = np.arange(0, len(ipr))
+    def calculate_specific_occupation(self, atoms_indices):
+        """ Method to compute the occupation for all the states in the spectrum
+         on the specified atoms """
+        eigen_states = np.copy(self.eigen_states.reshape(self.system.basisdim, -1).T)
+        occupations = []
+        for eigenvector in eigen_states:
+            state = State(eigenvector, self.system)
+            occupation = state.compute_specific_occupation(atoms_indices)
+            occupations.append(occupation)
+
+        return occupations
+
+    @staticmethod
+    def plot_quantity(array, name=None, sort=False, ax=None):
+        """ Method to plot an array of some quantity for each state
+        in the spectrum as a bar plot """
+        x = np.arange(0, len(array))
+
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+
         if sort:
-            ipr = np.sort(ipr)
-        plt.bar(x, ipr, width=1)
-        plt.title(fr"IPR $M=${self.system.m}")
-        plt.ylabel("IPR")
-        plt.xlabel("Sorted states")
+            array = np.sort(array)
+        ax.bar(x, array, width=1)
+        ax.set_title(fr"{name}")
+        ax.set_ylabel(f"{name}")
+        ax.set_xlabel("States")
 
 
 class State:
@@ -217,6 +235,12 @@ class State:
         ipr = np.sum(squared_amplitude)
 
         return ipr
+
+    def compute_specific_occupation(self, atoms_indices):
+        """ Method to compute which percentage of the atomic amplitude is located
+         at the given list of atoms """
+        occupation = np.sum(self.amplitude[atoms_indices])
+        return occupation
 
     def compute_spin_projection(self, axis):
         """ Method to compute the expected value of any of the three spin operators Sx, Sy or Sz.

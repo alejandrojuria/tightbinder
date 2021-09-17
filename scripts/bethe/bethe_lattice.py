@@ -7,10 +7,8 @@ import numpy as np
 def main():
     length = 0.8
     mass = 2
-    motif, bonds = bethe_lattice(z=3, depth=8, length=length)
     model = WilsonAmorphous(m=mass)
-    model.motif = motif
-    model.bonds = bonds
+    model.motif, model.bonds = bethe_lattice(z=3, depth=8, length=length)
     model.boundary = "OBC"
 
     model.initialize_hamiltonian(find_bonds=False)
