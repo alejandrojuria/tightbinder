@@ -1,6 +1,7 @@
 # Script to run tests on fileparse module
 
 from pathlib import Path
+import pytest
 from tightbinder.fileparse import parse_config_file
 
 path = Path(__file__).parent.parent.resolve()
@@ -8,6 +9,15 @@ files = [
     path / "examples/test/square.txt",
     path / "examples/test/bi(111).txt"
 ]
+
+
+def check_configuration(configuration, expected_configuration):
+    keys = expected_configuration.keys()
+    for key in keys:
+        try:
+            assert configuration[key] == expected_configuration[key]
+        except AssertionError as e:
+            pytest.fail(f"Configuration mismatch for {key}")
 
 
 def test_parse_square():
@@ -27,9 +37,7 @@ def test_parse_square():
         "Spin-orbit coupling": 0,
         "Mesh": [100, 100]
     }
-    keys = expected_configuration.keys()
-    for key in keys:
-        assert configuration[key] == expected_configuration[key]
+    check_configuration(configuration, expected_configuration)
 
 
 def test_parse_bi_bilayer():
@@ -50,6 +58,5 @@ def test_parse_bi_bilayer():
         "Spin-orbit coupling": 0.5,
         "Mesh": [200, 200]
     }
-    keys = expected_configuration.keys()
-    for key in keys:
-        assert configuration[key] == expected_configuration[key]
+    check_configuration(configuration, expected_configuration)
+
