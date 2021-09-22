@@ -146,11 +146,10 @@ class System(Crystal):
         # Determine list of neighbours for each atom of the motif
         index = 0
         atoms = np.copy(self.motif)
-        print(atoms)
         for n, reference_atom in enumerate(self.motif):
             for cell in near_cells:
                 distance = np.linalg.norm(atoms[index:, :3] + cell - reference_atom[:3], axis=1)
-                neigh_atoms_indices_max = np.where(distance <= r)[0]
+                neigh_atoms_indices_max = np.where(distance <= r + eps)[0]
                 if mode == "minimal":
                     neigh_atoms_indices_min = np.where(r - eps < distance)[0]
                 else:

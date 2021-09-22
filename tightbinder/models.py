@@ -341,10 +341,9 @@ class SKModel(System):
                     position_difference = np.array(final_atom) + np.array(cell) - np.array(initial_atom)
                     orbital_config = [initial_orbital, initial_atom_species, final_orbital, final_atom_species]
                     h_cell = self._unit_cell_list.index(list(cell))
+                    hopping_amplitude = self.__hopping_amplitude(position_difference, orbital_config)
                     hamiltonian[h_cell][initial_atom_index * self.norbitals + i,
-                                        final_atom_species * self.norbitals + j] += self.__hopping_amplitude(
-                                                                                    position_difference,
-                                                                                    orbital_config)
+                                        final_atom_index * self.norbitals + j] += hopping_amplitude
 
         # Check spinless or spinful model and initialize spin-orbit coupling
         if self.configuration['Spin']:
@@ -400,6 +399,7 @@ class SKModel(System):
         for cell_index, cell in enumerate(self._unit_cell_list):
             hamiltonian_k += self.hamiltonian[cell_index] * cmath.exp(1j*np.dot(k, cell))
 
+        hamiltonian_k = (hamiltonian_k + np.transpose(np.conjugate(hamiltonian_k)))
         return hamiltonian_k
 
     # ---------------------------- IO routines ----------------------------
