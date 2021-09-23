@@ -17,7 +17,8 @@ def check_configuration(configuration, expected_configuration):
         try:
             assert configuration[key] == expected_configuration[key]
         except AssertionError as e:
-            pytest.fail(f"Configuration mismatch for {key}")
+            pytest.fail(f"Configuration mismatch for {key}, " +
+                        f"{configuration[key]} differs from {expected_configuration[key]}")
 
 
 def test_parse_square():
@@ -55,7 +56,7 @@ def test_parse_bi_bilayer():
         "Onsite energy": [[-10.906, -0.486]],
         "SK amplitudes": [[-0.608, 1.320, 1.854, -0.600, 0, 0, 0, 0, 0, 0]],
         "Spin": True,
-        "Spin-orbit coupling": 0.5,
+        "Spin-orbit coupling": 0.3,
         "Mesh": [200, 200]
     }
     check_configuration(configuration, expected_configuration)
