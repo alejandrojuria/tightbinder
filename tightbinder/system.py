@@ -62,7 +62,7 @@ class System(Crystal):
     @filling.setter
     def filling(self, filling):
         if filling > 1 or filling < 0:
-            print("Error: filling attribute must be betweem 0 and 1")
+            print("Error: filling attribute must be between 0 and 1")
         else:
             self._filling = filling
 
@@ -80,6 +80,11 @@ class System(Crystal):
     @property
     def basisdim(self):
         return self._basisdim
+
+    @basisdim.setter
+    def basisdim(self, basisdim):
+        if basisdim < self.natoms:
+            raise ValueError(f"basisdim has to be at least equal to the number of atoms (motif, {self.natoms})")
 
     # ####################################################################################
     # ################################# Bonds/Neighbours #################################
@@ -265,7 +270,7 @@ class System(Crystal):
         if update:
             self.update()
 
-        self._basisdim = self.norbitals * len(self.motif)
+        self.basisdim = self.norbitals * len(self.motif)
 
         return self
 
@@ -404,7 +409,7 @@ class System(Crystal):
 
         nk = len(kpoints)
         eig_num = 1000
-        eigen_energy = np.zeros([self._basisdim, nk])
+        eigen_energy = np.zeros([self.basisdim, nk])
         eigen_states = []
 
         for n, k in enumerate(kpoints):
