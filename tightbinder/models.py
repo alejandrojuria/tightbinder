@@ -207,7 +207,7 @@ class SKModel(System):
         for element in itertools.product(self.motif, orbitals):
             basis.append(element)
 
-        self._basisdim = len(basis)
+        self.basisdim = len(basis)
         return basis
 
     def __extend_onsite_vector(self):
@@ -319,7 +319,7 @@ class SKModel(System):
 
         hamiltonian = []
         for _ in self._unit_cell_list:
-            hamiltonian.append(np.zeros(([self._basisdim, self._basisdim]), dtype=np.complex_))
+            hamiltonian.append(np.zeros(([self.basisdim, self.basisdim]), dtype=np.complex_))
 
         onsite_energies = self.__extend_onsite_vector()
 
@@ -348,11 +348,11 @@ class SKModel(System):
         # Check spinless or spinful model and initialize spin-orbit coupling
         if self.configuration['Spin']:
             self.norbitals = self.norbitals * 2
-            self._basisdim = self._basisdim * 2
+            self.basisdim = self.basisdim * 2
 
             for index, cell in enumerate(self._unit_cell_list):
                 if self.ordering == "atomic":
-                    aux_hamiltonian = np.zeros([self._basisdim, self._basisdim], dtype=np.complex_)
+                    aux_hamiltonian = np.zeros([self.basisdim, self.basisdim], dtype=np.complex_)
                     for n in range(self.natoms):
                         for m in range(self.natoms):
                             atom_block = np.kron(np.eye(2, 2),
@@ -376,8 +376,8 @@ class SKModel(System):
                     hamiltonian[0] += self.spin_orbit_hamiltonian
                 else:
                     for block, indices in enumerate(itertools.product([0, 1], [0, 1])):
-                        hamiltonian[0][indices[0] * self._basisdim//2:(indices[0] + 1) * self._basisdim//2,
-                                       indices[1] * self._basisdim//2:(indices[1] + 1) * self._basisdim//2] += self.spin_blocks[block]
+                        hamiltonian[0][indices[0] * self.basisdim//2:(indices[0] + 1) * self.basisdim//2,
+                                       indices[1] * self.basisdim//2:(indices[1] + 1) * self.basisdim//2] += self.spin_blocks[block]
 
         self.hamiltonian = hamiltonian
 
@@ -387,7 +387,7 @@ class SKModel(System):
             zeeman = np.kron(np.array([[1, 0], [0, -1]]), np.eye(self.norbitals//2))
             zeeman_h = np.kron(np.eye(self.natoms), zeeman) * intensity
         else:
-            zeeman_h = np.kron(np.array([[1, 0], [0, -1]]), np.eye(self._basisdim // 2) * intensity)
+            zeeman_h = np.kron(np.array([[1, 0], [0, -1]]), np.eye(self.basisdim // 2) * intensity)
 
         self.__zeeman = zeeman_h
 
@@ -395,7 +395,7 @@ class SKModel(System):
         """ Add the k dependency of the Bloch Hamiltonian through the complex exponential
          and adds the spin-orbit term in case it is present """
 
-        hamiltonian_k = np.zeros([self._basisdim, self._basisdim], dtype=np.complex_)
+        hamiltonian_k = np.zeros([self.basisdim, self.basisdim], dtype=np.complex_)
         for cell_index, cell in enumerate(self._unit_cell_list):
             hamiltonian_k += self.hamiltonian[cell_index] * cmath.exp(1j*np.dot(k, cell))
 
@@ -470,7 +470,7 @@ class SKModel(System):
         model.ndim = ndim
         model.norbitals = norbitals
         model.natoms = natoms
-        model._basisdim = basisdim
+        model.basisdim = basisdim
         model._unit_cell_list = unit_cell_list
         model.bravais_lattice = bravais_lattice
         model.hamiltonian = hamiltonian
@@ -530,7 +530,7 @@ class WilsonFermions2D(System, FrozenClass):
                                          motif=[[0, 0, 0, 0]]))
         self.system_name = "Wilson-fermions model"
         self.norbitals = 4
-        self._basisdim = self.norbitals * 1
+        self.basisdim = self.norbitals * 1
         self.filling = 0.5
 
         self.a = side
@@ -567,7 +567,7 @@ class WilsonFermions3D(System, FrozenClass):
                          crystal=Crystal([[side, 0, 0], [0, side, 0], [0, 0, side]],
                                          motif=[[0, 0, 0, 0]]))
         self.num_orbitals = 4
-        self._basisdim = self.num_orbitals * self.natoms
+        self.basisdim = self.num_orbitals * self.natoms
 
         self.a = side
         self.t = t
@@ -612,7 +612,7 @@ class WilsonAmorphous(System):
 
         self.filling = 0.5
         self.norbitals = 4
-        self._basisdim = self.norbitals * len(self.motif)
+        self.basisdim = self.norbitals * len(self.motif)
         self.boundary = "PBC"
 
         self.a = side
@@ -648,7 +648,7 @@ class WilsonAmorphous(System):
 
     def initialize_hamiltonian(self, find_bonds=True):
         """ Routine to initialize the matrices that compose the Bloch Hamiltonian """
-        self._basisdim = self.natoms * self.norbitals
+        self.basisdim = self.natoms * self.norbitals
         if find_bonds:
             print("Computing neighbours...")
             self.find_neighbours(mode="radius", r=self.r)
@@ -656,7 +656,7 @@ class WilsonAmorphous(System):
 
         hamiltonian = []
         for _ in self._unit_cell_list:
-            hamiltonian.append(np.zeros([self._basisdim, self._basisdim], dtype=np.complex_))
+            hamiltonian.append(np.zeros([self.basisdim, self.basisdim], dtype=np.complex_))
 
         hamiltonian_atom_block = np.diag(np.array([-3 + self.m, -3 + self.m,
                                                    3 - self.m, 3 - self.m])*0.5)
@@ -701,8 +701,21 @@ class RSmodel(System):
      PBC. """
     def __init__(self, system_name=None, bravais_lattice=None, motif=None):
         super().__init__(system_name=system_name, bravais_lattice=bravais_lattice, motif=motif)
-        self.hoppings = None
+        self.onsite_energy = None
+        self.hoppings = {}
         self.boundary = "OBC"
+        self.orbitals = None
+        self.bond_graphs = None
+
+    def add_onsite_energy(self, index, energy):
+        """ Method to specify the onsite energy of a given atom """
+        self.hoppings[index] = energy
+
+    def add_onsite_energies(self, indices, energies):
+        """ same as add_onsite_energy. Used to specify the onsite energies of a collection
+         of atom indices """
+        for index, energy in zip(indices, energies):
+            self.add_onsite_energy(index, energy)
 
     def add_hopping(self, hopping, initial, final, cell=(0., 0., 0.)):
         """ Method to add a hopping between two atoms of the motif.
@@ -739,17 +752,82 @@ class RSmodel(System):
         for n, hopping in enumerate(hoppings):
             self.add_hopping(hopping, initial[n], final[n], cells[n, :])
 
+    def specify_hopping_amplitude(self, amplitude, bond_index):
+        """ Instead of adding the hopping directly as a bond with an amplitude, we
+         can also specify the hopping amplitude of a preexisting bond """
+        self.hoppings.append([bond_index, amplitude])
+
+    def specify_hopping_amplitudes(self, amplitudes, bond_indices):
+        """ Same as specify_hopping_amplitude but for a list of amplitudes-bond indices """
+        for amplitude, bond_index in zip(amplitudes, bond_indices):
+            self.specify_hopping_amplitude(amplitude, bond_index)
+
+    def __construct_bond_graph(self):
+        """ Private method to create the graph of bonds between all atoms """
+        bond_graphs = []
+        for _ in self._unit_cell_list:
+            bond_graphs.append(np.zeros([self.natoms, self.natoms]))
+
+        for bond, _ in self.hoppings:
+            initial_atom, final_atom, cell = bond
+            cell_index = self._unit_cell_list.index(cell)
+            bond_graphs[cell_index][initial_atom, final_atom] += 1
+
+        for i in range(self._unit_cell_list):
+            bond_graphs[i] += bond_graphs[i].T
+
+        self.bond_graphs = bond_graphs
+
+    def __calculate_orbitals(self):
+        """ Private method to compute the dimension of the basis for the model, taking into account
+         the number of bonds present for each atom of the motif. """
+        orbitals = []
+        for i in range(self.natoms):
+            max_orbitals = 0
+            for j in range(len(self._unit_cell_list)):
+                max_bonds_in_unit_cell = np.max(self.bond_graphs[j][i, :])
+                if max_bonds_in_unit_cell > max_orbitals:
+                    max_orbitals = max_bonds_in_unit_cell
+            orbitals.append(max_orbitals)
+
+        orbitals[orbitals == 0] = 1
+        self.orbitals = orbitals
+
+    def __calculate_basisdim(self):
+        """ Method to compute the dimension of the basis based on the orbitals of each atom """
+        self.basisdim = np.sum(self.orbitals)
+
     def initialize_hamiltonian(self):
         """ Method to set up the matrices that compose the Hamiltonian, either the Bloch Hamiltonian
         or the real-space one """
-        unit_cell_list = [[0., 0., 0.]]
+
+        # First call private methods to compute orbitals per atom and basis dimension
+        self._determine_connected_unit_cells()
+        self.__calculate_orbitals()
+        self.__calculate_basisdim()
+
+        # Build the matrices that compose the Bloch Hamiltonian
+        assert len(self.bonds) == len(self.hoppings)
         hamiltonian = []
-        for _ in range(self.unit_cell_list):
-            hamiltonian.append(np.zeros((self.natoms, self.natoms), dtype=np.complex))
-        for hopping in self.hoppings:
-            bond_index, amplitude = hopping
+        for _ in range(self._unit_cell_list):
+            hamiltonian.append(np.zeros((self.basisdim, self.basisdim), dtype=np.complex))
+
+        # Onsite energies
+        for n in range(len(self.natoms)):
+            hamiltonian[0][n:n + self.orbitals[n], n:n+self.orbitals[n]] = self.onsite_energy[n]/2.
+
+        # Hoppings
+        for bond_index, amplitude in self.hoppings:
             bond = self.bonds[bond_index]
             initial_atom_index, final_atom_index, cell = bond
+            
+
+
+
+    def hamiltonian_k(self, k):
+        hamiltonian_k = np.zeros((self.basisdim, self.basisdim), dtype=np.complex_)
+        for cell_index, cell in enumerate(self._unit_cell_list):
+            hamiltonian_k += (self.hamiltonian[cell_index] * cmath.exp(1j * np.dot(k, cell)))
 
 
 def bethe_lattice(z=3, depth=3, length=1):
