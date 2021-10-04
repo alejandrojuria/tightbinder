@@ -85,7 +85,7 @@ class System(Crystal):
     def basisdim(self, basisdim):
         if basisdim < self.natoms:
             raise ValueError(f"basisdim has to be at least equal to the number of atoms (motif, {self.natoms})")
-
+        self._basisdim = basisdim
     # ####################################################################################
     # ################################# Bonds/Neighbours #################################
     # ####################################################################################
@@ -129,7 +129,7 @@ class System(Crystal):
         :param r: Value for radius sphere to detect neighbours
         """
         eps = 1E-4
-
+        print("Why")
         if mode is "radius" and r is None:
             raise Exception("Error: Search mode is radius but no r given, exiting...")
         elif mode is "minimal" and r is not None:
@@ -143,10 +143,11 @@ class System(Crystal):
 
         # Determine neighbour distance from one fixed atom
         neigh_distance = self.compute_first_neighbour_distance(near_cells)
-        if mode is "radius" and r < neigh_distance:
+        if mode == "radius" and r < neigh_distance:
             print("Warning: Radius smaller than first neighbour distance")
-        elif mode is "minimal":
+        elif mode == "minimal":
             r = neigh_distance
+            print("Works!!!!!!!!!!!")
 
         # Determine list of neighbours for each atom of the motif
         index = 0

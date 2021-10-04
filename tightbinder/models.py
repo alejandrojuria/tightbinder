@@ -652,6 +652,8 @@ class WilsonAmorphous(System):
         if find_bonds:
             print("Computing neighbours...")
             self.find_neighbours(mode="radius", r=self.r)
+        if not find_bonds and self.bonds is None:
+            raise ArithmeticError("No bonds found to initialize Hamiltonian, exiting...")
         self._determine_connected_unit_cells()
 
         hamiltonian = []

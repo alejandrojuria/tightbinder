@@ -80,6 +80,7 @@ class TestChain(SKModelTest):
         e_max_energy, e_min_energy = 1.6, 0.4
         self.bands(files[0], labels, e_max_energy, e_min_energy, expected_gap=0)
 
+        assert np.max(result.eigen_energy) == 1
 
 class TestBiBilayer(SKModelTest):
 
