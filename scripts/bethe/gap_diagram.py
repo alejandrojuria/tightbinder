@@ -13,6 +13,7 @@ def main():
     mass_array = np.linspace(-1, 7, 31)
     for length in length_array:
         for mass in mass_array:
+            print(f"Mass: {mass}, length: {length}")
             model = WilsonAmorphous(m=mass)
             model.motif, model.bonds = bethe_lattice(z=3, depth=8, length=length)
             model.boundary = "OBC"
@@ -21,6 +22,7 @@ def main():
             results = model.solve()
             filling = int(model.natoms * model.norbitals * model.filling)
             gap = results.calculate_gap(filling)
+            print(f"Gap: {gap}\n")
             file.write(f"{mass}\t{length}\t{gap}\n")
 
     file.close()

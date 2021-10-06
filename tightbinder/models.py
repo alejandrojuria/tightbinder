@@ -822,8 +822,6 @@ class RSmodel(System):
         for bond_index, amplitude in self.hoppings:
             bond = self.bonds[bond_index]
             initial_atom_index, final_atom_index, cell = bond
-            
-
 
 
     def hamiltonian_k(self, k):

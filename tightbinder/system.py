@@ -129,7 +129,6 @@ class System(Crystal):
         :param r: Value for radius sphere to detect neighbours
         """
         eps = 1E-4
-        print("Why")
         if mode is "radius" and r is None:
             raise Exception("Error: Search mode is radius but no r given, exiting...")
         elif mode is "minimal" and r is not None:
