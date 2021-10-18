@@ -8,9 +8,9 @@ import matplotlib.pyplot as plt
 def main():
     print("Initializing Wilson Amorphous model")
     plot_energy_spectrum = False
-    wilson = WilsonAmorphous(m=0.5,  r=1.1)
+    wilson = WilsonAmorphous(m=2,  r=1.1)
     wilson = wilson.reduce(n3=0)
-    wilson = wilson.supercell(n1=20, n2=20)
+    wilson = wilson.supercell(n1=30, n2=30)
     wilson = amorphize(wilson, spread=0.5)
 
     # wcc = topology.calculate_wannier_centre_flow(wilson, number_of_points=10, nk_subpath=10)
@@ -37,7 +37,7 @@ def main():
 
     # edge_states = results_obc.identify_edge_states(wilson)
     ipr = results_obc.calculate_ipr()
-    results_obc.plot_ipr(ipr, sort=True)
+    results_obc.plot_quantity(ipr, sort=True)
     try:
         energies = np.abs(results_obc.eigen_energy)
         print(f"Energy of edge state: {np.min(energies)}")

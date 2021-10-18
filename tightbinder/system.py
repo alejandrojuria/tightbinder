@@ -128,6 +128,8 @@ class System(Crystal):
         :param mode: Search mode, can be either 'minimal' or 'radius'. Defaults to 'minimal'.
         :param r: Value for radius sphere to detect neighbours
         """
+        if self.bonds is not None:
+            self.bonds = []
         eps = 1E-4
         if mode is "radius" and r is None:
             raise Exception("Error: Search mode is radius but no r given, exiting...")
@@ -165,6 +167,22 @@ class System(Crystal):
             index += 1
 
         print("Done")
+
+    def find_disconnected_atoms(self):
+        """ Method to find which atoms do not have neighbours, i.e. they are disconnected from
+         te he lattice """
+        all_bonds = self.__reconstruct_all_bonds()
+        initial_atoms = [initial_atom for initial_atom, _, _ in all_bonds]
+        disconnected_atoms = [atom for atom in range(self.natoms) if atom not in initial_atoms]
+        print(disconnected_atoms)
+        print(self.natoms)
+
+        return disconnected_atoms
+
+    def remove_disconnected_atoms(self):
+        """ Method to remove disconnected atoms from the motif """
+        disconnected_atoms = self.find_disconnected_atoms()
+        self.remove_atoms(disconnected_atoms)
 
     def __reconstruct_all_bonds(self):
         """ Method to obtain all neighbours for all atoms since the find_neighbours method

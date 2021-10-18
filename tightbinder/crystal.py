@@ -106,11 +106,15 @@ class Crystal:
             self.add_atom(atom, species[n])
 
     def remove_atom(self, index):
-        self.motif.pop(index)
+        if type(self.motif) == list:
+            self.motif.pop(index)
+        elif type(self.motif) == np.ndarray:
+            self.motif = np.delete(self.motif, index, 0)
 
     def remove_atoms(self, indices):
-        for index in indices:
-            self.remove_atom(index)
+        indices = np.sort(indices)
+        for n, index in enumerate(indices):
+            self.remove_atom(index - n)
 
     def update(self):
         """ Routine to initialize or update the intrinsic attributes of the Crystal class whenever

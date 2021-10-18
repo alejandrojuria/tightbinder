@@ -39,5 +39,6 @@ def main():
     plt.ylabel(rf"Coordination number")
     plt.show()
 
+
 if __name__ == "__main__":
     main()
