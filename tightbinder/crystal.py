@@ -313,29 +313,32 @@ class Crystal:
 
         return kpoints
 
-    def identify_edges(self):
+    def identify_edges(self, loop=6):
         """ Method to obtain the atoms that correspond to the edges of the system.
          This method uses directly the ConvexHull method from Scipy to identify the outmost points
          of the motif. Compute the ConvexHull three times, each time removing the points detected in the
          previous iteration.
-          Returns: Indices of atoms belonging to edges of motif """
+          Returns: Indices of atoms belonging to edges of motif
+           NB: If given 3d points, they must not be coplanar for the algorithm
+           to work. If they are, then the points must be given as 2d """
 
-        atoms_coordinates = np.copy(self.motif[:, :3])
+        atoms_coordinates = np.copy(self.motif[:, :2])
         hull = ConvexHull(atoms_coordinates)
         edge_indices = hull.vertices
         max_x = np.max(atoms_coordinates[:, 0])
         min_x = np.min(atoms_coordinates[:, 0])
         max_y = np.max(atoms_coordinates[:, 1])
         min_y = np.min(atoms_coordinates[:, 1])
-        midpoint = np.array([(max_x - min_x)/2, (max_y - min_y)/2, 0])
+        midpoint = np.array([(max_x - min_x)/2, (max_y - min_y)/2])
         for index in edge_indices:
             atoms_coordinates[index, :] = midpoint
-        hull = ConvexHull(atoms_coordinates)
-        edge_indices = np.concatenate((edge_indices, hull.vertices))
-        for index in hull.vertices:
-            atoms_coordinates[index, :] = midpoint
-        hull = ConvexHull(atoms_coordinates)
-        edge_indices = np.sort(np.concatenate((edge_indices, hull.vertices)))
+
+        # Repeat this procedure more times
+        for _ in range(loop):
+            hull = ConvexHull(atoms_coordinates)
+            edge_indices = np.concatenate((edge_indices, hull.vertices))
+            for index in hull.vertices:
+                atoms_coordinates[index, :] = midpoint
 
         return edge_indices
 
@@ -397,6 +400,7 @@ class CrystalView:
         self.extra_atoms = []
         self.bonds = []
         self.extra_bonds = []
+        self.crystal = crystal
         try:
             self.neighbours = crystal.neighbours
         except AttributeError:
@@ -469,6 +473,7 @@ class CrystalView:
         vp.button(text="show bonds", bind=self.__show_bonds)
         vp.button(text="draw cell boundary", bind=self.__draw_boundary)
         vp.button(text="remove cell boundary", bind=self.__remove_boundary)
+        vp.button(text="highlight edge atoms", bind=self.__highlight_edge)
         vp.scene.bind("mousedown", self.__mousedown)
         vp.scene.bind("mousemove", self.__mousemove)
         vp.scene.bind("mouseup", self.__mouseup)
@@ -532,5 +537,12 @@ class CrystalView:
         self.cell_boundary.visible = False
         for vector in self.cell_vectors:
             vector.visible = False
+
+    def __highlight_edge(self):
+        edges = self.crystal.identify_edges()
+        for atom_index in edges:
+            self.atoms[atom_index].color = vp.color.green
+
+
 
 
