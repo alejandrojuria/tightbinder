@@ -164,12 +164,13 @@ class Spectrum:
         average_ipr /= len(states)
         return average_ipr
 
-    def calculate_specific_occupation(self, atoms_indices):
+    def calculate_specific_occupation(self, atoms_indices, states=None):
         """ Method to compute the occupation for all the states in the spectrum
          on the specified atoms """
-        eigen_states = np.copy(self.eigen_states.reshape(self.system.basisdim, -1).T)
+        if states is None:
+            states = np.copy(self.eigen_states.reshape(self.system.basisdim, -1).T)
         occupations = []
-        for eigenvector in eigen_states:
+        for eigenvector in states:
             state = State(eigenvector, self.system)
             occupation = state.compute_specific_occupation(atoms_indices)
             occupations.append(occupation)
@@ -210,24 +211,34 @@ class State:
         amplitude = np.abs(self.eigenvector) ** 2
         return condense_vector(amplitude, self.norbitals)
 
-    def plot_amplitude(self, ax=None, title=""):
+    def plot_amplitude(self, ax=None, title=None, linewidth=3):
         """ Method to plot the atomic amplitude of the state on top of the crystalline positions"""
         amplitude = np.array(self.atomic_amplitude())
-        amplitude = scale_array(amplitude)
+        scaled_amplitude = scale_array(amplitude, factor=60)
+        # To enhance visibility
+        root_amplitude = np.sqrt(amplitude)
+        root_amplitude = scale_array(root_amplitude, factor=20)
 
         if ax is None:
-            fig = plt.figure(figsize=(5, 5))
+            fig = plt.figure(figsize=(5, 6))
             ax = fig.add_subplot(111)
 
         atoms = np.array(self.motif)[:, :3]
-        # plt.scatter(atoms[:, 0], atoms[:, 1])
         for n, bond in enumerate(self.hoppings):
             x0, y0 = atoms[bond[0], :2]
             xneigh, yneigh = atoms[bond[1], :2]
-            ax.plot([x0, xneigh], [y0, yneigh], "-k")
-        ax.scatter(atoms[:, 0], atoms[:, 1], c="b", alpha=0.5, s=amplitude)
-        ax.set_title(title)
+            ax.plot([x0, xneigh], [y0, yneigh], "-k", linewidth=linewidth)
+        ax.scatter(atoms[:, 0], atoms[:, 1],
+                   c=scaled_amplitude, cmap="plasma", alpha=0.9,
+                   s=scaled_amplitude)
+        ax.set_xlim([np.min(atoms[:, 0]), np.max(atoms[:, 0])])
+        ax.set_ylim([np.min(atoms[:, 1]), np.max(atoms[:, 1])])
+        ax.set_xticks([0, 29])
+        ax.set_yticks([0, 29])
+        if title is not None:
+            ax.set_title(title)
         ax.axis('off')
+        ax.axis('tight')
 
     def compute_ipr(self):
         """ Method to compute the inverse participation ratio (IPR) for the state """
@@ -255,7 +266,7 @@ class State:
         if axis not in axis_list:
             raise KeyError("Axis must be x, y or z")
 
-        pass  # //////// TO DO
+        pass  # //////// TODO
 
 
 
