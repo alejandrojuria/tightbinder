@@ -12,7 +12,7 @@ from tightbinder.disorder import amorphize
 def main():
     # ----------------------- Parameters -----------------------
     mass = 3
-    cutoff = 1.1
+    cutoff = 1.4
     spread = 0.5
     cellsize = 30
     fontsize = 24
@@ -49,7 +49,7 @@ def main():
     energies = np.abs(results_obc.eigen_energy)
     print(f"Energy of edge state: {np.min(energies)}")
     index = np.where(energies == np.min(energies))[0][0]
-    edge_state = State(results_obc.eigen_states[0][:, index + 6], model)
+    edge_state = State(results_obc.eigen_states[0][:, index], model)
     edge_state.plot_amplitude(ax[0])
 
     # Energy spectrum
@@ -69,7 +69,7 @@ def main():
     axins = ax[1].inset_axes([0.55, 0.05, 0.4, 0.4])
     axins.plot(eigenval_pbc, 'b.', markersize=markersize)
     axins.plot(eigenval_obc, 'g-', linewidth=markersize/4)
-    x1, x2, y1, y2 = len(eigenval_obc)/2 - 300, len(eigenval_obc)/2 + 300, -0.25, 0.25
+    x1, x2, y1, y2 = len(eigenval_obc)/2 - 50, len(eigenval_obc)/2 + 50, -0.25, 0.25
     axins.set_xlim(x1, x2)
     axins.set_ylim(y1, y2)
     axins.set_xticklabels('')
@@ -88,7 +88,7 @@ def main():
                                fontsize=fontsize, markersize=markersize)
     axins_ent = ax[2].inset_axes([0.02, 0.5, 0.4, 0.4])
     axins_ent.plot(entanglement, 'g.')
-    x1, x2, y1, y2 = len(entanglement) / 2 - 100, len(entanglement) / 2 + 100, 0, 1
+    x1, x2, y1, y2 = len(entanglement) / 2 - 50, len(entanglement) / 2 + 50, 0, 1
     axins_ent.set_xlim(x1, x2)
     axins_ent.set_xticks([x1, x2])
     axins_ent.set_ylim(y1, y2)
@@ -104,7 +104,7 @@ def main():
     ax[2].set_position(bbox)
 
     # plt.tight_layout()
-    plt.savefig("edge_state_w_spectrums_r11.png", bbox_inches='tight')
+    plt.savefig("edge_state_w_spectrums_r14.png", bbox_inches='tight')
     plt.show()
 
 

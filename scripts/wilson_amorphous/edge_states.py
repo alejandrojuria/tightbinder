@@ -8,10 +8,11 @@ import matplotlib.pyplot as plt
 def main():
     print("Initializing Wilson Amorphous model")
     plot_energy_spectrum = False
-    wilson = WilsonAmorphous(m=2,  r=1.1)
+    wilson = WilsonAmorphous(m=0.9,  r=1.4)
     wilson = wilson.reduce(n3=0)
-    wilson = wilson.supercell(n1=30, n2=30)
+    wilson = wilson.supercell(n1=20, n2=20)
     wilson = amorphize(wilson, spread=0.5)
+    wilson.visualize()
 
     # wcc = topology.calculate_wannier_centre_flow(wilson, number_of_points=10, nk_subpath=10)
     # topology.plot_wannier_centre_flow(wcc, show_midpoints=True)
