@@ -1,7 +1,6 @@
 from tightbinder.models import WilsonAmorphous
 from tightbinder.disorder import amorphize
 import numpy as np
-import matplotlib.pyplot as plt
 
 
 def find_lowest_eigenstates(n, results):
@@ -21,43 +20,33 @@ def main():
     """ Initialize WilsonFermions model for a M value and compute the average IPR for the 10 lowest eigenstates,
     for all given M values so that we plot average IPR vs M """
 
-    m_values = np.linspace(-1, 7, 20)
+    file = open('edge_occupation_r11_L20', 'w')
+    m_values = np.linspace(-1, 7, 51)
     disorder_values = [0.0, 0.5]
-    cutoff = 1.4
+    cutoff = 1.1
     cellsize = 20
     n = 21
     wilson = WilsonAmorphous(m=m_values[0], r=cutoff).reduce(n3=0).supercell(n1=cellsize, n2=cellsize)
     wilson.boundary = "OBC"
-    fig, ax1 = plt.subplots()
-    ax2 = plt.twinx()
-    ax = [ax1, ax2]
-    colors = ['tab:red', 'tab:blue']
     for i, spread in enumerate(disorder_values):
+        file.write(f"{spread}\n")
         wilson = amorphize(wilson, spread=spread)
-        edge_atoms = wilson.identify_edges()
+        # edge_atoms = wilson.identify_edges()
         edge_occupation = []
         for mass in m_values:
             print(f"Computing IPR for M={mass}...")
             wilson.m = mass
             wilson.initialize_hamiltonian()
             wilson.remove_disconnected_atoms()
-            # edge_atoms = wilson.find_lowest_coordination_atoms()
+            edge_atoms = wilson.find_lowest_coordination_atoms()
             results = wilson.solve()
             states = find_lowest_eigenstates(n, results)
-            edge_occupation.append(
-                np.sum(results.calculate_specific_occupation(edge_atoms, states))/n
-            )
+            occupation = np.sum(results.calculate_specific_occupation(edge_atoms, states))/n
+            edge_occupation.append(occupation)
+            file.write(f"{mass}\t{occupation}\n")
+        file.write('#\n')
 
-        ax[i].plot(m_values, edge_occupation, '-', color=colors[i], label=rf"$\Delta r$={spread}")
-
-    plt.title(rf"Edge occupation vs M ($R={cutoff}$)")
-    fig.legend(loc="upper right")
-    ax1.set_ylabel("Edge occupation", color=colors[0])
-    ax2.set_ylabel("Edge occupation", color=colors[1])
-    ax1.tick_params(axis='y', labelcolor=colors[0])
-    ax2.tick_params(axis='y', labelcolor=colors[1])
-    plt.xlabel(r"$M (eV)$")
-    plt.show()
+    file.close()
 
 
 if __name__ == "__main__":

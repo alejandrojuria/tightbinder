@@ -614,6 +614,7 @@ class WilsonAmorphous(System):
         self.norbitals = 4
         self.basisdim = self.norbitals * len(self.motif)
         self.boundary = "PBC"
+        np.var
 
         self.a = side
         self.t = t
@@ -800,7 +801,8 @@ class RSmodel(System):
         self.basisdim = np.sum(self.orbitals)
 
     def initialize_hamiltonian(self):
-        """ Method to set up the matrices that compose the Hamiltonian, either the Bloch Hamiltonian
+        """ TODO initialize_hamiltonian RSmodel
+        Method to set up the matrices that compose the Hamiltonian, either the Bloch Hamiltonian
         or the real-space one """
 
         # First call private methods to compute orbitals per atom and basis dimension
@@ -823,11 +825,12 @@ class RSmodel(System):
             bond = self.bonds[bond_index]
             initial_atom_index, final_atom_index, cell = bond
 
-
     def hamiltonian_k(self, k):
         hamiltonian_k = np.zeros((self.basisdim, self.basisdim), dtype=np.complex_)
         for cell_index, cell in enumerate(self._unit_cell_list):
             hamiltonian_k += (self.hamiltonian[cell_index] * cmath.exp(1j * np.dot(k, cell)))
+
+        return hamiltonian_k
 
 
 def bethe_lattice(z=3, depth=3, length=1):

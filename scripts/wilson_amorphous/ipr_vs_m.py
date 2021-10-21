@@ -21,9 +21,9 @@ def main():
     """ Initialize WilsonFermions model for a M value and compute the average IPR for the 10 lowest eigenstates,
     for all given M values so that we plot average IPR vs M """
 
-    m_values = np.linspace(-1, 7, 20)
+    m_values = np.linspace(-3, 10, 30)
     disorder_values = [0.0, 0.5]
-    cutoff = 1.4
+    cutoff = 1.1
     cellsize = 20
     n = 21
     wilson = WilsonAmorphous(m=m_values[0], r=cutoff).reduce(n3=0).supercell(n1=cellsize, n2=cellsize)
@@ -34,26 +34,21 @@ def main():
     colors = ['tab:red', 'tab:blue']
     for i, spread in enumerate(disorder_values):
         wilson = amorphize(wilson, spread=spread)
-        edge_atoms = wilson.identify_edges()
-        edge_occupation = []
+        ipr = []
         for mass in m_values:
             print(f"Computing IPR for M={mass}...")
             wilson.m = mass
             wilson.initialize_hamiltonian()
-            wilson.remove_disconnected_atoms()
-            # edge_atoms = wilson.find_lowest_coordination_atoms()
             results = wilson.solve()
             states = find_lowest_eigenstates(n, results)
-            edge_occupation.append(
-                np.sum(results.calculate_specific_occupation(edge_atoms, states))/n
-            )
+            ipr.append(results.calculate_average_ipr(states))
 
-        ax[i].plot(m_values, edge_occupation, '-', color=colors[i], label=rf"$\Delta r$={spread}")
+        ax[i].plot(m_values, ipr, '-', color=colors[i], label=rf"$\Delta r$={spread}")
 
-    plt.title(rf"Edge occupation vs M ($R={cutoff}$)")
+    plt.title(rf"IPR vs M ($R={cutoff}$)")
     fig.legend(loc="upper right")
-    ax1.set_ylabel("Edge occupation", color=colors[0])
-    ax2.set_ylabel("Edge occupation", color=colors[1])
+    ax1.set_ylabel("IPR", color=colors[0])
+    ax2.set_ylabel("IPR", color=colors[1])
     ax1.tick_params(axis='y', labelcolor=colors[0])
     ax2.tick_params(axis='y', labelcolor=colors[1])
     plt.xlabel(r"$M (eV)$")

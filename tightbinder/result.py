@@ -92,9 +92,11 @@ class Spectrum:
         plt.show()
 
     def write_bands_to_file(self):
+        """ TODO write_bands_to_file"""
         pass
 
     def write_states_to_file(self):
+        """ TODO write_states_to_file"""
         pass
 
     # --------------- Utilities ---------------
@@ -254,7 +256,8 @@ class State:
         return occupation
 
     def compute_spin_projection(self, axis):
-        """ Method to compute the expected value of any of the three spin operators Sx, Sy or Sz.
+        """ TODO compute_spin_projection
+        Method to compute the expected value of any of the three spin operators Sx, Sy or Sz.
         All calculations are done supposing that the original atomic basis for the tight-binding is written
         using the z projection of the spin (if the calculation is spinful).
         Parameters:
@@ -266,7 +269,7 @@ class State:
         if axis not in axis_list:
             raise KeyError("Axis must be x, y or z")
 
-        pass  # //////// TODO
+        pass
 
 
 
