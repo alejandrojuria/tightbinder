@@ -217,9 +217,6 @@ class State:
         """ Method to plot the atomic amplitude of the state on top of the crystalline positions"""
         amplitude = np.array(self.atomic_amplitude())
         scaled_amplitude = scale_array(amplitude, factor=60)
-        # To enhance visibility
-        root_amplitude = np.sqrt(amplitude)
-        root_amplitude = scale_array(root_amplitude, factor=20)
 
         if ax is None:
             fig = plt.figure(figsize=(5, 6))
