@@ -38,7 +38,6 @@ def main():
     print(all_gap_closings)
     all_gap_closings = np.array(all_gap_closings).T
 
-
     fig = plt.figure()
     mass, disorder = transform_data(mass, disorder)
     plt.pcolor(mass, disorder, gap, norm=LogNorm(vmin=1E-1, vmax=gap.max()))

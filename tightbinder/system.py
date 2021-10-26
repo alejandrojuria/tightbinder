@@ -218,7 +218,7 @@ class System(Crystal):
         atoms = []
         for index in range(self.natoms):
             atom_coordination = self.atom_coordination_number(index, bonds)
-            if coordination > 3 and atom_coordination <= 3:
+            if coordination >= 3 and atom_coordination <= 3:
                 atoms.append(index)
             elif coordination < 3 and atom_coordination <= 2:
                 atoms.append(index)
@@ -226,7 +226,6 @@ class System(Crystal):
         return atoms
 
     def compute_first_neighbour_distance(self, near_cells=None):
-
         if near_cells is None:
             near_cells = generate_near_cells(self.bravais_lattice)
 

@@ -1,8 +1,8 @@
 #! /home/minyn03/alejandro/miniconda3/bin/python3 -u
 
-import models
+import tightbinder.models as models
 import time
-import tightbinder.disorder
+from tightbinder.disorder import amorphize
 import numpy as np
 
 

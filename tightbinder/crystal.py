@@ -392,6 +392,7 @@ class Crystal:
 
 
 class CrystalView:
+    # TODO CrystalView fix problems (show bonds not working)
     def __init__(self, crystal):
         self.bravais_lattice = crystal.bravais_lattice
         self.motif = crystal.motif
@@ -400,7 +401,8 @@ class CrystalView:
         self.extra_atoms = []
         self.bonds = []
         self.extra_bonds = []
-        self.crystal = crystal
+        # TODO remove self.crystal from CrystalView
+        self.edge_atoms = crystal.find_lowest_coordination_atoms()
         try:
             self.neighbours = crystal.neighbours
         except AttributeError:
@@ -539,8 +541,7 @@ class CrystalView:
             vector.visible = False
 
     def __highlight_edge(self):
-        edges = self.crystal.identify_edges()
-        for atom_index in edges:
+        for atom_index in self.edge_atoms:
             self.atoms[atom_index].color = vp.color.green
 
 

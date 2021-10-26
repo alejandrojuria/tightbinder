@@ -216,7 +216,7 @@ class State:
     def plot_amplitude(self, ax=None, title=None, linewidth=3):
         """ Method to plot the atomic amplitude of the state on top of the crystalline positions"""
         amplitude = np.array(self.atomic_amplitude())
-        scaled_amplitude = scale_array(amplitude, factor=60)
+        scaled_amplitude = scale_array(amplitude, factor=70)
 
         if ax is None:
             fig = plt.figure(figsize=(5, 6))
@@ -228,7 +228,7 @@ class State:
             xneigh, yneigh = atoms[bond[1], :2]
             ax.plot([x0, xneigh], [y0, yneigh], "-k", linewidth=linewidth)
         ax.scatter(atoms[:, 0], atoms[:, 1],
-                   c=scaled_amplitude, cmap="plasma", alpha=0.9,
+                   c="tomato", alpha=0.9,
                    s=scaled_amplitude)
         ax.set_xlim([np.min(atoms[:, 0]), np.max(atoms[:, 0])])
         ax.set_ylim([np.min(atoms[:, 1]), np.max(atoms[:, 1])])
