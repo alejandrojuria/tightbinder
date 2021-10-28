@@ -53,7 +53,7 @@ True
 
 #Spin-orbit coupling
 ! Note: Using a non-zero value will automatically produce a spinful model
-0.5
+0.3
 
 ! --------------------- Simulation parameters ---------------------
 #Mesh
