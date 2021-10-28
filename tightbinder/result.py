@@ -54,28 +54,32 @@ class Spectrum:
 
         plt.show()
 
-    def plot_along_path(self, labels, title='', filling=None):
+    def plot_along_path(self, labels, title='', filling=None, ax=None):
         """ Method to plot the bands along a path in reciprocal space, normally along high symmetry points """
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+
         nk = len(self.kpoints)
         x_points = np.arange(0, nk)
-        plt.figure()
         x_ticks = []
         number_of_paths = len(labels) - 1
         for n, label in enumerate(labels):
             x_ticks.append((nk - 1)/number_of_paths*n)
         for eigen_energy_k in self.eigen_energy:
-            plt.plot(x_points, eigen_energy_k, 'g-')
+            ax.plot(x_points, eigen_energy_k, 'g-')
 
-        plt.xticks(x_ticks, labels)
-        plt.ylabel(r'$\epsilon (eV)$')
-        plt.title(title + " band structure")
+        ax.set_xticks(x_ticks)
+        ax.set_xticklabels(labels)
+        ax.set_ylabel(r'$\epsilon (eV)$')
+        ax.set_title(title + " band structure")
 
         if filling is not None:
             fermi_energy = self.calculate_fermi_level(filling)
-            plt.axhline(y=fermi_energy, linewidth=2, color='r', label=r"$E_F$")
+            ax.axhline(y=fermi_energy, linewidth=2, color='r', label=r"$E_F$")
 
-        plt.legend()
-        plt.xlim([min(x_points), max(x_points)])
+        ax.legend()
+        ax.set_xlim([min(x_points), max(x_points)])
 
     def plot_spectrum(self, title=''):
         """ Routine to plot all the eigenvalues coming from the Bloch Hamiltonian diagonalization
@@ -228,7 +232,7 @@ class State:
             xneigh, yneigh = atoms[bond[1], :2]
             ax.plot([x0, xneigh], [y0, yneigh], "-k", linewidth=linewidth)
         ax.scatter(atoms[:, 0], atoms[:, 1],
-                   c="tomato", alpha=0.9,
+                   c="royalblue", alpha=1,
                    s=scaled_amplitude)
         ax.set_xlim([np.min(atoms[:, 0]), np.max(atoms[:, 0])])
         ax.set_ylim([np.min(atoms[:, 1]), np.max(atoms[:, 1])])
