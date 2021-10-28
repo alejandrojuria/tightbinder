@@ -6,6 +6,7 @@
 
 
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 from tightbinder.models import WilsonAmorphous
 from tightbinder.disorder import amorphize
@@ -59,7 +60,7 @@ def plot_edge_occupation_data(data, ax=None, fontsize=10):
         ax.fill_between(mass, occupation-std, occupation+std, alpha=0.5)
 
     ax.legend([rf"$\Delta r=${n}" for n in data['spread']],
-              fontsize=fontsize*3/4, frameon=False)
+              fontsize=fontsize*3/4, frameon=True).set_zorder(2)
     ax.tick_params('both', labelsize=fontsize)
     ax.set_ylim(0, 1)
     ax.set_xlim(np.min(data['mass'][0]), np.max(data['mass'][0]))
@@ -112,17 +113,19 @@ def plot_gap_data(data, ax=None, fontsize=10):
         axins.spines[axis].set_linewidth(2)
 
     nseries = len(data['cellsize'])
+    cmap = matplotlib.cm.get_cmap("viridis")
+    colors = [cmap(n) for n in np.linspace(0, 1, nseries)]
     for n in range(nseries):
         gap = np.array(data['gap'][n])
         std = np.array(data['gap_std'][n])
         mass = data['mass'][n]
-        ax.plot(mass, gap, linewidth=3)
-        axins.plot(mass, gap, linewidth=1.5)
+        ax.plot(mass, gap, linewidth=3, c=colors[n])
+        axins.plot(mass, gap, linewidth=1.5, c=colors[n])
         ax.fill_between(mass, gap-std, gap+std, alpha=0.5)
         # ax.errorbar(mass, gap, yerr=std, linewidth=3, elinewidth=1.5, capsize=5)
 
     ax.legend([f"N={int(n)}" for n in data['cellsize']],
-              fontsize=fontsize*3/4, frameon=False, loc="upper left")
+              fontsize=fontsize*3/4, frameon=True, loc="upper left").set_zorder(2)
     ax.set_xlim(np.min(data['mass'][0]), np.max(data['mass'][1]))
     ax.set_xticks([0, 2, 4, 6])
     ax.set_ylim(np.min(gap), np.max(gap))
@@ -223,7 +226,6 @@ def main():
 
     plt.savefig("gap_edge_coord.png", bbox_inches='tight')
     plt.show()
-
 
 
 if __name__ == "__main__":

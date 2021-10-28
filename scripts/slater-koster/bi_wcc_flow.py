@@ -27,21 +27,41 @@ def main():
         sys.exit(1)
 
     configuration = parse_config_file(file)
+    fig, ax = plt.subplots(1, 2, sharey=True, figsize=(15, 6), dpi=100)
+    fontsize = 24
+
+    # First compute the HWCC flow for topological Bi(111) with non-zero SOC
     bi = SKModel(configuration)
-    # lattice.plot_crystal(cell_number=1)
     labels = ["M", "G", "K", "M"]
     kpoints = bi.high_symmetry_path(200, labels)
     bi.initialize_hamiltonian()
-
     results = bi.solve(kpoints)
-    results.plot_along_path(labels)
 
     bi.filling = 5./8.
     wcc_flow = calculate_wannier_centre_flow(bi, number_of_points=10)
-    plot_wannier_centre_flow(wcc_flow, show_midpoints=True)
     print(f"Z2 invariant: {calculate_z2_invariant(wcc_flow)}")
+    plot_wannier_centre_flow(wcc_flow, show_midpoints=True, ax=ax[0], fontsize=fontsize)
 
-    plot_wannier_centre_flow(wcc_flow)
+    # Now compute the HWCC flow for trivial Bi(111) (zero SOC)
+    configuration["Spin-orbit coupling"] = 0.0
+
+    bi = SKModel(configuration)
+    labels = ["M", "G", "K", "M"]
+    kpoints = bi.high_symmetry_path(200, labels)
+    bi.initialize_hamiltonian()
+    results = bi.solve(kpoints)
+
+    bi.filling = 5. / 8.
+    wcc_flow = calculate_wannier_centre_flow(bi, number_of_points=10)
+    print(f"Z2 invariant: {calculate_z2_invariant(wcc_flow)}")
+    plot_wannier_centre_flow(wcc_flow, show_midpoints=True, ax=ax[1], fontsize=fontsize)
+
+    # Add text to the subplots, (a) and (b)
+    ax[0].text(0.9, 0.75, "(a)", fontsize=fontsize)
+    ax[1].text(0.9, 0.75, "(b)", fontsize=fontsize)
+
+    plt.subplots_adjust(wspace=0.15)
+    plt.savefig("wcc_flow.png", bbox_inches="tight")
     plt.show()
 
 
