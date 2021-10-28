@@ -85,7 +85,7 @@ def calculate_wannier_centre_flow(system, number_of_points, additional_k=None, n
     wcc_results = []
     # cell_side = crystal.high_symmetry_points
     # k_fixed_list = np.linspace(-cell_side/2, cell_side/2, number_of_points)
-    for i in range(number_of_points + 1):
+    for i in range(-number_of_points, number_of_points + 1):
         k_fixed = system.reciprocal_basis[1]*i/(2*number_of_points)
         if additional_k is not None:
             k_fixed += additional_k
@@ -196,34 +196,37 @@ def calculate_z2_invariant(wcc_flow):
     return invariant
 
 
-def plot_wannier_centre_flow(wcc_flow, show_midpoints=False, title=''):
+def plot_wannier_centre_flow(wcc_flow, show_midpoints=False, ax=None, title=None,
+                             fontsize=10):
     """ Routine to plot the WCC evolution """
 
-    plt.figure()
+    if ax is None:
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+
     for wcc in wcc_flow.T:
-        plt.plot(wcc, 'ob', fillstyle='none')
+        ax.plot(wcc, 'ob', fillstyle='none')
 
     if show_midpoints:
         midpoints, _ = calculate_wcc_gap_midpoints(wcc_flow)
-        plt.plot(midpoints, 'Dr')
+        ax.plot(midpoints, 'Dr')
 
-    plt.title('WCC flow ' + title)
-    plt.xlabel(r'$k_y$')
-    plt.ylabel(r'$\hat{x}_n$')
-    plt.xticks([0, wcc_flow.shape[0] - 1], ["0", r'$\pi$'])
-    plt.ylim(bottom=-1, top=1)
+    if title is not None:
+        ax.set_title('WCC flow ' + title)
+    ax.set_xlabel(r'$k_y$', fontsize=fontsize)
+    ax.set_ylabel(r'$\hat{x}_n$', fontsize=fontsize)
+    ax.set_xticks([0, wcc_flow.shape[0]/2 - 1/2, wcc_flow.shape[0] - 1])
+    ax.set_xticklabels([r'$\pi$', "0", r'$\pi$'], fontsize=fontsize)
+    ax.set_xlim([0, wcc_flow.shape[0] - 1])
+    ax.set_ylim(bottom=-1, top=1)
 
 
 def calculate_chern(wannier_centre_flow):
+    """ TODO calculate_chern fix broken computation """
     """ Routine to compute explicitly the first Chern number from the WCC flow calculation """
     polarization_flow = np.sum(wannier_centre_flow, axis=1)
     plt.plot(polarization_flow)
     plt.show()
-
-
-def calculate_z2(wannier_centre_flow):
-    """ Routine to compute explicitly the Z2 invariant from the WCC flow calculation """
-    pass
 
 
 def plot_polarization_flow(wcc_flow):
@@ -325,6 +328,7 @@ def entanglement_spectrum(system, plane, kpoints=None):
 
 
 def entanglement_entropy(spectrum):
+    """ TODO entanglement_entropy fix log(0) """
     """ Routine to compute the entanglement entropy from the entanglement spectrum """
     entropy = 0
     for eigval in spectrum.T:
