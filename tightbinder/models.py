@@ -53,9 +53,9 @@ class SKModel(System):
         participating orbitals, following the Slater-Koster approxiamtion """
 
         initial_orbital = orbitals[0][0]
-        initial_species = orbitals[0][1]
+        initial_species = int(orbitals[0][1])
         final_orbital = orbitals[0][2]
-        final_species = orbitals[0][3]
+        final_species = int(orbitals[0][3])
 
         initial_orbital_type = initial_orbital[0]
         final_orbital_type = final_orbital[0]
