@@ -303,7 +303,7 @@ class Crystal:
 
         kpoints = []
         number_of_points = len(points)
-        interval_mesh = int(nk/number_of_points)
+        interval_mesh = int(nk/(number_of_points - 1))
         previous_point = self.high_symmetry_points[points[0]]
         for point in points[1:]:
             next_point = self.high_symmetry_points[point]
@@ -401,10 +401,11 @@ class CrystalView:
         self.extra_atoms = []
         self.bonds = []
         self.extra_bonds = []
+
         # TODO remove self.crystal from CrystalView
         self.edge_atoms = crystal.find_lowest_coordination_atoms()
         try:
-            self.neighbours = crystal.neighbours
+            self.neighbours = crystal.bonds
         except AttributeError:
             pass
 
@@ -425,7 +426,7 @@ class CrystalView:
         color_list = [vp.color.yellow, vp.color.red]
         for position in self.motif:
             species = int(position[3])
-            atom = vp.sphere(radius=0.1, color=color_list[species])
+            atom = vp.sphere(radius=0.5, color=color_list[species])
             atom.pos.x, atom.pos.y, atom.pos.z = position[:3]
             self.atoms.append(atom)
 
@@ -448,11 +449,15 @@ class CrystalView:
         mesh_points = generate_basis_combinations(self.ndim)
         try:
             # Origin cell
-            for i, neighbours in enumerate(self.neighbours):
-                for neighbour in neighbours:
-                    unit_cell = vp.vector(neighbour[1][0], neighbour[1][1], neighbour[1][2])
-                    bond = vp.curve(self.atoms[i].pos, self.atoms[neighbour[0]].pos + unit_cell)
-                    self.bonds.append(bond)
+            for initial_atom, final_atom, cell in self.neighbours:
+                unit_cell = vp.vector(*cell)
+                bond = vp.curve(self.atoms[initial_atom].pos, self.atoms[final_atom].pos + unit_cell)
+                self.bonds.append(bond)
+                if np.linalg.norm(cell) > 1E-4:
+                    continue
+                    reverse_bond = vp.curve(self.atoms[final_atom].pos, self.atoms[initial_atom].pos - unit_cell)
+                    self.bonds.append(reverse_bond)
+
             # Super cell
             for point in mesh_points:
                 unit_cell = np.array(([0., 0., 0.]))

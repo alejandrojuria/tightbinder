@@ -217,6 +217,7 @@ def plot_wannier_centre_flow(wcc_flow, show_midpoints=False, ax=None, title=None
     ax.set_ylabel(r'$\hat{x}_n$', fontsize=fontsize)
     ax.set_xticks([0, wcc_flow.shape[0]/2 - 1/2, wcc_flow.shape[0] - 1])
     ax.set_xticklabels([r'$\pi$', "0", r'$\pi$'], fontsize=fontsize)
+    ax.tick_params(labelsize=fontsize)
     ax.set_xlim([0, wcc_flow.shape[0] - 1])
     ax.set_ylim(bottom=-1, top=1)
 
@@ -309,17 +310,18 @@ def entanglement_spectrum(system, plane, kpoints=None):
 
     print("Computing entanglement spectrum...")
     nk = len(kpoints)
+    print(nk)
     sector = __specify_partition(system, plane)
     print("Diagonalizing system...")
     results = system.solve(kpoints)
 
     spectrum = np.zeros([len(sector) * system.norbitals, nk])
+    print("Computing density matrices...")
     for i in range(len(kpoints)):
         truncated_eigenvectors = __truncate_eigenvectors(results.eigen_states[i],
                                                          sector, system)
-        print("Computing density matrix...")
+
         density_matrix = __density_matrix(truncated_eigenvectors)
-        print("Computing entanglement spectrum...")
         eigenvalues, eigenvectors = np.linalg.eigh(density_matrix)
 
         spectrum[:, i] = eigenvalues
@@ -372,20 +374,25 @@ def plot_entanglement_spectrum(spectrum, system, ax=None,
         ax = fig.add_subplot(111)
 
     if system.boundary == "OBC" or spectrum.shape[1] == 1:
-        plt.plot(spectrum, 'g.', markersize=markersize)
+        ax.plot(spectrum, 'bo', markersize=markersize)
+        ax.set_xlim(0, len(spectrum))
     else:
         for entanglement_band in spectrum:
-            plt.plot(entanglement_band, 'g.')
+            ax.plot(entanglement_band, 'bo')
+        ax.set_xlim(0, len(spectrum.T) - 1)
+        ax.set_xticks([0, len(spectrum.T)/2 - 1/2, len(spectrum.T) - 1])
+        ax.set_xticklabels([r"-$\pi/a$", "0", r"$\pi/a$"], fontsize=fontsize)
 
     if title is not None:
         ax.set_title(title, fontsize=fontsize)
     ax.tick_params(axis='both', labelsize=fontsize, direction="in")
-    ax.set_xlim(0, len(spectrum))
+
     ax.set_ylim(0, 1)
     ax.set_yticks([0, 0.5, 1])
     # ax.set_title(f"Entanglement spectrum of {system.system_name}", fontsize=15)
     ax.set_xlabel("n", fontsize=fontsize)
     ax.set_ylabel(rf"$\xi_n$", fontsize=fontsize)
+
 
 
 

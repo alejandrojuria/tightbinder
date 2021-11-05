@@ -30,8 +30,10 @@ class SKModel(System):
         else:
             super().__init__()
 
-        """ Specific attributes of SKModel """
+        # Specific attributes of SKModel
         self.configuration = configuration
+        self.norbitals = int(np.sum(self.configuration["Orbitals"]))
+
         self.hamiltonian = None
         self.neighbours = None
         self.spin_orbit_hamiltonian = None

@@ -131,7 +131,7 @@ class System(Crystal):
         """
         if self.bonds is not None:
             self.bonds = []
-        eps = 1E-4
+        eps = 1E-2
         if mode is "radius" and r is None:
             raise Exception("Error: Search mode is radius but no r given, exiting...")
         elif mode is "minimal" and r is not None:
@@ -149,7 +149,6 @@ class System(Crystal):
             print("Warning: Radius smaller than first neighbour distance")
         elif mode == "minimal":
             r = neigh_distance
-            print("Works!!!!!!!!!!!")
 
         # Determine list of neighbours for each atom of the motif
         index = 0
@@ -175,8 +174,6 @@ class System(Crystal):
         all_bonds = self.__reconstruct_all_bonds()
         initial_atoms = [initial_atom for initial_atom, _, _ in all_bonds]
         disconnected_atoms = [atom for atom in range(self.natoms) if atom not in initial_atoms]
-        print(disconnected_atoms)
-        print(self.natoms)
 
         return disconnected_atoms
 
@@ -465,30 +462,41 @@ def search_neighbour(reference_atom, i, atom, cell, radius):
             return
 
 
-def generate_combinations(ndim):
+def generate_all_combinations(ndim):
     """ Auxiliary routine to generate an array of combinations of possible neighbouring
-     unit cells. NB: It only generates half of them, since we are going to use hermiticity to
-     generate the Hamiltonian """
+     unit cells. """
     mesh_points = []
     for i in range(ndim):
         mesh_points.append(list(range(-1, 2)))
     mesh_points = np.array(np.meshgrid(*mesh_points)).T.reshape(-1, ndim)
 
+    return mesh_points
+
+
+def generate_half_combinations(ndim):
+    """ Auxiliary routine to generate an array of combinations of possible neighbouring
+     unit cells. NB: It only generates half of them, since we are going to use hermiticity to
+     generate the Hamiltonian """
+    all_combinations = generate_all_combinations(ndim)
+
     # Eliminate vectors that are the inverse of others
     points = []
-    for point in mesh_points:
+    for point in all_combinations:
         if list(-point) not in points:
             points.append(list(point))
 
     return points
 
 
-def generate_near_cells(bravais_lattice):
+def generate_near_cells(bravais_lattice, half=False):
     """ Auxiliary routine to generate the Bravais vectors corresponding to unit cells
      neighbouring the origin one. NB: It only generates half of them, since we are going to use hermiticity to
      generate the Hamiltonian """
     ndim = len(bravais_lattice)
-    mesh_points = generate_combinations(ndim)
+    if not half:
+        mesh_points = generate_all_combinations(ndim)
+    else:
+        mesh_points = generate_half_combinations(ndim)
     near_cells = np.zeros([len(mesh_points), 3])
     for n, coefficients in enumerate(mesh_points):
         cell_vector = np.array([0.0, 0.0, 0.0])
