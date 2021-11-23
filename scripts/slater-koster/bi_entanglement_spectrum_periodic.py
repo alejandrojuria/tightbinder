@@ -7,7 +7,7 @@ import argparse
 import sys
 from tightbinder.fileparse import parse_config_file
 from tightbinder.topology import entanglement_spectrum, plot_entanglement_spectrum
-from tightbinder.topology import calculate_wannier_centre_flow, plot_wannier_centre_flow
+from tightbinder.topology import specify_partition_shape, specify_partition_plane
 import time
 from tightbinder.models import SKModel
 import matplotlib.pyplot as plt
@@ -39,22 +39,30 @@ def main():
     # First compute the HWCC flow for topological Bi(111) with non-zero SOC
     bi = SKModel(configuration)
     bi.motif = np.array(bi.motif)
-    bi = bi.reduce(n1=50)
+    bi = bi.reduce(n1=20).supercell(n1=3)
     bi.filling = 5. / 8.
     bi.ordering = "atomic"
-    plane = np.array([1, 0, 0, np.max(bi.motif[:, 0]/2)])
+    partition_center = np.array([np.max(bi.motif[:, 0])/2, np.max(bi.motif[:, 1])/2, 0])
+    print(np.max(bi.motif[:, 1]))
+    radius = np.min([np.max(bi.motif[:, 0]), np.max(bi.motif[:, 1])])/4
+    print(radius)
+    partition = specify_partition_shape(bi, shape='circle', center=partition_center, r=radius)
+    plane = np.array([1, 0, 0, np.max(bi.motif[:, 0] / 2)])
+    partition = specify_partition_plane(bi, plane)
+    print(partition)
+    print()
     labels = ["K", "G", "K"]
     kpoints = bi.high_symmetry_path(21, labels)
     bi.initialize_hamiltonian()
 
-    entanglement = entanglement_spectrum(bi, plane, kpoints=kpoints)
+    entanglement = entanglement_spectrum(bi, partition, kpoints=kpoints)
     plot_entanglement_spectrum(entanglement, bi, ax=ax[0], fontsize=fontsize)
 
     # Now compute the HWCC flow for trivial Bi(111) (zero SOC)
     bi.configuration["Spin-orbit coupling"] = 0.0
     bi.initialize_hamiltonian()
 
-    entanglement = entanglement_spectrum(bi, plane, kpoints=kpoints)
+    entanglement = entanglement_spectrum(bi, partition, kpoints=kpoints)
     plot_entanglement_spectrum(entanglement, bi, ax=ax[1], fontsize=fontsize)
 
     # Add text to the subplots, (a) and (b)
@@ -62,8 +70,8 @@ def main():
     ax[1].text(0.9, 0.75, "(b)", fontsize=fontsize)
 
     plt.subplots_adjust(wspace=0.15)
-    plt.savefig("bi_entanglement_periodic_w50.png", bbox_inches="tight")
-    plt.show()
+    # plt.savefig("bi_entanglement_periodic_w50.png", bbox_inches="tight")
+    # plt.show()
 
 
 if __name__ == "__main__":

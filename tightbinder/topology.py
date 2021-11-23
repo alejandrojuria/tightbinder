@@ -275,7 +275,7 @@ def __density_matrix(truncated_eigenvectors):
     return density_matrix
 
 
-def __specify_partition(system, plane):
+def specify_partition_plane(system, plane):
     """ Routine to specify a real-space partition of the atoms of the system based on a given
     plane.
     Input: plane Array [A,B,C,D] <-> Ax + By + Cz + D = 0
@@ -297,7 +297,30 @@ def __specify_partition(system, plane):
     return np.array(sector)
 
 
-def entanglement_spectrum(system, plane, kpoints=None):
+def specify_partition_shape(system, shape, center, r):
+    """ Routine to determine which atoms are inside of a partition of the system.
+        :param system: System object to extract the motif positions
+        :param shape: Either 'square' or 'circle'. Shape of the partition we are considering.
+        :param center: np.array or list with the coordinates of the center of the shape
+        :param r: radius of the shape; for a square it corresponds to its side
+        :return partition: Indices of atoms referred to the motif ordering which are
+        inside the specified partition """
+
+    """ TODO specify_partition_shape: 'square' shape not implemented """
+    available_shapes = ["square", "circle"]
+    if shape not in available_shapes:
+        raise ValueError("shape must be either square or circle")
+
+    partition = []
+    for n, atom in enumerate(system.motif):
+        atom_position = atom[:3]
+        if np.linalg.norm(atom_position - np.array(center)) < r:
+            partition.append(n)
+
+    return np.array(partition)
+
+
+def entanglement_spectrum(system, partition, kpoints=None):
     """ Routine to obtain the eigenvalues from the correlation/density matrix, which is directly
      related with the entangled Hamiltonian. Should be computable for both PBC and OBC """
     if kpoints is None and system.boundary != "OBC":
@@ -309,17 +332,15 @@ def entanglement_spectrum(system, plane, kpoints=None):
         kpoints = [[0., 0., 0.]]
 
     print("Computing entanglement spectrum...")
-    nk = len(kpoints)
-    print(nk)
-    sector = __specify_partition(system, plane)
     print("Diagonalizing system...")
+    nk = len(kpoints)
     results = system.solve(kpoints)
 
-    spectrum = np.zeros([len(sector) * system.norbitals, nk])
+    spectrum = np.zeros([len(partition) * system.norbitals, nk])
     print("Computing density matrices...")
     for i in range(len(kpoints)):
         truncated_eigenvectors = __truncate_eigenvectors(results.eigen_states[i],
-                                                         sector, system)
+                                                         partition, system)
 
         density_matrix = __density_matrix(truncated_eigenvectors)
         eigenvalues, eigenvectors = np.linalg.eigh(density_matrix)
