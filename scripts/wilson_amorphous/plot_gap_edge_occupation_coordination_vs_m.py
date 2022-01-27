@@ -60,7 +60,7 @@ def plot_edge_occupation_data(data, ax=None, fontsize=10):
         ax.fill_between(mass, occupation-std, occupation+std, alpha=0.5)
 
     ax.legend([rf"$\Delta r=${n}" for n in data['spread']],
-              fontsize=fontsize*3/4, frameon=True).set_zorder(2)
+              fontsize=fontsize*3/4, frameon=True, loc="upper left").set_zorder(2)
     ax.tick_params('both', labelsize=fontsize)
     ax.set_ylim(0, 1)
     ax.set_xlim(np.min(data['mass'][0]), np.max(data['mass'][0]))
@@ -181,7 +181,7 @@ def plot_coordination(data, ax=None, fontsize=10):
         ax.plot(mass, coordination, linewidth=2)
         ax.fill_between(mass, coordination-std, coordination+std, alpha=0.5)
 
-    ax.legend([r"$R_{cutoff}=$" + str(n) for n in data['spread']],
+    ax.legend([r"$R_{c}=$" + str(n) for n in data['spread']],
               fontsize=fontsize*3/4, frameon=False)
     ax.set_xlim(np.min(data['mass'][0]), np.max(data['mass'][1]))
     ax.tick_params(axis="both", labelsize=fontsize)
@@ -204,6 +204,8 @@ def main():
     gapfile = "./data/gap_r11_spread_03"
     gapdata = extract_gap(gapfile)
     plot_gap_data(gapdata, ax[0, 0], fontsize=fontsize)
+    ax[0, 0].text(0.9, 0.9, "(a)", horizontalalignment='center',
+               verticalalignment='center', transform=ax[0, 0].transAxes, fontsize=fontsize)
 
     # # |-x|
     # # |--|
@@ -212,6 +214,8 @@ def main():
     data = extract_coordination(coordinationfile)
     print(data["coordination"])
     plot_coordination(data, ax[0, 1], fontsize)
+    ax[0, 1].text(0.9, 0.9, "(b)", horizontalalignment='center',
+               verticalalignment='center', transform=ax[0, 1].transAxes, fontsize=fontsize)
 
     # |--|
     # |xy|
@@ -223,8 +227,12 @@ def main():
     for i, file in enumerate(files):
         data = extract_edge_occupation(files[i])
         plot_edge_occupation_data(data, ax[1, i], fontsize)
+    ax[1, 0].text(0.9, 0.9, "(c)", horizontalalignment='center',
+               verticalalignment='center', transform=ax[1, 0].transAxes, fontsize=fontsize)
+    ax[1, 1].text(0.9, 0.9, "(d)", horizontalalignment='center',
+               verticalalignment='center', transform=ax[1, 1].transAxes, fontsize=fontsize)
 
-    plt.savefig("gap_edge_coord.png", bbox_inches='tight')
+    plt.savefig("gap_edge_coord_test.png", bbox_inches='tight')
     plt.show()
 
 

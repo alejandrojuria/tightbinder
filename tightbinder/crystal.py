@@ -426,7 +426,7 @@ class CrystalView:
         color_list = [vp.color.yellow, vp.color.red]
         for position in self.motif:
             species = int(position[3])
-            atom = vp.sphere(radius=0.5, color=color_list[species])
+            atom = vp.sphere(radius=0.1, color=color_list[species])
             atom.pos.x, atom.pos.y, atom.pos.z = position[:3]
             self.atoms.append(atom)
 

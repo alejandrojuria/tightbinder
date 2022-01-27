@@ -5,15 +5,15 @@ import numpy as np
 
 
 def main():
-    length = 0.8
-    mass = 2
+    length = 0.7
+    mass = 2.6
     model = WilsonAmorphous(m=mass)
     model.motif, model.bonds = bethe_lattice(z=3, depth=8, length=length)
     model.boundary = "OBC"
 
     model.initialize_hamiltonian(find_bonds=False)
     results = model.solve()
-    results.plot_spectrum(title=f"Bethe lattice M={mass}")
+    # results.plot_spectrum(title=f"Bethe lattice M={mass}")
     abs_energy = np.abs(results.eigen_energy)
     min_energy = min(abs_energy)
     print(min_energy)

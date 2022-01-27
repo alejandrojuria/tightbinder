@@ -386,7 +386,7 @@ def write_entanglement_spectrum_to_file(spectrum, file, n=None, shift=0):
 
 
 def plot_entanglement_spectrum(spectrum, system, ax=None,
-                               fontsize=10, title=None, markersize=5):
+                               fontsize=10, title=None, markersize=5, color="b"):
     """ Routine to plot the entanglement spectrum as a function of k.
      CAREFUL: This routine is not made to deal with any set of kpoints, rather it is intended
      to be used with a set of kpoints along a given line (1D). """
@@ -395,11 +395,11 @@ def plot_entanglement_spectrum(spectrum, system, ax=None,
         ax = fig.add_subplot(111)
 
     if system.boundary == "OBC" or spectrum.shape[1] == 1:
-        ax.plot(spectrum, 'bo', markersize=markersize)
+        ax.plot(spectrum, 'o', c=color, markersize=markersize)
         ax.set_xlim(0, len(spectrum))
     else:
         for entanglement_band in spectrum:
-            ax.plot(entanglement_band, 'bo')
+            ax.plot(entanglement_band, 'o', c=color)
         ax.set_xlim(0, len(spectrum.T) - 1)
         ax.set_xticks([0, len(spectrum.T)/2 - 1/2, len(spectrum.T) - 1])
         ax.set_xticklabels([r"-$\pi/a$", "0", r"$\pi/a$"], fontsize=fontsize)

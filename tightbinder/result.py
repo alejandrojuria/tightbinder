@@ -54,11 +54,14 @@ class Spectrum:
 
         plt.show()
 
-    def plot_along_path(self, labels, title='', filling=None, ax=None):
+    def plot_along_path(self, labels, title='', filling=None, fermi_level=False,
+                        edge_states=False, ax=None, y_values=[], fontsize=10):
         """ Method to plot the bands along a path in reciprocal space, normally along high symmetry points """
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
+        if len(y_values) != 2:
+            raise ValueError("y_values must be [y_min, y_max]")
 
         nk = len(self.kpoints)
         x_points = np.arange(0, nk)
@@ -69,17 +72,25 @@ class Spectrum:
         for eigen_energy_k in self.eigen_energy:
             ax.plot(x_points, eigen_energy_k, 'g-')
 
-        ax.set_xticks(x_ticks)
-        ax.set_xticklabels(labels)
-        ax.set_ylabel(r'$\epsilon (eV)$')
-        ax.set_title(title + " band structure")
+        if edge_states and filling is not None:
+            edge_states_indices = [int(filling) + i for i in range(-2, 2)]
+            for state in edge_states_indices:
+                ax.plot(x_points, self.eigen_energy[state], 'r-')
 
-        if filling is not None:
+        if fermi_level and filling is not None:
             fermi_energy = self.calculate_fermi_level(filling)
             ax.axhline(y=fermi_energy, linewidth=2, color='r', label=r"$E_F$")
 
-        ax.legend()
+        ax.set_xticks(x_ticks)
+        ax.set_xticklabels(labels, fontsize=fontsize)
+        ax.set_ylabel(r'$\epsilon$ (eV)', fontsize=fontsize)
+        ax.tick_params('y', labelsize=fontsize)
+        if title != '':
+            ax.set_title(title + " band structure", fontsize=fontsize)
         ax.set_xlim([min(x_points), max(x_points)])
+        if y_values:
+            ax.yaxis.set_ticks(np.arange(y_values[0], y_values[1] + 1, 1))
+            ax.set_ylim(y_values)
 
     def plot_spectrum(self, title=''):
         """ Routine to plot all the eigenvalues coming from the Bloch Hamiltonian diagonalization
@@ -220,7 +231,7 @@ class State:
     def plot_amplitude(self, ax=None, title=None, linewidth=3):
         """ Method to plot the atomic amplitude of the state on top of the crystalline positions"""
         amplitude = np.array(self.atomic_amplitude())
-        scaled_amplitude = scale_array(amplitude, factor=70)
+        scaled_amplitude = scale_array(amplitude, factor=30)
 
         if ax is None:
             fig = plt.figure(figsize=(5, 6))
@@ -230,9 +241,9 @@ class State:
         for n, bond in enumerate(self.hoppings):
             x0, y0 = atoms[bond[0], :2]
             xneigh, yneigh = atoms[bond[1], :2]
-            ax.plot([x0, xneigh], [y0, yneigh], "-k", linewidth=linewidth)
+            ax.plot([x0, xneigh], [y0, yneigh], "-k", linewidth=1.5)
         ax.scatter(atoms[:, 0], atoms[:, 1],
-                   c="royalblue", alpha=1,
+                   c="royalblue", alpha=0.9,
                    s=scaled_amplitude)
         ax.set_xlim([np.min(atoms[:, 0]), np.max(atoms[:, 0])])
         ax.set_ylim([np.min(atoms[:, 1]), np.max(atoms[:, 1])])
@@ -242,6 +253,7 @@ class State:
             ax.set_title(title)
         ax.axis('off')
         ax.axis('tight')
+        ax.axis('equal')
 
     def compute_ipr(self):
         """ Method to compute the inverse participation ratio (IPR) for the state """
