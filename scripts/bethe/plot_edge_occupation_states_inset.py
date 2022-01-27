@@ -9,7 +9,7 @@ from tightbinder.models import WilsonAmorphous, bethe_lattice
 from tightbinder.result import State
 
 
-def plot_state(mass, length, ax=None, linewidth=3):
+def plot_state(mass, length, ax=None, linewidth=1.5):
     if ax is None:
         fig = plt.figure()
         ax = fig.subplot(111)
@@ -74,47 +74,49 @@ def plot_edge_occupation_data(data, ax=None, fontsize=10):
         occupation = np.array(data['occupation'][n])
         ax.plot(mass, occupation, '-', c=colors[n], linewidth=3)
 
-    ax.legend([rf"$\Delta r=${n}" for n in data['length']],
-              fontsize=fontsize*3/4, frameon=True).set_zorder(2)
+    ax.legend([rf"l={n}" for n in data['length']],
+              fontsize=fontsize, frameon=False).set_zorder(2)
     ax.tick_params('both', labelsize=fontsize)
     ax.set_ylim(0, 1)
     ax.set_xlim(np.min(data['mass'][0]), np.max(data['mass'][0]))
     ax.set_xticks([-1, 1, 3, 5, 7])
     ax.set_ylabel("Edge occupation", fontsize=fontsize)
     ax.set_xlabel("M (eV)", fontsize=fontsize)
-    ax.set_aspect(8)
+    # ax.set_aspect(8)
 
 
 def main():
-    fig = plt.figure(figsize=(12, 18), dpi=100)
-    gs = fig.add_gridspec(2, 2, height_ratios=[2, 1])
-    ax1 = fig.add_subplot(gs[0, :])
-    ax2 = fig.add_subplot(gs[1, 0])
-    ax3 = fig.add_subplot(gs[1, 1])
-    ax = [ax1, ax2, ax3]
+    fig = plt.figure(figsize=(14, 10), dpi=100)
+    ax = fig.add_subplot(111)
     fontsize = 24
 
-    # |xx|
-    # |--|
-    # Plot topological edge state
-    plot_state(mass=2, length=0.8, ax=ax[0])
-    ax[0].set_aspect('equal', 'box')
-
-    # |--|
-    # |x-|
-    # Plot trivial state
-    plot_state(mass=1, length=1.4, ax=ax[1], linewidth=1)
-    ax[1].set_aspect('equal', 'box')
-
-    # |--|
-    # |-x|
-    # Plot edge occupation
     filename = "./data/bethe_edge_occupation"
     occupationdata = extract_edge_occupation(filename)
-    plot_edge_occupation_data(occupationdata, ax=ax[2], fontsize=fontsize)
+    plot_edge_occupation_data(occupationdata, ax=ax, fontsize=fontsize)
+
+    # Topological state inset
+    axins = ax.inset_axes([-0.05, 0.5, 0.5, 0.5])
+    dummy_axins = ax.inset_axes([0, 0.5, 0.3, 0.45])
+    dummy_axins.axis('off')
+    for axis in ['top', 'bottom', 'left', 'right']:
+        axins.spines[axis].set_linewidth(2)
+    plot_state(mass=2.2, length=0.75, ax=axins)
+    ax.indicate_inset([2.2, 0.8, 0.1, 0.025], dummy_axins, linestyle="-", linewidth=3, edgecolor="black")
+
+    axins.set_aspect('equal', 'box')
+
+    # Trivial state inset
+    axins2 = ax.inset_axes([0.55, 0.5, 0.5, 0.5])
+    dummy_axins = ax.inset_axes([0.64, 0.65, 0.32, 0.35])
+    dummy_axins.axis('off')
+    for axis in ['top', 'bottom', 'left', 'right']:
+        axins2.spines[axis].set_linewidth(2)
+    plot_state(mass=5, length=1.25, ax=axins2)
+    axins2.set_aspect('equal', 'box')
+    ax.indicate_inset([5, 0.065, 0.1, 0.025], dummy_axins, linestyle="-", linewidth=3, edgecolor="black")
 
     plt.tight_layout()
-    plt.savefig("bethe_states_2.png", bbox_inches='tight')
+    plt.savefig("bethe_states_insets.png", bbox_inches='tight')
     plt.show()
 
 

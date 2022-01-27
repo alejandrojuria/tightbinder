@@ -217,7 +217,7 @@ def plot_wannier_centre_flow(wcc_flow, show_midpoints=False, ax=None, title=None
     ax.set_ylabel(r'$\hat{x}_n$', fontsize=fontsize)
     ax.set_xticks([0, wcc_flow.shape[0]/2 - 1/2, wcc_flow.shape[0] - 1])
     ax.set_xticklabels([r'$\pi$', "0", r'$\pi$'], fontsize=fontsize)
-    ax.tick_params(labelsize=fontsize)
+    ax.tick_params(axis="both", labelsize=fontsize)
     ax.set_xlim([0, wcc_flow.shape[0] - 1])
     ax.set_ylim(bottom=-1, top=1)
 

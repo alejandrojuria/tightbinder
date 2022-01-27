@@ -82,39 +82,33 @@ def plot_edge_occupation_data(data, ax=None, fontsize=10):
     ax.set_xticks([-1, 1, 3, 5, 7])
     ax.set_ylabel("Edge occupation", fontsize=fontsize)
     ax.set_xlabel("M (eV)", fontsize=fontsize)
-    ax.set_aspect(8)
+    ax.set_aspect(7)
 
 
 def main():
-    fig = plt.figure(figsize=(12, 18), dpi=100)
-    gs = fig.add_gridspec(2, 2, height_ratios=[2, 1])
-    ax1 = fig.add_subplot(gs[0, :])
-    ax2 = fig.add_subplot(gs[1, 0])
-    ax3 = fig.add_subplot(gs[1, 1])
-    ax = [ax1, ax2, ax3]
+    fig = plt.figure(figsize=(16, 12), dpi=100)
+    gs = fig.add_gridspec(1, 2)
+    ax1 = fig.add_subplot(gs[0, 0])
+    ax2 = fig.add_subplot(gs[0, 1])
+    ax = [ax1, ax2]
     fontsize = 24
 
-    # |xx|
+    # |x-|
     # |--|
     # Plot topological edge state
-    plot_state(mass=2, length=0.8, ax=ax[0])
+    plot_state(mass=2.2, length=0.75, ax=ax[0], linewidth=2)
     ax[0].set_aspect('equal', 'box')
 
-    # |--|
-    # |x-|
-    # Plot trivial state
-    plot_state(mass=1, length=1.4, ax=ax[1], linewidth=1)
-    ax[1].set_aspect('equal', 'box')
 
     # |--|
-    # |-x|
+    # |xx|
     # Plot edge occupation
     filename = "./data/bethe_edge_occupation"
     occupationdata = extract_edge_occupation(filename)
-    plot_edge_occupation_data(occupationdata, ax=ax[2], fontsize=fontsize)
+    plot_edge_occupation_data(occupationdata, ax=ax[1], fontsize=fontsize)
 
     plt.tight_layout()
-    plt.savefig("bethe_states_2.png", bbox_inches='tight')
+    plt.savefig("bethe_states_top.png", bbox_inches='tight')
     plt.show()
 
 

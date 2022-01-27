@@ -8,10 +8,13 @@ import matplotlib.pyplot as plt
 def main():
     fontsize = 20
     fig, ax = plt.subplots(2, 1, sharex=True, figsize=(15, 4), dpi=100)
+    for axis in ax:
+        for border in ['top', 'bottom', 'left', 'right']:
+            axis.spines[border].set_linewidth(2)
 
     # First plot for 3D Wilson
     # Plot vertical lines to indicate gap closings
-    ax[0].vlines([0, 2, 4, 6], 0, 1, linestyle='dashed')
+    ax[0].vlines([0, 2, 4, 6], 0, 1, linestyle='dashed', linewidth=2)
     ax[0].set_ylim([0, 1])
     ax[0].tick_params(left=False)
     ax[0].set(yticklabels=[])
@@ -36,7 +39,7 @@ def main():
 
     # Then plot for 2D Wilson
     # Plot vertical lines to indicate gap closings
-    ax[1].vlines([1, 3, 5], 0, 1, linestyle='dashed')
+    ax[1].vlines([1, 3, 5], 0, 1, linestyle='dashed', linewidth=2)
     ax[1].set_ylim([0, 1])
     ax[1].tick_params(left=False)
     ax[1].set(yticklabels=[])
