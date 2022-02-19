@@ -60,7 +60,7 @@ class Spectrum:
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
-        if len(y_values) != 2:
+        if y_values and len(y_values) != 2:
             raise ValueError("y_values must be [y_min, y_max]")
 
         nk = len(self.kpoints)

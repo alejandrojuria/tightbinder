@@ -328,7 +328,7 @@ class SKModel(System):
         for n, atom in enumerate(self.motif):
             species = int(atom[3])  # To match list beginning on zero
 
-            hamiltonian_atom_block = np.diag(np.array(onsite_energies[species])/2)
+            hamiltonian_atom_block = np.diag(np.array(onsite_energies[species]))
             hamiltonian[0][self.norbitals*n:self.norbitals*(n+1),
                            self.norbitals*n:self.norbitals*(n+1)] = hamiltonian_atom_block
 
@@ -346,6 +346,10 @@ class SKModel(System):
                     hopping_amplitude = self.__hopping_amplitude(position_difference, orbital_config)
                     hamiltonian[h_cell][initial_atom_index * self.norbitals + i,
                                         final_atom_index * self.norbitals + j] += hopping_amplitude
+
+        # Substract half-diagonal from all hamiltonian matrices to compensate transposing later
+        for h in hamiltonian:
+            h -= np.diag(np.diag(h)/2)
 
         # Check spinless or spinful model and initialize spin-orbit coupling
         if self.configuration['Spin']:
@@ -420,6 +424,7 @@ class SKModel(System):
 
             # Write Bloch Hamiltonian matrices containing hopping to different unit cells
             for i, matrix in enumerate(self.hamiltonian):
+                matrix += np.transpose(np.conjugate(matrix))
                 np.savetxt(file, [self._unit_cell_list[i]])
                 np.savetxt(file, matrix, fmt='%.10f')
                 file.write("#\n")
