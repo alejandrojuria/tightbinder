@@ -413,24 +413,28 @@ class SKModel(System):
         """ Routine to write the Hamiltonian matrices calculated to a file """
         with open(filename, "w") as file:
             # Write ndim, natoms, norbitals, ncells and bravais lattice basis vectors
-            file.write(str(self.ndim) + '\t' + str(self.natoms) + '\t'
-                       + str(self.norbitals) + '\t'
-                       + str(len(self._unit_cell_list)) + '\n')
+            file.write("# dimension\n" + str(self.ndim) + "\n")
+            file.write("# norbitals\n" + str(self.norbitals) + "\n")
+            file.write("# bravaislattice\n")
             np.savetxt(file, self.bravais_lattice)
-
-            # Write motif atoms
+            file.write("# motif\n")
             for atom in self.motif:
                 np.savetxt(file, [atom[0:3]])
+            file.write("# bravaisvectors\n")
+            for vector in self._unit_cell_list:
+                np.savetxt(file, [vector])
+            file.write("# hamiltonian\n")
+            for h in self.hamiltonian:
+                np.savetxt(file, h)
+                file.write("&\n")
+            if self.filling:
+                file.write("# filling\n" + str(self.filling) + "\n")
+            file.write("#")
 
-            # Write Bloch Hamiltonian matrices containing hopping to different unit cells
-            for i, matrix in enumerate(self.hamiltonian):
-                matrix += np.transpose(np.conjugate(matrix))
-                np.savetxt(file, [self._unit_cell_list[i]])
-                np.savetxt(file, matrix, fmt='%.10f')
-                file.write("#\n")
 
     @classmethod
     def import_model(cls, filename):
+        """ TODO: Has to be adapted to new file format """
         """ Routine to read the Hamiltonian matrix from a file """
         it = 0
         with open(filename, "r") as file:
