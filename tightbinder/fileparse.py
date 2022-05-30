@@ -88,25 +88,21 @@ def shape_arguments(arguments):
         elif arg == 'Orbitals':
             possible_orbitals = ['s', 'px', 'py', 'pz', 'dxy', 'dyz', 'dzx', 'dx2-y2', 'd3z2-r2']
             aux_array = []
-            try:
-                orbitals = re.split(' |, |,', arguments[arg][0])
-            except IndexError as e:
-                print(f'{type(e).__name__}: No orbitals included')
-                raise
-            else:
-                # Check that all are correctly written
-                for orbital in orbitals:
-                    if orbital not in possible_orbitals:
-                        print('Error: Incorrect orbital specified')
-                        raise
-                # Label with true or false
-                for orbital in possible_orbitals:
-                    if orbital in orbitals:
-                        aux_array.append(1)
-                    else:
-                        aux_array.append(0)
-                arguments[arg] = aux_array
-            
+            for line in arguments[arg]:
+                try:
+                    orbitals = re.split(' |, |,', line)
+                except IndexError as e:
+                    print(f'{type(e).__name__}: No orbitals included')
+                    raise
+                else:
+                    # Check that all are correctly written
+                    for orbital in orbitals:
+                        if orbital not in possible_orbitals:
+                            print('Error: Incorrect orbital specified')
+                            raise ValueError("Specified orbitals are not correct")
+                    aux_array.append(orbitals)
+            arguments[arg] = aux_array
+
         elif arg == 'Onsite energy':
             aux_array = []
             for line in arguments[arg]:
@@ -121,17 +117,21 @@ def shape_arguments(arguments):
             arguments[arg] = aux_array
 
         elif arg == 'SK amplitudes':
-            aux_array = []
+            dictionary = {}
             for n, line in enumerate(arguments[arg]):
-                try:
-                    aux_array.append([float(num) for num in re.split(' |, |,|; |;', line)])
-                except IndexError as e:
-                    print(f'{type(e).__name__}: No Slater-Koster amplitudes given')
-                    raise
-                except ValueError as e:
-                    print(f'{type(e).__name__}: Slater-Koster amplitudes must be numbers')
-                    raise
-            arguments[arg] = aux_array
+                    try:
+                        aux_array = [float(num) for num in re.split(' |, |,|; |;', line)]
+                        if arguments["Species"] == 1 and len(aux_array) == len(arguments["Orbitals"][0]):
+                            aux_array = "00" + aux_array
+                        orbitals = str(int(aux_array[0])) + str(int(aux_array[1]))
+                        dictionary[orbitals] = aux_array[2:]
+                    except IndexError as e:
+                        print(f'{type(e).__name__}: No Slater-Koster amplitudes given')
+                        raise
+                    except ValueError as e:
+                        print(f'{type(e).__name__}: Slater-Koster amplitudes must be numbers')
+                        raise
+            arguments[arg] = dictionary
 
         elif arg == 'Spin':
             if arguments[arg][0] == "True":
@@ -148,14 +148,17 @@ def shape_arguments(arguments):
             #    sys.exit(1)
 
         elif arg == 'Spin-orbit coupling':
-            try:
-                arguments[arg] = float(arguments[arg][0])
-            except IndexError as e:
-                print(f'Warning: No spin-orbit coupling given, defaulting to 0...')
-                arguments[arg] = 0.0
-            except ValueError as e:
-                print(f'{type(e).__name__}: Spin-orbit coupling must be a number')
-                raise
+            aux_array = []
+            for line in arguments[arg]:
+                try:
+                    aux_array.append(float(arguments[arg][0]))
+                except IndexError as e:
+                    print(f'Warning: No spin-orbit coupling given, defaulting to 0...')
+                    arguments[arg] = 0.0
+                except ValueError as e:
+                    print(f'{type(e).__name__}: Spin-orbit coupling must be a number')
+                    raise
+            arguments[arg] = aux_array
 
         elif arg == 'Mesh':
             try:
@@ -209,43 +212,63 @@ def check_coherence(arguments):
     if len(arguments['Onsite energy']) != arguments['Species']:
         raise AssertionError('Error: Missing onsite energies for both atomic species')
 
-    # Check SK coefficients are present for all species
-    if len(arguments['SK amplitudes']) < arguments['Species']:
-        raise AssertionError('Error: Missing SK coefficients for both atomic species')
-    elif len(arguments['SK amplitudes']) > arguments['Species']:
+    # Check orbitals present for all species
+    if (len(arguments['Orbitals']) != arguments['Species']):
+        raise AssertionError("Error: Orbitals must be specified for each species")
+
+    # Check number of SK coefficients
+    if len(arguments['SK amplitudes']) > arguments['Species']*(arguments['Species'] + 1)/2:
         raise AssertionError('Error: Expected only one row of SK coefficients')
 
-    if arguments['Spin-orbit coupling'] != 0 and not arguments['Spin']:
-        print('Warning: Spin-orbit coupling is non-zero but spin was set to False. ')
-        arguments['Spin'] = True
+    # Check number of SOC strenghts
+    if arguments['Spin'] and len(arguments['Spin-orbit coupling']) != arguments["Species"]:
+        raise AssertionError("Error: Values for SOC strength must match number of species")
+
+    # Check if SOC are non-zero
+    for soc in arguments['Spin-orbit coupling']:
+        if soc != 0 and not arguments['Spin']:
+            print('Warning: Spin-orbit coupling is non-zero but spin was set to False. ')
+            arguments['Spin'] = True
     
     # ------------ Orbital consistency ------------
-    diff_orbitals = 0
-    needed_SK_coefs = 0
-    if arguments['Orbitals'][0]:    # s
-        diff_orbitals += 1
-        needed_SK_coefs += 1
-    if True in arguments['Orbitals'][1:4]:  # p
-        diff_orbitals += 1
-        needed_SK_coefs += 2
-    if True in arguments['Orbitals'][4:]:   # d
-        diff_orbitals += 1
-        needed_SK_coefs += 3
-    if arguments['Orbitals'][0] and True in arguments['Orbitals'][1:4]:
-        needed_SK_coefs += 1
-    if arguments['Orbitals'][0] and True in arguments['Orbitals'][4:]:
-        needed_SK_coefs += 1
-    if True in arguments['Orbitals'][1:4] and True in arguments['Orbitals'][4:]:
-        needed_SK_coefs += 2
+    # Check onsite energy per orbital per species
+    for n, onsite_energies in enumerate(arguments["Onsite energy"]):
+        if len(onsite_energies) != len(arguments["Orbitals"][n]):
+            raise AssertionError("Error: Each orbital requires one onsite energy value")
 
-    # Check onsite energy for all orbitals
-    for onsite_energies in arguments['Onsite energy']:
-        if diff_orbitals != len(onsite_energies):
-            raise AssertionError('Error: Mismatch between number of onsite energies and orbitals')
+    # Check SK amplitudes match present orbitals
+    for item in arguments["SK amplitudes"].items():
+        species = item[0]
+        coefs    = item[1]
+        needed_SK_coefs = 0
 
-    # Check whether all necessary SK coefs are present for all orbitals
-    for species_coefs in arguments['SK amplitudes']:
-        if len(species_coefs) != needed_SK_coefs:
+        first_orbitals = arguments["Orbitals"][int(species[0])]
+        second_orbitals = arguments["Orbitals"][int(species[1])]
+
+        first_orbital_list = []
+        for orbital in first_orbitals:
+            if orbital[0] not in first_orbital_list:
+                first_orbital_list.append(orbital[0])
+        
+        second_orbital_list = []
+        for orbital in second_orbitals:
+            if orbital[0] not in second_orbital_list:
+                second_orbital_list.append(orbital[0])
+        
+        amplitudes_per_orbitals = {"ss": 1, "sp": 1, "sd": 1, "pp": 2, "pd": 2, "dd":3}
+        for key in amplitudes_per_orbitals.keys():
+            if((key[0] in first_orbital_list and key[1] in second_orbital_list)
+                or 
+               (key[1] in first_orbital_list and key[0] in second_orbital_list)
+              ):
+                needed_SK_coefs += amplitudes_per_orbitals[key]
+
+        if needed_SK_coefs != len(coefs):
+            raise AssertionError("Error: Wrong number of SK amplitudes for given orbitals")
+
+
+        # Check whether all necessary SK coefs are present for all orbitals
+        if len(coefs) != needed_SK_coefs:
             raise AssertionError('Error: Mismatch between orbitals and required SK amplitudes')
 
     # ---------------- Simulation ----------------
@@ -260,32 +283,57 @@ def transform_sk_coefficients(configuration):
     """ Routine to transform SK coefficients into standardized form
     for later manipulation in hamiltonian """
 
-    orbitals = configuration['Orbitals']
-    amplitudes = [0]*10  # Number of possible SK amplitudes
-    amplitudes_list = []
-    for coefs in configuration['SK amplitudes']:
-        if orbitals[0] and True in orbitals[1:4] and True in orbitals[4:]:
-            amplitudes = coefs
-        elif orbitals[0] and True in orbitals[1:4]:
-            amplitudes[0:4] = coefs[0:4]
-        elif orbitals[0] and True in orbitals[4:]:
-            amplitudes[0] = coefs[0]
-            amplitudes[4:] = coefs[1:]
-        elif True in orbitals[1:4] and True in orbitals[4:]:
-            amplitudes[2:4] = coefs[0:2]
-            amplitudes[5:] = coefs[2:]
-        elif orbitals[0]:  # s
-            amplitudes[0] = coefs[0]
-        elif True in orbitals[1:4]:  # p
-            amplitudes[2:4] = coefs
-        elif True in orbitals[4:]:  # d
-            amplitudes[7:] = coefs
-        else:
-            raise ValueError('Error: No orbitals given')
+    dict = {}
+    for species, coefs in configuration['SK amplitudes'].items():
+        amplitudes = [0]*10  # Number of possible SK amplitudes
+        first_orbitals = configuration["Orbitals"][int(species[0])]
+        second_orbitals = configuration["Orbitals"][int(species[1])]
 
-        amplitudes_list.append(amplitudes)
+        first_orbital_list = []
+        for orbital in first_orbitals:
+            if orbital[0] not in first_orbital_list:
+                first_orbital_list.append(orbital[0])
+        
+        second_orbital_list = []
+        for orbital in second_orbitals:
+            if orbital[0] not in second_orbital_list:
+                second_orbital_list.append(orbital[0])
+        
+        if "d" in second_orbital_list and "d" not in first_orbital_list:
+            aux_array = second_orbital_list
+            second_orbital_list = first_orbital_list
+            first_orbital_list = aux_array
+        if "d" not in first_orbital_list and "d" not in second_orbital_list:
+            if "p" in second_orbital_list and "p" not in first_orbital_list:
+                aux_array = second_orbital_list
+                second_orbital_list = first_orbital_list
+                first_orbital_list = aux_array
+
+        it = 0
+        if "s" in first_orbital_list:
+            if "s" in second_orbital_list:
+                amplitudes[0] = coefs[it]
+                it += 1
+        if "p" in first_orbital_list:
+            if "s" in second_orbital_list:
+                amplitudes[1] = coefs[it]
+                it += 1
+            if "p" in second_orbital_list:
+                amplitudes[2:4] = coefs[it:it+2]
+                it += 2
+        if "d" in first_orbital_list:
+            if "s" in second_orbital_list:
+                amplitudes[4] = coefs[it]
+                it += 1
+            if "p" in second_orbital_list:
+                amplitudes[5:7] = coefs[it:it+2]
+                it += 2
+            if "d" in second_orbital_list:
+                amplitudes[7:] = coefs[it:]
+
+        dict[species] = amplitudes
     
-    configuration['SK amplitudes'] = amplitudes_list
+    configuration['SK amplitudes'] = dict
 
     return None
 
@@ -293,6 +341,7 @@ def transform_sk_coefficients(configuration):
 def parse_config_file(file):
     """ Routine to obtain all the information from the configuration file, already shaped and verified """
 
+    print("Parsing configuration file... ")
     configuration = shape_arguments(parse_raw_arguments(file))
     required_arguments = ['System name', 'Dimensionality', 'Bravais lattice', 'Species',
                           'Motif', 'Orbitals', 'Onsite energy', 'SK amplitudes']
@@ -300,5 +349,6 @@ def parse_config_file(file):
     check_coherence(configuration)
 
     transform_sk_coefficients(configuration)
+    print("Done\n")
 
     return configuration
