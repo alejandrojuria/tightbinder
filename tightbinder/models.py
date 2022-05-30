@@ -1,6 +1,8 @@
 # Module with all the models declarations, from the Slater-Koster tight-binding model
 # to toy models such as the BHZ model or Wilson fermions.
 
+from typing import final
+from debugpy import configure
 from .system import System, FrozenClass
 from .crystal import Crystal
 import numpy as np
@@ -32,7 +34,8 @@ class SKModel(System):
 
         # Specific attributes of SKModel
         self.configuration = configuration
-        self.norbitals = int(np.sum(self.configuration["Orbitals"]))
+        self.species = configuration['Species']
+        self.norbitals = [len(orbitals) for orbitals in self.configuration["Orbitals"]]
 
         self.hamiltonian = None
         self.neighbours = None
@@ -45,9 +48,10 @@ class SKModel(System):
         self.__r = r
 
         self.boundary = boundary
-        self.__spin_blocks = None
         self.__zeeman = None
         self.ordering = None
+
+        self.basisdim = np.sum([self.norbitals[int(atom[3])] for atom in self.motif])
 
     # --------------- Methods ---------------
     def __hopping_amplitude(self, position_diff, *orbitals):
@@ -70,16 +74,12 @@ class SKModel(System):
             orbitals = [final_orbital, final_species, initial_orbital, initial_species]
             hopping = self.__hopping_amplitude(position_diff, orbitals)
             return hopping
+        
+        species_pair = str(initial_species) + str(final_species)
+        if species_pair not in amplitudes.keys():
+            species_pair = str(final_species) + str(initial_species)
 
-        amplitudes = np.array(amplitudes)
-        # Mixing of amplitudes on case of having different species
-        # So far the mixing if equivalent (beta = 0.5)
-        beta = 0.5
-        if initial_species != final_species:
-            effective_amplitudes = (amplitudes[initial_species] + amplitudes[final_species]) * beta
-        else:
-            effective_amplitudes = amplitudes[initial_species]
-
+        effective_amplitudes = amplitudes[species_pair]
         direction_cosines = position_diff / np.linalg.norm(position_diff)
         direction_cosines = {'x': direction_cosines[0], 'y': direction_cosines[1], 'z': direction_cosines[2]}
         [l, m, n] = direction_cosines.values()
@@ -87,7 +87,7 @@ class SKModel(System):
         special_orbital = True if final_orbital == 'dx2-y2' or final_orbital == 'd3z2-r2' else False
 
         # Start checking the different possibilities
-        if initial_orbital == "s":
+        if initial_orbital_type == "s":
             if final_orbital == "s":
                 hopping = Vsss
             elif final_orbital_type == "p":
@@ -143,16 +143,18 @@ class SKModel(System):
                 [l_aux, m_aux, n_aux] = ([direction_cosines[coordinate_initial_first],
                                           direction_cosines[coordinate_initial_second],
                                           direction_cosines[coordinate_initial_third]])
-                hopping = (3.*l_aux*m_aux *
+                hopping = (3.*l_aux*m_aux*
                            direction_cosines[coordinate_final_first]*direction_cosines[coordinate_final_second]*Vdds)
                 if initial_orbital == final_orbital:
                     hopping += (l_aux**2 + m_aux**2 - 4*l_aux**2*m_aux**2)*Vddp + (n_aux**2 + l_aux**2*m_aux**2)*Vddd
                 else:
                     non_repeated_coordinates = list({coordinate_initial_first, coordinate_initial_second} -
                                                     {coordinate_final_first, coordinate_final_second})
+                    print(non_repeated_coordinates)
                     repeated_coordinate = list({coordinate_initial_first, coordinate_initial_second} &
                                                {coordinate_final_first, coordinate_final_second})[0]
                     m_aux = direction_cosines[repeated_coordinate]
+                    print(repeated_coordinate)
                     [l_aux, n_aux] = [direction_cosines[non_repeated_coordinates[0]],
                                       direction_cosines[non_repeated_coordinates[1]]]
                     hopping += l_aux*n_aux*(1 - 4*m_aux**2)*Vddp + l_aux*n_aux*(m_aux**2 - 1)*Vddd
@@ -161,87 +163,36 @@ class SKModel(System):
                            (l*l - m*m)*(3./2*Vdds - 2*Vddp + Vddd/2.))
                 if initial_orbital == "yz":
                     hopping += (direction_cosines[coordinate_initial_first]*direction_cosines[coordinate_initial_second] *
-                                (-Vddp + Vddd/2.))
+                                (-Vddp + Vddd))
                 elif initial_orbital == "zx":
-                    hopping -= (direction_cosines[coordinate_initial_first]*direction_cosines[coordinate_initial_second] *
-                                (-Vddp + Vddd/2.))
+                    hopping += (direction_cosines[coordinate_initial_first]*direction_cosines[coordinate_initial_second] *
+                                (Vddp - Vddd))
             elif final_orbital == "d3z2-r2":
                 hopping = math.sqrt(3)*(direction_cosines[coordinate_initial_first] *
                                         direction_cosines[coordinate_initial_second]*(n*n - (l*l + m*m)/2))*Vdds
                 if initial_orbital == 'xy':
-                    hopping += -2*l*m*n*n*Vddp + (l*m*(1 + n*n)/2)*Vddd
+                    hopping += math.sqrt(3)*(-2*l*m*n*n*Vddp + (l*m*(1 + n*n)/2)*Vddd)
                 else:
-                    hopping += (direction_cosines[coordinate_initial_first]*direction_cosines[coordinate_initial_second] *
-                                ((l*l + m*m - n*n)*Vddp - (l*l + m*m)/2.*Vddd))
+                    hopping += math.sqrt(3)*(direction_cosines[coordinate_initial_first]*
+                    direction_cosines[coordinate_initial_second] * ((l*l + m*m - n*n)*Vddp - (l*l + m*m)/2.*Vddd))
 
-            elif initial_orbital == "dx2-y2":
-                if final_orbital == "dx2-y2":
-                    hopping = 3./4*(l*l - m*m)**2*Vdds + (l*l + m*m - (l*l - m*m)**2)*Vddp + (n*n + (l*l - m*m)**2/4)*Vddd
-                elif final_orbital == "d3z2-r2":
-                    hopping = math.sqrt(3)*((l*l - m*m)*(n*n - (l*l + m*m)/2))*Vdds/2 + n*n*(m*m - l*l)*Vddp + ((1 + n*n) *
-                              (l*l - m*m)/4)*Vddd
-            elif initial_orbital == "d3z2-r2":
-                hopping = (n*n - (l*l - m*m)/2)**2*Vdds + 3*n*n*(l*l + m*m)*Vddp + 3./4*(l*l + m*m)**2*Vddd
+        elif initial_orbital == "dx2-y2":
+            if final_orbital == "dx2-y2":
+                hopping = 3./4*(l*l - m*m)**2*Vdds + (l*l + m*m - (l*l - m*m)**2)*Vddp + (n*n + (l*l - m*m)**2/4)*Vddd
+            elif final_orbital == "d3z2-r2":
+                hopping = math.sqrt(3)*((l*l - m*m)*(n*n - (l*l + m*m)/2)*Vdds/2 + n*n*(m*m - l*l)*Vddp + ((1 + n*n) *
+                              (l*l - m*m)/4)*Vddd)
+        elif initial_orbital == "d3z2-r2":
+            hopping = (n*n - (l*l + m*m)/2)**2*Vdds + 3*n*n*(l*l + m*m)*Vddp + 3./4*(l*l + m*m)**2*Vddd
 
         return hopping
 
-    def __transform_orbitals_to_string(self):
-        """ Method to transform the orbitals list from logical form back to string form, to be used in the
-         hamiltonian routine """
-
-        possible_orbitals = ['s', 'px', 'py', 'pz', 'dxy', 'dyz', 'dzx', 'dx2-y2', 'd3z2-r2']
-        orbitals_string = []
-        orbitals = self.configuration['Orbitals']
-        for i, orbital in enumerate(orbitals):
-            if orbital:
-                orbitals_string.append(possible_orbitals[i])
-
-        self.norbitals = len(orbitals_string)
-        return orbitals_string
-
-    def __create_atomic_orbital_basis(self):
-        """ Method to calculate the Cartesian product between the motif list and the orbitals list
-         to get the standard atomic-orbital basis |i,\alpha>. The ordering is as written in the ket: first
-         the atomic position, then the orbital. For fixed atom, we iterate over the possible orbitals """
-
-        basis = []
-        orbitals = self.__transform_orbitals_to_string()
-        for element in itertools.product(self.motif, orbitals):
-            basis.append(element)
-
-        self.basisdim = len(basis)
-        return basis
-
-    def __extend_onsite_vector(self):
-        """ Routine to extend the onsite energies from the original list to
-         a list the same length as the orbitals one, with the corresponding onsite energy
-         per index """
-
-        onsite_energies = self.configuration['Onsite energy']
-        orbitals = self.__transform_orbitals_to_string()
-        onsite_full_list = []
-
-        for element in range(self.configuration['Species']):
-            onsite_list = []
-            reduced_orbitals = []
-            onsite_orbital_dictionary = {}
-            count = 0
-            for orbital in orbitals:
-                if orbital[0] not in reduced_orbitals:
-                    reduced_orbitals.append(orbital[0])
-                    onsite_orbital_dictionary.update({orbital[0]: onsite_energies[element][count]})
-                    count += 1
-            for orbital in orbitals:
-                onsite_list.append(onsite_orbital_dictionary[orbital[0]])
-            onsite_full_list.append(onsite_list)
-
-        return onsite_full_list
 
     def __initialize_spin_orbit_coupling(self):
         """ Method to initialize the whole spin-orbit coupling matrix corresponding to the
          orbitals that participate in the tight-binding model"""
 
-        dimension_block = int(len(self.configuration["Orbitals"]))
+        dimension_block = 1 + 3 + 5
         # We hardcode the whole spin-orbit hamilonian up to d orbitals
         spin_orbit_hamiltonian = np.zeros([dimension_block*2, dimension_block*2], dtype=np.complex_)
         p_orbital_beginning = 1
@@ -271,7 +222,7 @@ class SKModel(System):
         spin_orbit_hamiltonian[d_orbital_beginning + 4, dimension_block + d_orbital_beginning + 2] = 1j*math.sqrt(3)
         spin_orbit_hamiltonian[dimension_block + d_orbital_beginning, dimension_block + d_orbital_beginning + 3] = -2j
         spin_orbit_hamiltonian[dimension_block + d_orbital_beginning + 1,
-                               dimension_block + d_orbital_beginning + 2] = 1j
+                            dimension_block + d_orbital_beginning + 2] = 1j
 
         spin_orbit_hamiltonian += np.conj(spin_orbit_hamiltonian.T)
 
@@ -282,38 +233,26 @@ class SKModel(System):
          that participate in the model. Generate spin blocks to append later to the global hamiltonian.
           Ordering is: self.spin_blocks=[up up, up down, down up, down down] """
 
-        orbitals = self.configuration["Orbitals"]
-        npossible_orbitals = len(orbitals)
-        orbitals_indices = np.array([index for index, orbital in enumerate(orbitals) if orbital])
+        possible_orbitals = ['s', 'px', 'py', 'pz', 'dxy', 'dyz', 'dzx', 'dx2-y2', 'd3z2-r2']
+        npossible_orbitals = len(possible_orbitals)
+        spin_orbit_hamiltonian = np.zeros([self.basisdim, self.basisdim], dtype=np.complex_)
+        matrix_index = 0
+        for n, atom in enumerate(self.motif):
+            species = atom[3]
+            orbitals = self.configuration["Orbitals"][species]
+            norbitals = self.norbitals[species]
+            orbitals_indices = [index + i for i in [0, npossible_orbitals] for index, orbital in enumerate(possible_orbitals) 
+                                if orbital in orbitals]
+            
+            soc = self.spin_orbit_hamiltonian[np.ix_(orbitals_indices, orbitals_indices)]
+            spin_orbit_hamiltonian[matrix_index : matrix_index + norbitals, matrix_index : matrix_index + norbitals] = soc
+            matrix_index += norbitals
 
-        self.spin_blocks = []
+        self.spin_orbit_hamiltonian = spin_orbit_hamiltonian
 
-        for indices in itertools.product([0, 1], [0, 1]):
-            self.spin_blocks.append(self.spin_orbit_hamiltonian[
-                                        np.ix_(orbitals_indices + indices[0]*npossible_orbitals,
-                                               orbitals_indices + indices[1]*npossible_orbitals)])
-
-        if self.ordering == "atomic":
-            spin_block_size = len(orbitals_indices)
-            spin_orbit_hamiltonian = np.zeros([spin_block_size*2,
-                                               spin_block_size*2], dtype=np.complex_)
-
-            for n, indices in enumerate(itertools.product([0, 1], [0, 1])):
-                spin_orbit_hamiltonian[indices[0] * spin_block_size:
-                                            (indices[0] + 1)*spin_block_size,
-                                            indices[1] * spin_block_size:
-                                            (indices[1] + 1) * spin_block_size] = self.spin_blocks[n]
-                self.spin_orbit_hamiltonian = np.kron(np.eye(self.natoms, self.natoms), spin_orbit_hamiltonian)
-
-        else:
-            for n, spin_block in enumerate(self.spin_blocks):
-                self.spin_blocks[n] = np.kron(np.eye(self.natoms, self.natoms), spin_block)
 
     def initialize_hamiltonian(self):
         """ Routine to initialize the hamiltonian matrices which describe the system. """
-
-        orbitals = self.__transform_orbitals_to_string()
-        basis = self.__create_atomic_orbital_basis()
 
         print('Computing first neighbours...\n')
         self.find_neighbours()
@@ -323,29 +262,34 @@ class SKModel(System):
         for _ in self._unit_cell_list:
             hamiltonian.append(np.zeros(([self.basisdim, self.basisdim]), dtype=np.complex_))
 
-        onsite_energies = self.__extend_onsite_vector()
-
+        matrix_index = 0
         for n, atom in enumerate(self.motif):
             species = int(atom[3])  # To match list beginning on zero
+            hamiltonian_atom_block = np.diag(np.array(self.configuration['Onsite energy'][species]))
+            hamiltonian[0][matrix_index : matrix_index + self.norbitals[species],
+                           matrix_index : matrix_index + self.norbitals[species]] = hamiltonian_atom_block
+            matrix_index += self.norbitals[species]
 
-            hamiltonian_atom_block = np.diag(np.array(onsite_energies[species]))
-            hamiltonian[0][self.norbitals*n:self.norbitals*(n+1),
-                           self.norbitals*n:self.norbitals*(n+1)] = hamiltonian_atom_block
+        atom_index = {0: 0}
+        for n, atom in enumerate(self.motif[1:]):
+            atom_index[n + 1] = atom_index[n] + self.norbitals[int(self.motif[n][3])]
 
         for bond in self.bonds:
             initial_atom_index, final_atom_index, cell = bond
             initial_atom = self.motif[initial_atom_index][:3]
-            initial_atom_species = self.motif[initial_atom_index][3]
+            initial_atom_species = int(self.motif[initial_atom_index][3])
             final_atom = self.motif[final_atom_index][:3]
-            final_atom_species = self.motif[final_atom_index][3]
-            for i, initial_orbital in enumerate(orbitals):
-                for j, final_orbital in enumerate(orbitals):
+            final_atom_species = int(self.motif[final_atom_index][3])
+            iorbitals = self.configuration['Orbitals'][initial_atom_species]
+            forbitals = self.configuration['Orbitals'][final_atom_species]
+            for i, initial_orbital in enumerate(iorbitals):
+                for j, final_orbital in enumerate(forbitals):
                     position_difference = np.array(final_atom) + np.array(cell) - np.array(initial_atom)
                     orbital_config = [initial_orbital, initial_atom_species, final_orbital, final_atom_species]
                     h_cell = self._unit_cell_list.index(list(cell))
                     hopping_amplitude = self.__hopping_amplitude(position_difference, orbital_config)
-                    hamiltonian[h_cell][initial_atom_index * self.norbitals + i,
-                                        final_atom_index * self.norbitals + j] += hopping_amplitude
+                    hamiltonian[h_cell][atom_index[initial_atom_index] + i,
+                                        atom_index[final_atom_index] + j] += hopping_amplitude
 
         # Substract half-diagonal from all hamiltonian matrices to compensate transposing later
         for h in hamiltonian:
@@ -353,22 +297,22 @@ class SKModel(System):
 
         # Check spinless or spinful model and initialize spin-orbit coupling
         if self.configuration['Spin']:
-            self.norbitals = self.norbitals * 2
+            self.norbitals = [2*norbitals for norbitals in self.norbitals]
             self.basisdim = self.basisdim * 2
 
             for index, cell in enumerate(self._unit_cell_list):
-                if self.ordering == "atomic":
-                    aux_hamiltonian = np.zeros([self.basisdim, self.basisdim], dtype=np.complex_)
-                    for n in range(self.natoms):
-                        for m in range(self.natoms):
-                            atom_block = np.kron(np.eye(2, 2),
-                                                 hamiltonian[index][n * self.norbitals//2:(n + 1) * self.norbitals//2,
-                                                                    m * self.norbitals//2:(m + 1) * self.norbitals//2])
-                            aux_hamiltonian[n*self.norbitals:(n+1)*self.norbitals,
-                                            m*self.norbitals:(m+1)*self.norbitals] += atom_block
-                    hamiltonian[index] = aux_hamiltonian
-                else:
-                    hamiltonian[index] = np.kron(np.eye(2, 2), hamiltonian[index])
+                aux_hamiltonian = np.zeros([self.basisdim, self.basisdim], dtype=np.complex_)
+                for n, r_atom in enumerate(self.motif):
+                    for m, c_atom in enumerate(self.motif):
+                        atom_block = np.kron(
+                            np.eye(2, 2),
+                            hamiltonian[index][atom_index[n]: atom_index[n] + self.norbitals[r_atom[3]]//2,
+                                               atom_index[m]: atom_index[m] + self.norbitals[c_atom[3]]//2]
+                                            )
+
+                        aux_hamiltonian[atom_index[n]*2: atom_index[n]*2 + self.norbitals[r_atom[3]],
+                                        atom_index[m]*2: atom_index[m]*2 + self.norbitals[c_atom[3]]] += atom_block
+                hamiltonian[index] = aux_hamiltonian
 
             # Add Zeeman term
             self.__zeeman_term(1E-7)
@@ -378,23 +322,24 @@ class SKModel(System):
                 self.__initialize_spin_orbit_coupling()
                 self.__spin_orbit_h()
 
-                if self.ordering == "atomic":
-                    hamiltonian[0] += self.spin_orbit_hamiltonian
-                else:
-                    for block, indices in enumerate(itertools.product([0, 1], [0, 1])):
-                        hamiltonian[0][indices[0] * self.basisdim//2:(indices[0] + 1) * self.basisdim//2,
-                                       indices[1] * self.basisdim//2:(indices[1] + 1) * self.basisdim//2] += self.spin_blocks[block]
+                hamiltonian[0] += self.spin_orbit_hamiltonian
 
         self.hamiltonian = hamiltonian
 
     def __zeeman_term(self, intensity):
         """ Routine to incorporate a Zeeman term to the Hamiltonian """
-        if self.ordering == "atomic":
-            zeeman = np.kron(np.array([[1, 0], [0, -1]]), np.eye(self.norbitals//2))
-            zeeman_h = np.kron(np.eye(self.natoms), zeeman) * intensity
-        else:
-            zeeman_h = np.kron(np.array([[1, 0], [0, -1]]), np.eye(self.basisdim // 2) * intensity)
 
+        zeeman_h = np.zeros([self.basisdim, self.basisdim])
+        matrix_index = 0
+        for atom in self.motif:
+            species = atom[3]
+            zeeman_h[matrix_index: matrix_index + self.norbitals[species], 
+                     matrix_index: matrix_index + self.norbitals[species]] = np.kron(
+                     np.array([[1, 0], [0, -1]]), 
+                     np.eye(self.norbitals[species]//2))
+            matrix_index += self.norbitals[species]
+
+        zeeman_h *= intensity
         self.__zeeman = zeeman_h
 
     def hamiltonian_k(self, k):

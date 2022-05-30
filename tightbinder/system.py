@@ -32,6 +32,7 @@ class System(Crystal):
                 print("Warning: Provided values for Bravais lattice or motif are disregarded" +
                       "in presence of crystal object")
             super().__init__(crystal.bravais_lattice, crystal.motif)
+
         self.system_name = system_name
         self._norbitals = None
         self._basisdim = None
@@ -53,7 +54,7 @@ class System(Crystal):
 
     @norbitals.setter
     def norbitals(self, norbitals):
-        assert type(norbitals) == int
+        assert type(norbitals) == list
         self._norbitals = norbitals
 
     @property
