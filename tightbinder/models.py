@@ -252,7 +252,7 @@ class SKModel(System):
 
         spin_orbit_hamiltonian += np.conj(spin_orbit_hamiltonian.T)
 
-        self.spin_orbit_hamiltonian = self.configuration['Spin-orbit coupling']*spin_orbit_hamiltonian
+        self.spin_orbit_hamiltonian = spin_orbit_hamiltonian
 
     def __spin_orbit_h(self):
         """ Method to obtain the actual spin-orbit hamiltonian that corresponds to the orbitals
@@ -264,13 +264,14 @@ class SKModel(System):
         spin_orbit_hamiltonian = np.zeros([self.basisdim, self.basisdim], dtype=np.complex_)
         matrix_index = 0
         for n, atom in enumerate(self.motif):
-            species = atom[3]
+            species = int(atom[3])
             orbitals = self.configuration["Orbitals"][species]
             norbitals = self.norbitals[species]
             orbitals_indices = [index + i for i in [0, npossible_orbitals] for index, orbital in enumerate(possible_orbitals) 
                                 if orbital in orbitals]
             
-            soc = self.spin_orbit_hamiltonian[np.ix_(orbitals_indices, orbitals_indices)]
+            soc = (self.spin_orbit_hamiltonian[np.ix_(orbitals_indices, orbitals_indices)] *
+                   self.configuration['Spin-orbit coupling'][species])
             spin_orbit_hamiltonian[matrix_index : matrix_index + norbitals, matrix_index : matrix_index + norbitals] = soc
             matrix_index += norbitals
 
@@ -329,15 +330,17 @@ class SKModel(System):
             for index, cell in enumerate(self._unit_cell_list):
                 aux_hamiltonian = np.zeros([self.basisdim, self.basisdim], dtype=np.complex_)
                 for n, r_atom in enumerate(self.motif):
+                    r_species = int(r_atom[3])
                     for m, c_atom in enumerate(self.motif):
+                        c_species = int(c_atom[3])
                         atom_block = np.kron(
                             np.eye(2, 2),
-                            hamiltonian[index][atom_index[n]: atom_index[n] + self.norbitals[r_atom[3]]//2,
-                                               atom_index[m]: atom_index[m] + self.norbitals[c_atom[3]]//2]
+                            hamiltonian[index][atom_index[n]: atom_index[n] + self.norbitals[r_species]//2,
+                                               atom_index[m]: atom_index[m] + self.norbitals[c_species]//2]
                                             )
 
-                        aux_hamiltonian[atom_index[n]*2: atom_index[n]*2 + self.norbitals[r_atom[3]],
-                                        atom_index[m]*2: atom_index[m]*2 + self.norbitals[c_atom[3]]] += atom_block
+                        aux_hamiltonian[atom_index[n]*2: atom_index[n]*2 + self.norbitals[r_species],
+                                        atom_index[m]*2: atom_index[m]*2 + self.norbitals[c_species]] += atom_block
                 hamiltonian[index] = aux_hamiltonian
 
             # Add Zeeman term
@@ -358,7 +361,7 @@ class SKModel(System):
         zeeman_h = np.zeros([self.basisdim, self.basisdim])
         matrix_index = 0
         for atom in self.motif:
-            species = atom[3]
+            species = int(atom[3])
             zeeman_h[matrix_index: matrix_index + self.norbitals[species], 
                      matrix_index: matrix_index + self.norbitals[species]] = np.kron(
                      np.array([[1, 0], [0, -1]]), 
