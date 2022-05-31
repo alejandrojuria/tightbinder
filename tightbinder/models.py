@@ -37,6 +37,12 @@ class SKModel(System):
         self.species = configuration['Species']
         self.norbitals = [len(orbitals) for orbitals in self.configuration["Orbitals"]]
 
+        basisdim = 0
+        for atom in self.motif:
+            species = int(atom[3])
+            basisdim += self.norbitals[species]
+        self.basisdim = basisdim
+
         self.hamiltonian = None
         self.neighbours = None
         self.spin_orbit_hamiltonian = None
@@ -49,7 +55,17 @@ class SKModel(System):
 
         self.boundary = boundary
         self.__zeeman = None
-        self.ordering = None
+        self.__ordering = None
+
+    @property
+    def ordering(self):
+        return self.__ordering
+
+    @ordering.setter
+    def ordering(self, ordering):
+        if ordering != "atomic" and ordering != "spin":
+            raise ValueError("ordering must be either atomic or spin")
+        self.__ordering = ordering
 
         self.basisdim = np.sum([self.norbitals[int(atom[3])] for atom in self.motif])
 
@@ -70,7 +86,15 @@ class SKModel(System):
 
         possible_orbitals = {'s': 0, 'p': 1, 'd': 2}
         if possible_orbitals[initial_orbital_type] > possible_orbitals[final_orbital_type]:
-            position_diff = np.array(position_diff)*(-1)
+            position_diff = np.array(position_diff) * (-1)
+            orbitals = [final_orbital, final_species, initial_orbital, initial_species]
+            hopping = self.__hopping_amplitude(position_diff, orbitals)
+            return hopping
+        d_orbitals = {'dxy': 0, 'dyz': 0, 'dzx': 0, 'dx2-y2': 1, 'd3z2-r2':2}
+        if (initial_orbital_type == "d" and final_orbital_type == "d"
+                and
+            d_orbitals[initial_orbital] > d_orbitals[final_orbital]):
+            position_diff = np.array(position_diff) * (-1)
             orbitals = [final_orbital, final_species, initial_orbital, initial_species]
             hopping = self.__hopping_amplitude(position_diff, orbitals)
             return hopping
@@ -131,7 +155,7 @@ class SKModel(System):
                 else:
                     hopping -= math.sqrt(3)*direction_cosines[coordinate_initial]*n*n*Vpdp
 
-        elif initial_orbital_type == "d" and initial_orbital not in ["dx2-y2, d3r2-z2"]:
+        elif initial_orbital_type == "d" and initial_orbital not in ["dx2-y2", "d3z2-r2"]:
             coordinate_initial_first = initial_orbital[1]
             coordinate_initial_second = initial_orbital[2]
             for coordinate in ["x", "y", "z"]:  # Determine non present coordinate
@@ -148,42 +172,44 @@ class SKModel(System):
                 if initial_orbital == final_orbital:
                     hopping += (l_aux**2 + m_aux**2 - 4*l_aux**2*m_aux**2)*Vddp + (n_aux**2 + l_aux**2*m_aux**2)*Vddd
                 else:
-                    non_repeated_coordinates = list({coordinate_initial_first, coordinate_initial_second} -
+                    non_repeated_coordinates = list({coordinate_initial_first, coordinate_initial_second} ^
                                                     {coordinate_final_first, coordinate_final_second})
-                    print(non_repeated_coordinates)
                     repeated_coordinate = list({coordinate_initial_first, coordinate_initial_second} &
                                                {coordinate_final_first, coordinate_final_second})[0]
                     m_aux = direction_cosines[repeated_coordinate]
-                    print(repeated_coordinate)
                     [l_aux, n_aux] = [direction_cosines[non_repeated_coordinates[0]],
                                       direction_cosines[non_repeated_coordinates[1]]]
                     hopping += l_aux*n_aux*(1 - 4*m_aux**2)*Vddp + l_aux*n_aux*(m_aux**2 - 1)*Vddd
             elif final_orbital == "dx2-y2":
                 hopping = (direction_cosines[coordinate_initial_first]*direction_cosines[coordinate_initial_second] *
                            (l*l - m*m)*(3./2*Vdds - 2*Vddp + Vddd/2.))
-                if initial_orbital == "yz":
+                if initial_orbital == "dyz":
                     hopping += (direction_cosines[coordinate_initial_first]*direction_cosines[coordinate_initial_second] *
                                 (-Vddp + Vddd))
-                elif initial_orbital == "zx":
+                elif initial_orbital == "dzx":
                     hopping += (direction_cosines[coordinate_initial_first]*direction_cosines[coordinate_initial_second] *
                                 (Vddp - Vddd))
             elif final_orbital == "d3z2-r2":
                 hopping = math.sqrt(3)*(direction_cosines[coordinate_initial_first] *
                                         direction_cosines[coordinate_initial_second]*(n*n - (l*l + m*m)/2))*Vdds
-                if initial_orbital == 'xy':
+                if initial_orbital == 'dxy':
                     hopping += math.sqrt(3)*(-2*l*m*n*n*Vddp + (l*m*(1 + n*n)/2)*Vddd)
                 else:
                     hopping += math.sqrt(3)*(direction_cosines[coordinate_initial_first]*
                     direction_cosines[coordinate_initial_second] * ((l*l + m*m - n*n)*Vddp - (l*l + m*m)/2.*Vddd))
 
         elif initial_orbital == "dx2-y2":
+            hopping = 0.0
             if final_orbital == "dx2-y2":
-                hopping = 3./4*(l*l - m*m)**2*Vdds + (l*l + m*m - (l*l - m*m)**2)*Vddp + (n*n + (l*l - m*m)**2/4)*Vddd
+                hopping += 3./4*(l*l - m*m)**2*Vdds + (l*l + m*m - (l*l - m*m)**2)*Vddp + (n*n + (l*l - m*m)**2/4)*Vddd
             elif final_orbital == "d3z2-r2":
-                hopping = math.sqrt(3)*((l*l - m*m)*(n*n - (l*l + m*m)/2)*Vdds/2 + n*n*(m*m - l*l)*Vddp + ((1 + n*n) *
+                hopping += math.sqrt(3)*((l*l - m*m)*(n*n - (l*l + m*m)/2)*Vdds/2 + n*n*(m*m - l*l)*Vddp + ((1 + n*n) *
                               (l*l - m*m)/4)*Vddd)
         elif initial_orbital == "d3z2-r2":
             hopping = (n*n - (l*l + m*m)/2)**2*Vdds + 3*n*n*(l*l + m*m)*Vddp + 3./4*(l*l + m*m)**2*Vddd
+
+        else:
+            raise ValueError("Error: Shouldn't get called (some bug in orbital assertion in code)")
 
         return hopping
 
@@ -255,7 +281,7 @@ class SKModel(System):
         """ Routine to initialize the hamiltonian matrices which describe the system. """
 
         print('Computing first neighbours...\n')
-        self.find_neighbours()
+        self.find_neighbours(mode=self.__mode, r=self.__r)
         self._determine_connected_unit_cells()
 
         hamiltonian = []
@@ -292,8 +318,8 @@ class SKModel(System):
                                         atom_index[final_atom_index] + j] += hopping_amplitude
 
         # Substract half-diagonal from all hamiltonian matrices to compensate transposing later
-        for h in hamiltonian:
-            h -= np.diag(np.diag(h)/2)
+        #for h in hamiltonian:
+        #    h -= np.diag(np.diag(h)/2)
 
         # Check spinless or spinful model and initialize spin-orbit coupling
         if self.configuration['Spin']:
@@ -348,9 +374,9 @@ class SKModel(System):
 
         hamiltonian_k = np.zeros([self.basisdim, self.basisdim], dtype=np.complex_)
         for cell_index, cell in enumerate(self._unit_cell_list):
-            hamiltonian_k += self.hamiltonian[cell_index] * cmath.exp(1j*np.dot(k, cell))
+            hamiltonian_k += self.hamiltonian[cell_index] * cmath.exp(-1j*np.dot(k, cell))
 
-        hamiltonian_k = (hamiltonian_k + np.transpose(np.conjugate(hamiltonian_k)))
+        # hamiltonian_k = (hamiltonian_k + np.transpose(np.conjugate(hamiltonian_k)))
         return hamiltonian_k
 
     # ---------------------------- IO routines ----------------------------
