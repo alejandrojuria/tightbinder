@@ -67,8 +67,15 @@ class Spectrum:
         x_points = np.arange(0, nk)
         x_ticks = []
         number_of_paths = len(labels) - 1
+        if y_values:
+            ymin, ymax = y_values
+        else:
+            ymin, ymax = np.min(self.eigen_energy), np.max(self.eigen_energy)
         for n, label in enumerate(labels):
-            x_ticks.append((nk - 1)/number_of_paths*n)
+            xpos = (nk - 1)/number_of_paths*n
+            x_ticks.append(xpos)
+            ax.vlines(x=xpos, ymin=ymin, ymax=ymax,
+                      linestyles='dashed', colors='black')
         for eigen_energy_k in self.eigen_energy:
             ax.plot(x_points, eigen_energy_k, 'g-')
 
@@ -91,6 +98,9 @@ class Spectrum:
         if y_values:
             ax.yaxis.set_ticks(np.arange(y_values[0], y_values[1] + 1, 1))
             ax.set_ylim(y_values)
+
+        # Add vertical lines for each high symmetry point
+
 
     def plot_spectrum(self, title=''):
         """ Routine to plot all the eigenvalues coming from the Bloch Hamiltonian diagonalization
