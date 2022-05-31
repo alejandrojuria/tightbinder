@@ -24,7 +24,7 @@ Minimal hBN model
 2
 
 #Motif
-! Each row corresponds to one vector of the basis; fourth number denotes atomic species
+! Each row corresponds to one vector (atom) of the basis; fourth number denotes atomic species
 ! Species have to be either 0 or 1
 0 0 0 0
 1.443376 0 0 1
@@ -34,6 +34,7 @@ Minimal hBN model
 ! Order is irrelevant
 ! Species have to be isoelectronic (same number of valence shell electrons)
 ! Possible orbitals are: s, px, py, pz, dxy, dyz, dzx, dx2-y2, d3z2-r2
+s
 s
 
 #Onsite energy
@@ -46,8 +47,8 @@ s
 ! Order is fixed: Vsss, Vsps, Vpps, Vppp, Vsds, Vpds, Vpdp, Vdds, Vddp, Vddd (separated by spaces)
 ! Not present amplitudes can be omitted but ordering has te be respected always
 ! In case of having two atomic species, two lines must be appended, one for each element
--2.3
--2.3
+0, 1 -2.3
+
 
 #Spin
 ! Determine whether the model is spinless (spin polarized) or spinful
