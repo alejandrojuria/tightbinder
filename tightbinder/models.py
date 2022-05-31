@@ -233,26 +233,26 @@ class SKModel(System):
 
         # d orbitals
         spin_orbit_hamiltonian[d_orbital_beginning, d_orbital_beginning + 3] = 2j
-        spin_orbit_hamiltonian[d_orbital_beginning, dimension_block + d_orbital_beginning + 1] = -1j
-        spin_orbit_hamiltonian[d_orbital_beginning, dimension_block + d_orbital_beginning + 2] = 1
-        spin_orbit_hamiltonian[d_orbital_beginning + 1, d_orbital_beginning + 2] = -1j
-        spin_orbit_hamiltonian[d_orbital_beginning + 1, dimension_block + d_orbital_beginning] = 1j
+        spin_orbit_hamiltonian[d_orbital_beginning, dimension_block + d_orbital_beginning + 1] = 1
+        spin_orbit_hamiltonian[d_orbital_beginning, dimension_block + d_orbital_beginning + 2] = -1j
+        spin_orbit_hamiltonian[d_orbital_beginning + 1, d_orbital_beginning + 2] = 1j
+        spin_orbit_hamiltonian[d_orbital_beginning + 1, dimension_block + d_orbital_beginning] = -1
         spin_orbit_hamiltonian[d_orbital_beginning + 1, dimension_block + d_orbital_beginning + 3] = -1j
-        spin_orbit_hamiltonian[d_orbital_beginning + 1, dimension_block + d_orbital_beginning + 4] = math.sqrt(3)
-        spin_orbit_hamiltonian[d_orbital_beginning + 2, dimension_block + d_orbital_beginning] = -1
-        spin_orbit_hamiltonian[d_orbital_beginning + 2, dimension_block + d_orbital_beginning + 3] = 1j
-        spin_orbit_hamiltonian[d_orbital_beginning + 2, dimension_block + d_orbital_beginning + 4] = -1j*math.sqrt(3)
-        spin_orbit_hamiltonian[d_orbital_beginning + 3, dimension_block + d_orbital_beginning + 1] = 1
-        spin_orbit_hamiltonian[d_orbital_beginning + 3, dimension_block + d_orbital_beginning + 2] = 1j
-        spin_orbit_hamiltonian[d_orbital_beginning + 4, dimension_block + d_orbital_beginning + 1] = -math.sqrt(3)
-        spin_orbit_hamiltonian[d_orbital_beginning + 4, dimension_block + d_orbital_beginning + 2] = 1j*math.sqrt(3)
+        spin_orbit_hamiltonian[d_orbital_beginning + 1, dimension_block + d_orbital_beginning + 4] = -math.sqrt(3)*1j
+        spin_orbit_hamiltonian[d_orbital_beginning + 2, dimension_block + d_orbital_beginning] = 1j
+        spin_orbit_hamiltonian[d_orbital_beginning + 2, dimension_block + d_orbital_beginning + 3] = -1
+        spin_orbit_hamiltonian[d_orbital_beginning + 2, dimension_block + d_orbital_beginning + 4] = math.sqrt(3)
+        spin_orbit_hamiltonian[d_orbital_beginning + 3, dimension_block + d_orbital_beginning + 1] = 1j
+        spin_orbit_hamiltonian[d_orbital_beginning + 3, dimension_block + d_orbital_beginning + 2] = 1
+        spin_orbit_hamiltonian[d_orbital_beginning + 4, dimension_block + d_orbital_beginning + 1] = 1j*math.sqrt(3)
+        spin_orbit_hamiltonian[d_orbital_beginning + 4, dimension_block + d_orbital_beginning + 2] = -math.sqrt(3)
         spin_orbit_hamiltonian[dimension_block + d_orbital_beginning, dimension_block + d_orbital_beginning + 3] = -2j
         spin_orbit_hamiltonian[dimension_block + d_orbital_beginning + 1,
-                            dimension_block + d_orbital_beginning + 2] = 1j
+                            dimension_block + d_orbital_beginning + 2] = -1j
 
         spin_orbit_hamiltonian += np.conj(spin_orbit_hamiltonian.T)
 
-        self.spin_orbit_hamiltonian = spin_orbit_hamiltonian
+        self.spin_orbit_hamiltonian = spin_orbit_hamiltonian/2
 
     def __spin_orbit_h(self):
         """ Method to obtain the actual spin-orbit hamiltonian that corresponds to the orbitals
