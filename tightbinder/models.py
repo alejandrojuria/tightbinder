@@ -1,6 +1,8 @@
 # Module with all the models declarations, from the Slater-Koster tight-binding model
 # to toy models such as the BHZ model or Wilson fermions.
 
+from multiprocessing.sharedctypes import Value
+from operator import length_hint
 from typing import final
 from debugpy import configure
 from .system import System, FrozenClass
@@ -19,11 +21,19 @@ sigma_y = np.array([[0, -1j],
 sigma_z = np.array([[1, 0],
                     [0, -1]], dtype=np.complex_)
 
-# --------------- Constants ---------------
+# ------------------ Constants and auxiliary methods ------------------
 PI = 3.14159265359
 
+def overrides(interface_class):
+    def overrider(method):
+        assert(method.__name__ in dir(interface_class))
+        return method
+    return overrider
 
-class SKModel(System):
+# ------------------------------ Models ------------------------------
+
+
+class SlaterKoster(System):
     def __init__(self, configuration=None, mode='minimal', r=None, boundary="PBC"):
         if configuration is not None:
             super().__init__(system_name=configuration["System name"],
@@ -277,7 +287,6 @@ class SKModel(System):
 
         self.spin_orbit_hamiltonian = spin_orbit_hamiltonian
 
-
     def initialize_hamiltonian(self):
         """ Routine to initialize the hamiltonian matrices which describe the system. """
 
@@ -319,8 +328,8 @@ class SKModel(System):
                                         atom_index[final_atom_index] + j] += hopping_amplitude
 
         # Substract half-diagonal from all hamiltonian matrices to compensate transposing later
-        #for h in hamiltonian:
-        #    h -= np.diag(np.diag(h)/2)
+        for h in hamiltonian:
+            h -= np.diag(np.diag(h)/2)
 
         # Check spinless or spinful model and initialize spin-orbit coupling
         if self.configuration['Spin']:
@@ -462,6 +471,101 @@ class SKModel(System):
         model.hamiltonian = hamiltonian
 
         return model
+
+
+class AmorphousSlaterKoster(SlaterKoster):
+    """ Extension of the Slater-Koster tight binding model to describe amorphous solids,
+    taking the crystalline solid as the reference point. This model by default works in radius mode. """
+
+    def __init__(self, configuration=None, r=None, boundary="PBC"):
+        super.__init__(configuration, mode='radius', r=r, boundary=boundary)
+
+        # Specific attributes of AmorphousSlaterKoster
+        self._reference_lengths = None
+        self._decay_amplitude   = None
+        self._decay_mode        = 'exponential'
+
+    # Properties
+    @property
+    def reference_lengths(self):
+        return self._reference_lengths
+
+    @reference_lengths.setter
+    def reference_lengths(self, *values):
+        print('reference_lengths must be mutated using the set_reference_length method')
+
+    @property
+    def decay_amplitude(self):
+        return self._decay_amplitude
+    
+    @decay_amplitude.setter
+    def decay_amplitude(self, amplitude):
+        if amplitude < 0:
+            raise ValueError('decay_amplitude: amplitude must be positive number')
+        self._decay_amplitude = amplitude
+    
+    @property
+    def decay_mode(self):
+        return self._decay_mode
+    
+    @decay_mode.setter
+    def decay_mode(self, mode):
+        if mode != "exponential" or mode != "polynomial":
+            raise ValueError('decay_mode: mode must be either exponential or polynomial')
+        self._decay_mode = mode
+
+    def set_reference_length(self, first_species: int, second_species: int, length: float) -> None:
+        """ Method to set manually the reference bond length between two species. """
+
+        if first_species > self.species or second_species > self.species:
+            raise ValueError('set_reference_length: provided species must be numbers between 0 and nspecies - 1')
+        if first_species > second_species:
+            species_pair = str(second_species) + str(first_species)
+        else:
+            species_pair = str(first_species) + str(second_species)
+        self._reference_lengths[species_pair] = length
+
+    def __compute_reference_lengths(self):
+        """ Private method to compute the length between different chemical species in the crystalline solid. 
+        To be used only when the model is initialized with a configuration file corresponding to a crystalline solid. """
+
+        # First compute neighbours in crystalline solid
+        self.find_neighbours(mode=self.mode, r = self.r)
+        length_dict = {}
+        for i, j, cell in self.bonds:
+            distance = np.linalg.norm(self.motif[i, :3] - self.motif[j, :3] - cell)
+            species_pair = str(j) + str(i) if (i > j) else str(i) + str(j)
+            if species_pair in length_dict:
+                if distance < length_dict[species_pair]:
+                    length_dict[species_pair] = distance
+            else:
+                length_dict[species_pair] = distance
+
+        self._reference_lengths = length_dict
+
+    @overrides(SlaterKoster)
+    def __hopping_amplitude(self, position_diff, *orbitals):
+        """ Method to incorporate a decay to the hoppings as computed within a Slater-Koster model to describe
+        variable length bonds """
+
+        initial_species = int(orbitals[1])
+        final_species   = int(orbitals[3])
+        species_pair = str(initial_species) + str(final_species)
+        if species_pair not in self.reference_lengths.keys():
+            species_pair = str(final_species) + str(initial_species)
+        reference_bond_length = self.reference_lengths[species_pair]
+        r = np.linalg.norm(position_diff)
+        hopping = super().__hopping_amplitude(position_diff, *orbitals)
+        if self.decay_mode == "exponential":
+            hopping *= np.exp(-self.decay_amplitude*(r - reference_bond_length))
+        else:
+            hopping *= 1./(1 + self.decay_amplitude*(r - reference_bond_length))
+        return hopping
+
+    @overrides(SlaterKoster)
+    def initialize_hamiltonian(self):
+        self.__compute_reference_lengths()
+        return super().initialize_hamiltonian()
 
 
 class BHZ(System, FrozenClass):
@@ -684,7 +788,7 @@ class WilsonAmorphous(System):
         return hamiltonian_k
 
 
-class RSmodel(System):
+class RealSpace(System):
     """ Class to construct toy models, in which one sets the hoppings manually. This models
      are by default OBC; by setting one hopping between different unit cells it automatically becomes
      PBC. """
