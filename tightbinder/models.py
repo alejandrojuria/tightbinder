@@ -388,12 +388,13 @@ class SKModel(System):
         with open(filename, "w") as file:
             # Write ndim, natoms, norbitals, ncells and bravais lattice basis vectors
             file.write("# dimension\n" + str(self.ndim) + "\n")
-            file.write("# norbitals\n" + str(self.norbitals) + "\n")
+            file.write("# norbitals\n")
+            np.savetxt(file, self.norbitals, fmt='%i')
             file.write("# bravaislattice\n")
             np.savetxt(file, self.bravais_lattice)
             file.write("# motif\n")
             for atom in self.motif:
-                np.savetxt(file, [atom[0:3]])
+                np.savetxt(file, [atom])
             file.write("# bravaisvectors\n")
             for vector in self._unit_cell_list:
                 np.savetxt(file, [vector])
