@@ -252,7 +252,7 @@ class SKModel(System):
 
         spin_orbit_hamiltonian += np.conj(spin_orbit_hamiltonian.T)
 
-        self.spin_orbit_hamiltonian = spin_orbit_hamiltonian/2
+        self.spin_orbit_hamiltonian = spin_orbit_hamiltonian/3
 
     def __spin_orbit_h(self):
         """ Method to obtain the actual spin-orbit hamiltonian that corresponds to the orbitals
