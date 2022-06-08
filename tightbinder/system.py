@@ -411,12 +411,12 @@ class System(Crystal):
     def initialize_hamiltonian(self):
         """ Generic implementation of initialization of the Hamiltonian. To be overwritten
             by specific implementations of System """
-        raise Exception("Has to be implemented by child class")
+        print("initialize_hamiltonian has to be implemented by child class")
 
     def hamiltonian_k(self, k):
         """ Generic implementation of hamiltonian_k H(k). To be overwritten
             by specific implementations of System """
-        raise Exception("Has to be implemented by child class")
+        print("Has to be implemented by child class")
 
     def solve(self, kpoints=None):
         """ Diagonalize the Hamiltonian to obtain the band structure and the eigenstates """
@@ -424,7 +424,6 @@ class System(Crystal):
             kpoints = np.array([[0., 0., 0.]])
 
         nk = len(kpoints)
-        eig_num = 1000
         eigen_energy = np.zeros([self.basisdim, nk])
         eigen_states = []
 
