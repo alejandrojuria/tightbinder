@@ -8,11 +8,12 @@
 # alternatively we can specify which atoms
 
 import numpy as np
+from tightbinder.system import System
 import sys
 
 
 # ----------------------------- Random routines -----------------------------
-def introduce_vacancies(system, probability=0.5):
+def introduce_vacancies(system: System, probability=0.5):
     """ Routine to introduce vacancies in a system, i.e. to remove atoms. It is a
      statistical method, meaning that each atom in the motif has a probability of being removed
      or not. Thus each call to this method would generate a different structure.
@@ -28,7 +29,7 @@ def introduce_vacancies(system, probability=0.5):
     return system
 
 
-def introduce_impurities(system, energy=2, probability=0.5):
+def introduce_impurities(system: System, energy=2, probability=0.5):
     """ Routine to introduce impurities in the system. These impurities are implemented
      via a change in the on-site energies of the randomly selected atoms. This routine
      randomly chooses atoms according to the specified probability, meaning that each call
@@ -56,7 +57,7 @@ def introduce_impurities(system, energy=2, probability=0.5):
     return system
 
 
-def amorphize(system, spread=0.1, distribution="uniform", planar=False):
+def amorphize(system: System, spread=0.1, distribution="uniform", planar=False):
     """ Routine to amorphize a crystalline system. This routine takes each atom and displaces
     it with respect to its original position by an amount given by a distribution. Thus
     by specifying the spread of the distribution and the distribution itself, we can
@@ -116,8 +117,26 @@ def amorphize(system, spread=0.1, distribution="uniform", planar=False):
     return system
 
 
+def alloy(system: System, *concentrations: float):
+    """ Routine to alloy a material with two or more chemical species. In practice this means that each atom
+    is reasigned to a random chemical species, while keeping its position.
+    For two chemical species, is is only necessary to specify the concentration x of the first one, Ax B1-x.
+    For n species, one has to specify n-1, so that An1 Bn2 Cn3 ... Znn. """
+
+    prob_array    = np.random.uniform(0, 1, system.natoms)
+    final_species = np.zeros([system.natoms, system.natoms])
+    total_concentration = 0
+    for species, concentration in enumerate(concentrations):
+        new_species    = prob_array[total_concentration < prob_array < total_concentration + concentration]*species
+        final_species += new_species
+        total_concentration += concentration
+    
+    remaining_atoms = np.where(prob_array > probability)
+    system.motif = system.motif[remaining_atoms]
+
+
 # ----------------------------- Listing routines -----------------------------
-def remove_atoms(system, indices):
+def remove_atoms(system: System, indices):
     """ Routine to remove atoms from the system motif (i.e. create vacancies) according to
      a list of indices provided
       :param indices: List with indices of those atoms we want to remove, following the same
@@ -130,7 +149,7 @@ def remove_atoms(system, indices):
     return system
 
 
-def set_impurities(system, indices, energy=0.1):
+def set_impurities(system: System, indices, energy=0.1):
     """ Routine to set impurities on the system on the atoms specified by the list provided
      :param system: System class or derived subclass. Must have Hamiltonian initialized
      :param indices: List with indices of those atoms we want to transform into impurities. The indices
