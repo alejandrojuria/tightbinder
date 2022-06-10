@@ -42,13 +42,6 @@ class SlaterKoster(System):
         # Specific attributes of SKModel
         self.configuration = configuration
         self.species = configuration['Species']
-        self.norbitals = [len(orbitals) for orbitals in self.configuration["Orbitals"]]
-
-        basisdim = 0
-        for atom in self.motif:
-            species = int(atom[3])
-            basisdim += self.norbitals[species]
-        self.basisdim = basisdim
 
         self.hamiltonian = None
         self.neighbours = None
@@ -73,8 +66,6 @@ class SlaterKoster(System):
         if ordering != "atomic" and ordering != "spin":
             raise ValueError("ordering must be either atomic or spin")
         self.__ordering = ordering
-
-        self.basisdim = np.sum([self.norbitals[int(atom[3])] for atom in self.motif])
 
     # --------------- Methods ---------------
     def _hopping_amplitude(self, position_diff, *orbitals):
@@ -286,10 +277,13 @@ class SlaterKoster(System):
 
     def initialize_hamiltonian(self):
         """ Routine to initialize the hamiltonian matrices which describe the system. """
+        self.norbitals = [len(orbitals) for orbitals in self.configuration["Orbitals"]]
+        self.basisdim = np.sum([self.norbitals[int(atom[3])] for atom in self.motif])
 
         print('Computing first neighbours...\n')
         self.find_neighbours(mode=self.__mode, r=self.__r)
         self._determine_connected_unit_cells()
+
 
         hamiltonian = []
         for _ in self._unit_cell_list:

@@ -37,7 +37,7 @@ s, px, py, pz
 #Onsite energy
 ! One for each different orbital defined above
 ! In case of having two atomic species, two lines must be appended, one for each element
--10.906 -0.486
+-10.906 -0.486 -0.486 -0.486
 
 #SK amplitudes
 ! Order is fixed: Vsss, Vsps, Vpps, Vppp, Vsds, Vpds, Vpdp, Vdds, Vddp, Vddd (separated by spaces)
@@ -56,7 +56,16 @@ False
 0.0
 
 ! --------------------- Simulation parameters ---------------------
+#Radius
+! If present, SlaterKoster model runs in "radius" mode, meaning that it will look
+! for neighbours up to the given radius value
+3.16
+
 #Mesh
 ! Number of kpoints in each direction. Syntax is Nx Ny Nz
 ! It suffices to provide the required number of points depending on the system's dimension
 200 200
+
+#High symmetry points
+! Label of points which make the path to evalute the bands of the system
+M G K M
