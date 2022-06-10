@@ -12,7 +12,6 @@ from mpl_toolkits.mplot3d import Axes3D
 from numpy.linalg import LinAlgError
 import math
 import sys
-import vpython as vp
 from .utils import generate_basis_combinations
 
 
@@ -388,6 +387,7 @@ class Crystal:
         plt.show()
 
     def visualize(self):
+        import vpython as vp
         CrystalView(self).visualize()
 
 
