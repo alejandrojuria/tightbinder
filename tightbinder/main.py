@@ -36,12 +36,15 @@ def main():
     else:
         model = SlaterKoster(configuration)
 
+    # Possible system modifications before initialize_hamiltonian
+    model.initialize_hamiltonian()
+
     if args.crystalview == True:
         model.visualize()
 
     labels = configuration['High symmetry points']
     kpoints = model.high_symmetry_path(configuration['Mesh'][0], labels)
-    model.initialize_hamiltonian()
+
     results = model.solve(kpoints)
     results.plot_along_path(labels)
 

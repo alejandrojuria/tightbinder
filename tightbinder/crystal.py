@@ -387,32 +387,33 @@ class Crystal:
         plt.show()
 
     def visualize(self):
-        import vpython as vp
         CrystalView(self).visualize()
 
 
 class CrystalView:
-    # TODO CrystalView fix problems (show bonds not working)
+    vp = __import__('vpython')
     def __init__(self, crystal):
         self.bravais_lattice = crystal.bravais_lattice
-        self.motif = crystal.motif
+        self.motif = np.array(crystal.motif)
         self.ndim = crystal.ndim
         self.atoms = []
         self.extra_atoms = []
         self.bonds = []
         self.extra_bonds = []
+        self.atom_radius = None
 
-        # TODO remove self.crystal from CrystalView
-        self.edge_atoms = crystal.find_lowest_coordination_atoms()
         try:
+            self.edge_atoms = crystal.find_lowest_coordination_atoms()
             self.neighbours = crystal.bonds
-        except AttributeError:
-            pass
+        except IndexError or AttributeError as e:
+            print('visualize(): System must be initialized first')
+            raise
 
-        vp.scene.visible = False
-        vp.scene.background = vp.color.white
-        self.create_atoms()
-        self.create_bonds()
+        self.vp.scene.visible = False
+        self.vp.scene.background = self.vp.color.black
+        self.__compute_atom_radius()
+        self.__create_atoms()
+        self.__create_bonds()
 
         # Canvas attributes
         self.drag = False
@@ -420,13 +421,23 @@ class CrystalView:
         self.cell_vectors = None
         self.cell_boundary = None
 
-    def create_atoms(self):
+    def __compute_atom_radius(self):
+        first_neigh_distance = 0
+        for initial_atom, final_atom, cell in self.neighbours:
+            unit_cell = self.vp.vector(*cell)
+            bond_length = np.linalg.norm(self.motif[initial_atom, :3] - self.motif[initial_atom, :3] - cell)
+            if (bond_length < first_neigh_distance) or first_neigh_distance == 0:
+                first_neigh_distance = bond_length
+
+        self.atom_radius = first_neigh_distance/7
+
+    def __create_atoms(self):
         # Origin cell
         mesh_points = generate_basis_combinations(self.ndim)
-        color_list = [vp.color.yellow, vp.color.red]
+        color_list = [self.vp.color.yellow, self.vp.color.red]
         for position in self.motif:
             species = int(position[3])
-            atom = vp.sphere(radius=0.1, color=color_list[species])
+            atom = self.vp.sphere(radius=self.atom_radius, color=color_list[species])
             atom.pos.x, atom.pos.y, atom.pos.z = position[:3]
             self.atoms.append(atom)
 
@@ -440,22 +451,22 @@ class CrystalView:
                     unit_cell += point[n] * self.bravais_lattice[n]
                 for position in self.motif:
                     species = int(position[3])
-                    atom = vp.sphere(radius=0.1, color=color_list[species])
+                    atom = self.vp.sphere(radius=self.atom_radius, color=color_list[species])
                     atom.visible = False
                     atom.pos.x, atom.pos.y, atom.pos.z = (position[:3] + unit_cell)
                     self.extra_atoms.append(atom)
 
-    def create_bonds(self):
+    def __create_bonds(self):
         mesh_points = generate_basis_combinations(self.ndim)
         try:
             # Origin cell
             for initial_atom, final_atom, cell in self.neighbours:
-                unit_cell = vp.vector(*cell)
-                bond = vp.curve(self.atoms[initial_atom].pos, self.atoms[final_atom].pos + unit_cell)
+                unit_cell = self.vp.vector(*cell)
+                bond = self.vp.curve(self.atoms[initial_atom].pos, self.atoms[final_atom].pos + unit_cell)
                 self.bonds.append(bond)
                 if np.linalg.norm(cell) > 1E-4:
                     continue
-                    reverse_bond = vp.curve(self.atoms[final_atom].pos, self.atoms[initial_atom].pos - unit_cell)
+                    reverse_bond = self.vp.curve(self.atoms[final_atom].pos, self.atoms[initial_atom].pos - unit_cell)
                     self.bonds.append(reverse_bond)
 
             # Super cell
@@ -463,9 +474,9 @@ class CrystalView:
                 unit_cell = np.array(([0., 0., 0.]))
                 for n in range(self.ndim):
                     unit_cell += point[n] * self.bravais_lattice[n]
-                unit_cell = vp.vector(unit_cell[0], unit_cell[1], unit_cell[2])
+                unit_cell = self.vp.vector(unit_cell[0], unit_cell[1], unit_cell[2])
                 for bond in self.bonds:
-                    supercell_bond = vp.curve(bond.point(0)["pos"] + unit_cell, bond.point(1)["pos"] + unit_cell)
+                    supercell_bond = self.vp.curve(bond.point(0)["pos"] + unit_cell, bond.point(1)["pos"] + unit_cell)
                     supercell_bond.visible = False
                     self.extra_bonds.append(supercell_bond)
 
@@ -473,29 +484,26 @@ class CrystalView:
             print("Warning: To visualize bonds, Viewer must receive an initialized System")
 
     def visualize(self):
-        vp.scene.visible = True
-        vp.button(text="supercell", bind=self.__add_unit_cells)
-        vp.button(text="primitive unit cell", bind=self.__remove_unit_cells)
-        vp.button(text="remove bonds", bind=self.__remove_bonds)
-        vp.button(text="show bonds", bind=self.__show_bonds)
-        vp.button(text="draw cell boundary", bind=self.__draw_boundary)
-        vp.button(text="remove cell boundary", bind=self.__remove_boundary)
-        vp.button(text="highlight edge atoms", bind=self.__highlight_edge)
-        vp.scene.bind("mousedown", self.__mousedown)
-        vp.scene.bind("mousemove", self.__mousemove)
-        vp.scene.bind("mouseup", self.__mouseup)
+        self.vp.scene.visible = True
+        self.vp.button(text="supercell", bind=self.__add_unit_cells)
+        self.vp.button(text="primitive unit cell", bind=self.__remove_unit_cells)
+        self.vp.button(text="remove bonds", bind=self.__remove_bonds)
+        self.vp.button(text="show bonds", bind=self.__show_bonds)
+        self.vp.button(text="draw cell boundary", bind=self.__draw_boundary)
+        self.vp.button(text="remove cell boundary", bind=self.__remove_boundary)
+        self.vp.button(text="highlight edge atoms", bind=self.__highlight_edge)
+        self.vp.scene.bind("mousedown", self.__mousedown)
+        self.vp.scene.bind("mouseup", self.__mouseup)
 
     def __mousedown(self):
-        self.initial_position = vp.scene.mouse.pos
+        self.initial_position = self.vp.scene.mouse.pos
         self.drag = True
 
-    def __mousemove(self):
-        if self.drag:
-            increment = vp.scene.mouse.pos - self.initial_position
-            self.initial_position = vp.scene.mouse.pos
-            vp.scene.camera.pos -= increment
-
     def __mouseup(self):
+        if self.drag:
+            increment = self.vp.scene.mouse.pos - self.initial_position
+            self.initial_position = self.vp.scene.mouse.pos
+            self.vp.scene.camera.pos -= increment
         self.drag = False
 
     def __add_unit_cells(self):
@@ -523,22 +531,22 @@ class CrystalView:
             bond.visible = False
 
     def __draw_boundary(self):
-        cell_vectors = []
+        self.cell_vectors = []
         mid_point = np.array([0., 0., 0.])
         size_vector = [0., 0., 0.]
         for n in range(self.ndim):
             mid_point += self.bravais_lattice[n] / 2
             size_vector[n] = self.bravais_lattice[n][n]
-        self.cell_boundary = vp.box(pos=vp.vector(mid_point[0], mid_point[1], mid_point[2]),
-                                    size=vp.vector(size_vector[0], size_vector[1], size_vector[2]),
+        self.cell_boundary = self.vp.box(pos=self.vp.vector(mid_point[0], mid_point[1], mid_point[2]),
+                                    size=self.vp.vector(size_vector[0], size_vector[1], size_vector[2]),
                                     opacity=0.5)
         for basis_vector in self.bravais_lattice:
-            unit_cell = vp.vector(basis_vector[0], basis_vector[1], basis_vector[2])
-            vector = vp.arrow(pos=vp.vector(0, 0, 0),
+            unit_cell = self.vp.vector(basis_vector[0], basis_vector[1], basis_vector[2])
+            vector = self.vp.arrow(pos=self.vp.vector(0, 0, 0),
                               axis=unit_cell,
-                              color=vp.color.green,
+                              color=self.vp.color.green,
                               shaftwidth=0.1)
-            cell_vectors.append(vector)
+            self.cell_vectors.append(vector)
 
     def __remove_boundary(self):
         self.cell_boundary.visible = False
@@ -547,7 +555,7 @@ class CrystalView:
 
     def __highlight_edge(self):
         for atom_index in self.edge_atoms:
-            self.atoms[atom_index].color = vp.color.green
+            self.atoms[atom_index].color = self.vp.color.green
 
 
 
