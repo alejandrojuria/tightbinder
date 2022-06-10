@@ -1,5 +1,7 @@
+#!/usr/bin/python
+
 # Implementation of general tight-binding model based on the Slater-Koser approximation to parametrize
-# the hopping amplitudes in term of the angles and orbitals between atoms. 
+# the hopping amplitudes in term of the angles and orbitals between atoms.
 # Requires an input file with the data regarding the model (dimensionality, number of atoms in motif, orbitals,
 # interaction values)
 
@@ -18,7 +20,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('file', help='input file for tight-binding model')
     parser.add_argument('-v', '--verbose', action='store_true', help='verbose output')
+    parser.add_argument('-cv', '--crystalview', action='store_true', help='3D view of the crystal')
     args = parser.parse_args()
+    print(args)
 
     try:
         file = open(args.file, 'r')
@@ -32,7 +36,9 @@ def main():
     else:
         model = SlaterKoster(configuration)
 
-    # model.visualize() # Has to be fixed
+    if args.crystalview == True:
+        model.visualize()
+
     labels = configuration['High symmetry points']
     kpoints = model.high_symmetry_path(configuration['Mesh'][0], labels)
     model.initialize_hamiltonian()
