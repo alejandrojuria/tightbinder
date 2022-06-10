@@ -124,12 +124,12 @@ def __find_wcc_midpoint_gap(wcc):
     gaps = []
     for i in range(len(wcc_extended) - 1):
         gaps.append(wcc_extended[i+1] - wcc_extended[i])
-    gaps = np.array(gaps).round(decimals=2)
+    gaps = np.array(gaps).round(decimals=3)
     biggest_gap = np.max(gaps)
     position_gap = np.where(gaps == biggest_gap)[0][0]
 
     midpoint_gap = biggest_gap/2 + wcc_extended[position_gap]
-    midpoint_gap = round(midpoint_gap, 2)
+    midpoint_gap = round(midpoint_gap, 3)
 
     return midpoint_gap, position_gap
 
@@ -174,7 +174,7 @@ def calculate_z2_invariant(wcc_flow):
      max gap midpoint does across different WCC bands """
     nk = len(wcc_flow[:, 0])
     num_crosses = 0
-    for i in range(nk - 1):
+    for i in range(int(nk/2), nk - 1):
         wcc = np.copy(wcc_flow[i, :])
         next_wcc = wcc_flow[i + 1, :]
         midpoint, position = __find_wcc_midpoint_gap(wcc)
