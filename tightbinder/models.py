@@ -1,10 +1,6 @@
 # Module with all the models declarations, from the Slater-Koster tight-binding model
 # to toy models such as the BHZ model or Wilson fermions.
 
-from multiprocessing.sharedctypes import Value
-from operator import length_hint
-from typing import final
-from debugpy import configure
 from .system import System, FrozenClass
 from .crystal import Crystal
 import numpy as np
@@ -34,6 +30,7 @@ def overrides(interface_class):
 
 
 class SlaterKoster(System):
+    """ Implementation of Slater-Koster tight-binding model """
     def __init__(self, configuration=None, mode='minimal', r=None, boundary="PBC"):
         if configuration is not None:
             super().__init__(system_name=configuration["System name"],
@@ -80,7 +77,7 @@ class SlaterKoster(System):
         self.basisdim = np.sum([self.norbitals[int(atom[3])] for atom in self.motif])
 
     # --------------- Methods ---------------
-    def __hopping_amplitude(self, position_diff, *orbitals):
+    def _hopping_amplitude(self, position_diff, *orbitals):
         """ Routine to compute the hopping amplitude from one atom to another depending on the
         participating orbitals, following the Slater-Koster approxiamtion """
 
@@ -98,7 +95,7 @@ class SlaterKoster(System):
         if possible_orbitals[initial_orbital_type] > possible_orbitals[final_orbital_type]:
             position_diff = np.array(position_diff) * (-1)
             orbitals = [final_orbital, final_species, initial_orbital, initial_species]
-            hopping = self.__hopping_amplitude(position_diff, orbitals)
+            hopping = self._hopping_amplitude(position_diff, orbitals)
             return hopping
         d_orbitals = {'dxy': 0, 'dyz': 0, 'dzx': 0, 'dx2-y2': 1, 'd3z2-r2':2}
         if (initial_orbital_type == "d" and final_orbital_type == "d"
@@ -106,7 +103,7 @@ class SlaterKoster(System):
             d_orbitals[initial_orbital] > d_orbitals[final_orbital]):
             position_diff = np.array(position_diff) * (-1)
             orbitals = [final_orbital, final_species, initial_orbital, initial_species]
-            hopping = self.__hopping_amplitude(position_diff, orbitals)
+            hopping = self._hopping_amplitude(position_diff, orbitals)
             return hopping
         
         species_pair = str(initial_species) + str(final_species)
@@ -323,13 +320,13 @@ class SlaterKoster(System):
                     position_difference = np.array(final_atom) + np.array(cell) - np.array(initial_atom)
                     orbital_config = [initial_orbital, initial_atom_species, final_orbital, final_atom_species]
                     h_cell = self._unit_cell_list.index(list(cell))
-                    hopping_amplitude = self.__hopping_amplitude(position_difference, orbital_config)
+                    hopping_amplitude = self._hopping_amplitude(position_difference, orbital_config)
                     hamiltonian[h_cell][atom_index[initial_atom_index] + i,
                                         atom_index[final_atom_index] + j] += hopping_amplitude
 
         # Substract half-diagonal from all hamiltonian matrices to compensate transposing later
-        for h in hamiltonian:
-            h -= np.diag(np.diag(h)/2)
+        #for h in hamiltonian:
+        #    h -= np.diag(np.diag(h)/2)
 
         # Check spinless or spinful model and initialize spin-orbit coupling
         if self.configuration['Spin']:
@@ -386,7 +383,7 @@ class SlaterKoster(System):
 
         hamiltonian_k = np.zeros([self.basisdim, self.basisdim], dtype=np.complex_)
         for cell_index, cell in enumerate(self._unit_cell_list):
-            hamiltonian_k += self.hamiltonian[cell_index] * cmath.exp(-1j*np.dot(k, cell))
+            hamiltonian_k += self.hamiltonian[cell_index] * cmath.exp(1j*np.dot(k, cell))
 
         # hamiltonian_k = (hamiltonian_k + np.transpose(np.conjugate(hamiltonian_k)))
         return hamiltonian_k
@@ -398,7 +395,7 @@ class SlaterKoster(System):
             # Write ndim, natoms, norbitals, ncells and bravais lattice basis vectors
             file.write("# dimension\n" + str(self.ndim) + "\n")
             file.write("# norbitals\n")
-            np.savetxt(file, self.norbitals, fmt='%i')
+            np.savetxt(file, [self.norbitals], fmt="%i")
             file.write("# bravaislattice\n")
             np.savetxt(file, self.bravais_lattice)
             file.write("# motif\n")
@@ -544,7 +541,7 @@ class AmorphousSlaterKoster(SlaterKoster):
         self._reference_lengths = length_dict
 
     @overrides(SlaterKoster)
-    def __hopping_amplitude(self, position_diff, *orbitals):
+    def _hopping_amplitude(self, position_diff, *orbitals):
         """ Method to incorporate a decay to the hoppings as computed within a Slater-Koster model to describe
         variable length bonds """
 
@@ -555,7 +552,7 @@ class AmorphousSlaterKoster(SlaterKoster):
             species_pair = str(final_species) + str(initial_species)
         reference_bond_length = self.reference_lengths[species_pair]
         r = np.linalg.norm(position_diff)
-        hopping = super().__hopping_amplitude(position_diff, *orbitals)
+        hopping = super()._hopping_amplitude(position_diff, *orbitals)
         if self.decay_mode == "exponential":
             hopping *= np.exp(-self.decay_amplitude*(r - reference_bond_length))
         else:
