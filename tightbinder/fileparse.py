@@ -98,6 +98,7 @@ def shape_arguments(arguments):
                     # Check that all are correctly written
                     for orbital in orbitals:
                         if orbital not in possible_orbitals:
+                            print(orbital)
                             print('Error: Incorrect orbital specified')
                             raise ValueError("Specified orbitals are not correct")
                     aux_array.append(orbitals)
@@ -169,6 +170,25 @@ def shape_arguments(arguments):
             except ValueError as e:
                 print(f'{type(e).__name__}: Mesh must be integer numbers')
                 raise
+
+        elif arg == 'Radius':
+            try:
+                arguments[arg] = float(arguments[arg][0])
+            except IndexError as e:
+                print(f'{type(e).__name__}: No {arg} given')
+                raise
+            except ValueError as e:
+                print(f'{type(e).__name__}: {arg} has to be a float')
+                raise
+
+
+        elif arg == 'High symmetry points':
+            try:
+                arguments[arg] = [str(label) for label in re.split(' |, |,', arguments[arg][0])]
+            except IndexError as e:
+                print(f'{type(e).__name__}: No high symmetry points given')
+                raise
+
 
     return arguments
 
