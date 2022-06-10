@@ -123,7 +123,7 @@ def shape_arguments(arguments):
                     try:
                         aux_array = [float(num) for num in re.split(' |, |,|; |;', line)]
                         if arguments["Species"] == 1 and len(aux_array) == len(arguments["Orbitals"][0]):
-                            aux_array = "00" + aux_array
+                            aux_array = [0, 0] + aux_array
                         orbitals = str(int(aux_array[0])) + str(int(aux_array[1]))
                         dictionary[orbitals] = aux_array[2:]
                     except IndexError as e:
