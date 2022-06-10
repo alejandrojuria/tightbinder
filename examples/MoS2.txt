@@ -21,7 +21,6 @@ MoS2
 ! Number of atomic species (isoelectronic at the moment)
 2
 
-
 #Motif
 ! Each row corresponds to one vector of the basis; fourth number denotes atomic species
 ! Species have to be either 1 or 2
@@ -34,13 +33,13 @@ MoS2
 ! Species have to be isoelectronic (same number of valence shell electrons)
 ! Possible orbitals are: s, px, py, pz, dxy, dyz, dzx, dx2-y2, d3z2-r2
 ! NOTE: Order must be kept
-d3z2-r2 dx2-y2 dxy dzx dyz
+dxy dyz dzx dx2-y2 d3z2-r2
 px py pz
 
 #Onsite energy
 ! One for each different orbital defined above
 ! In case of having two atomic species, two lines must be appended, one for each element
-0.201 -0.352 -0.352 -1.563 -1.563
+-0.352 -1.563 -1.563 -0.352 0.201
 -54.839 -54.839 -39.275
 
 #SK amplitudes
@@ -55,14 +54,26 @@ px py pz
 ! Determine whether the model is spinless (spin polarized) or spinful
 ! Must be either True (spinful) or False (spinless); if left blank it will default to False
 ! NOTE: True or False must be capitalized
-False
+True
 
 #Spin-orbit coupling
 ! Note: Using a non-zero value will automatically produce a spinful model
-0.0
+0.075
+0.00052
 
 ! --------------------- Simulation parameters ---------------------
+#Radius
+! If present, SlaterKoster model runs in "radius" mode, meaning that it will look
+! for neighbours up to the given radius value
+3.16
+
 #Mesh
 ! Number of kpoints in each direction. Syntax is Nx Ny Nz
 ! It suffices to provide the required number of points depending on the system's dimension
 200 200
+
+#High symmetry points
+! Label of points which make the path to evalute the bands of the system
+G K M G
+
+
