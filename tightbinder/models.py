@@ -74,18 +74,19 @@ class SlaterKoster(System):
 
         initial_orbital = orbitals[0][0]
         initial_species = int(orbitals[0][1])
-        final_orbital = orbitals[0][2]
-        final_species = int(orbitals[0][3])
+        final_orbital   = orbitals[0][2]
+        final_species   = int(orbitals[0][3])
+        neigh           = orbitals[0][4]
 
         initial_orbital_type = initial_orbital[0]
         final_orbital_type = final_orbital[0]
 
-        amplitudes = self.configuration['SK amplitudes']
+        amplitudes = self.configuration['SK amplitudes'][neigh]
 
         possible_orbitals = {'s': 0, 'p': 1, 'd': 2}
         if possible_orbitals[initial_orbital_type] > possible_orbitals[final_orbital_type]:
             position_diff = np.array(position_diff) * (-1)
-            orbitals = [final_orbital, final_species, initial_orbital, initial_species]
+            orbitals = [final_orbital, final_species, initial_orbital, initial_species, neigh]
             hopping = self._hopping_amplitude(position_diff, orbitals)
             return hopping
         d_orbitals = {'dxy': 0, 'dyz': 0, 'dzx': 0, 'dx2-y2': 1, 'd3z2-r2':2}
@@ -93,7 +94,7 @@ class SlaterKoster(System):
                 and
             d_orbitals[initial_orbital] > d_orbitals[final_orbital]):
             position_diff = np.array(position_diff) * (-1)
-            orbitals = [final_orbital, final_species, initial_orbital, initial_species]
+            orbitals = [final_orbital, final_species, initial_orbital, initial_species, neigh]
             hopping = self._hopping_amplitude(position_diff, orbitals)
             return hopping
         
@@ -302,7 +303,7 @@ class SlaterKoster(System):
             atom_index[n + 1] = atom_index[n] + self.norbitals[int(self.motif[n][3])]
 
         for bond in self.bonds:
-            initial_atom_index, final_atom_index, cell = bond
+            initial_atom_index, final_atom_index, cell, neigh = bond
             initial_atom = self.motif[initial_atom_index][:3]
             initial_atom_species = int(self.motif[initial_atom_index][3])
             final_atom = self.motif[final_atom_index][:3]
@@ -312,7 +313,7 @@ class SlaterKoster(System):
             for i, initial_orbital in enumerate(iorbitals):
                 for j, final_orbital in enumerate(forbitals):
                     position_difference = np.array(final_atom) + np.array(cell) - np.array(initial_atom)
-                    orbital_config = [initial_orbital, initial_atom_species, final_orbital, final_atom_species]
+                    orbital_config = [initial_orbital, initial_atom_species, final_orbital, final_atom_species, neigh]
                     h_cell = self._unit_cell_list.index(list(cell))
                     hopping_amplitude = self._hopping_amplitude(position_difference, orbital_config)
                     hamiltonian[h_cell][atom_index[initial_atom_index] + i,

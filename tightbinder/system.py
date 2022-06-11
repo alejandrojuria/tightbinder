@@ -92,32 +92,48 @@ class System(Crystal):
     # ################################# Bonds/Neighbours #################################
     # ####################################################################################
 
-    def add_bond(self, initial, final, cell=(0., 0., 0.)):
+    def add_bond(self, initial, final, cell=(0., 0., 0.), neigh='1'):
         """ Method to add a hopping between two atoms of the motif.
         NB: The hopping has a specified direction, from initial to final. Since the final
         Hamiltonian is computed taking into account hermiticity, it is not necessary to specify the hopping
         in the other direction.
          Parameters:
              int initial, final: Indices of the atoms in the motif
-             array cell: Bravais vector connecting the cells of the two atoms. Defaults to zero """
-        hopping_info = [initial, final, cell]
+             array cell: Bravais vector connecting the cells of the two atoms. Defaults to zero
+             neigh: Store neighbour index. Defaults to 1 """
+
+        hopping_info = [initial, final, cell, neigh]
         self.bonds.append(hopping_info)
 
-    def add_bonds(self, initial, final, cells=None):
+    def add_bonds(self, initial, final, cells=None, neigh=None):
         """ Same method as add_hopping but we input a list of hoppings at once.
         Parameters:
              list hoppings: list of size nhop
              list initial, final: list of indices
-             matrix cells: Each row denotes the Bravais vector connecting two cells. Defaults to None """
+             matrix cells: Each row denotes the Bravais vector connecting two cells. Defaults to None 
+             neigh: list with neighbour indices. Default to none """
+
         if len(initial) != len(final):
             raise ValueError("Initial and final lists do not have same size")
         if cells is None:
             cells = np.zeros([len(initial), 3])
+        if neigh is None:
+            neigh = ['1']*len(initial)
         else:
             self.boundary = "PBC"
             cells = np.array(cells)
-        for bond in zip(initial, final, cells):
-            self.add_bond(bond[0], bond[1], bond[2])
+        for bond in zip(initial, final, cells, neigh):
+            self.add_bond(bond[0], bond[1], bond[2], bond[3])
+
+    def find_first_neighbours(self) -> list:
+        """ Method to find the first neighbours of the atoms of the motif """
+
+        if self.boundary == "OBC":
+            near_cells = np.array([[0.0, 0.0, 0.0]])
+        else:
+            near_cells = generate_near_cells(self.bravais_lattice)
+        neigh_distance = self.compute_first_neighbour_distance(near_cells)
+
 
     def find_neighbours(self, mode="minimal", r=None):
         """ Given a list of atoms (motif), it returns a list in which each
@@ -128,8 +144,8 @@ class System(Crystal):
         For amorphous systems the option radius is available to determine neighbours within a given radius R.
         Boundary conditions can also be set, either PBC (default) or OBC.
         :param mode: Search mode, can be either 'minimal' or 'radius'. Defaults to 'minimal'.
-        :param r: Value for radius sphere to detect neighbours
-        """
+        :param r: Value for radius sphere to detect neighbours """
+
         if self.bonds is not None:
             self.bonds = []
         eps = 1E-2
@@ -223,6 +239,10 @@ class System(Crystal):
 
         return atoms
 
+    def compute_neighbour_distance(self, neigh='first', near_cells=None):
+        """ Method to compute neighbour distance up to third neighbours """
+        pass
+
     def compute_first_neighbour_distance(self, near_cells=None):
         if near_cells is None:
             near_cells = generate_near_cells(self.bravais_lattice)
@@ -237,6 +257,10 @@ class System(Crystal):
         self.first_neighbour_distance = neigh_distance
 
         return neigh_distance
+
+    def compute_second_neighbour_distance(self, near_cells=None):
+        pass
+
 
     def _determine_connected_unit_cells(self):
         """ Method to calculate which unit cells connect with the origin from the neighbour list """
