@@ -131,8 +131,8 @@ def alloy(system: System, *concentrations: float):
         final_species += new_species
         total_concentration += concentration
     
-    remaining_atoms = np.where(prob_array > probability)
-    system.motif = system.motif[remaining_atoms]
+    final_species = final_species[final_species > total_concentration]*len(concentrations)
+    system.motif[:, 3] = final_species
 
 
 # ----------------------------- Listing routines -----------------------------
