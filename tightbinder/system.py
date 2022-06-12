@@ -287,9 +287,6 @@ class System(Crystal):
 
         return atoms
 
-    def compute_neighbour_distance(self, neigh='first', near_cells=None):
-        """ Method to compute neighbour distance up to third neighbours """
-        pass
 
     def compute_first_neighbour_distance(self, near_cells=None):
         if near_cells is None:
@@ -305,9 +302,6 @@ class System(Crystal):
         self.first_neighbour_distance = neigh_distance
 
         return neigh_distance
-
-    def compute_second_neighbour_distance(self, near_cells=None):
-        pass
 
 
     def _determine_connected_unit_cells(self):

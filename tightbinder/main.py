@@ -55,12 +55,11 @@ def main():
     kpoints = model.high_symmetry_path(configuration['Mesh'][0], labels)
 
     results = model.solve(kpoints)
-    results.plot_along_path(labels)
+    results.plot_along_path(labels, title=f'{model.system_name}')
 
     plt.show()
 
 if __name__ == "__main__":
-    print('Starting')
     initial_time = time.time()
     main()
     print(f'Elapsed time: {time.time() - initial_time}s')
