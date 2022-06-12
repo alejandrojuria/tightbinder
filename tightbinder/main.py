@@ -21,8 +21,9 @@ def main():
     parser.add_argument('file', help='input file for tight-binding model')
     parser.add_argument('-v', '--verbose', action='store_true', help='verbose output')
     parser.add_argument('-cv', '--crystalview', action='store_true', help='3D view of the crystal')
+    parser.add_argument('-z2', '--z2invariant', action='store_true', help='Compute Z2 invariant')
+    parser.add_argument('-z2p', '--z2plot', action='store_true', help='Plot Wannier charge centers used for Z2 computation')
     args = parser.parse_args()
-    print(args)
 
     try:
         file = open(args.file, 'r')
@@ -39,8 +40,16 @@ def main():
     # Possible system modifications before initialize_hamiltonian
     model.initialize_hamiltonian()
 
-    if args.crystalview == True:
+    if args.crystalview:
         model.visualize()
+
+    if args.z2invariant:
+        wcc = calculate_wannier_centre_flow(model, 20)
+        z2  = calculate_z2_invariant(wcc)
+        print(f'Z2 invariant is: {z2}')
+
+        if args.z2plot:
+            plot_wannier_centre_flow(wcc, show_midpoints=True)
 
     labels = configuration['High symmetry points']
     kpoints = model.high_symmetry_path(configuration['Mesh'][0], labels)
@@ -51,6 +60,7 @@ def main():
     plt.show()
 
 if __name__ == "__main__":
+    print('Starting')
     initial_time = time.time()
     main()
     print(f'Elapsed time: {time.time() - initial_time}s')
