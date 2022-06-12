@@ -57,6 +57,8 @@ class SlaterKoster(System):
         self.__zeeman = None
         self.__ordering = None
 
+        self.neighbours = len(configuration['SK amplitudes'].keys())
+
     @property
     def ordering(self):
         return self.__ordering
@@ -280,9 +282,11 @@ class SlaterKoster(System):
         """ Routine to initialize the hamiltonian matrices which describe the system. """
         self.norbitals = [len(orbitals) for orbitals in self.configuration["Orbitals"]]
         self.basisdim = np.sum([self.norbitals[int(atom[3])] for atom in self.motif])
+        if 'Filling' in self.configuration:
+            self.filling = self.configuration['Filling']/self.basisdim
 
         print('Computing first neighbours...\n')
-        self.find_neighbours(mode=self.__mode, r=self.__r)
+        self.find_neighbours(mode=self.__mode, nn=self.neighbours, r=self.__r)
         self._determine_connected_unit_cells()
 
 

@@ -125,17 +125,52 @@ class System(Crystal):
         for bond in zip(initial, final, cells, neigh):
             self.add_bond(bond[0], bond[1], bond[2], bond[3])
 
+    def compute_neighbour_distances(self, nni):
+        """ Method to compute neighbour distance up to neighbours nni.
+        Params:
+        nni: 1 <= nni """
+
+        if self.boundary == "OBC":
+            near_cells = np.array([[0.0, 0.0, 0.0]])
+        else:
+            near_cells = generate_near_cells(self.bravais_lattice, nni)
+
+        neigh_distance = np.array([])
+        atoms = np.kron(np.array(self.motif)[:, :3], np.ones((near_cells.shape[0], 1))) + np.kron(near_cells, np.ones((len(self.motif), 1)))
+        for reference_atom in self.motif:
+            distance = np.linalg.norm(atoms - reference_atom[:3], axis=1)
+            distance = np.sort(distance)[1:] # Remove 0 from distances
+            neigh_distance = np.concatenate((neigh_distance, distance[:nni]))
+        
+        neigh_distance = np.unique(neigh_distance)[:nni]
+
+        return neigh_distance
+
+
     def find_first_neighbours(self) -> list:
-        """ Method to find the first neighbours of the atoms of the motif """
+        """ Method to find the first neighbours of the atoms of the motif.
+        Returns list of the corresponding bonds """
 
         if self.boundary == "OBC":
             near_cells = np.array([[0.0, 0.0, 0.0]])
         else:
             near_cells = generate_near_cells(self.bravais_lattice)
-        neigh_distance = self.compute_first_neighbour_distance(near_cells)
+        first_neigh_distance = self.compute_first_neighbour_distance(near_cells)
+        eps = 1E-2
+        atoms = np.copy(self.motif)
+        bonds = []
+        for n, reference_atom in enumerate(self.motif):
+            for cell in near_cells:
+                distance = np.linalg.norm(atoms[:, :3] + cell - reference_atom[:3], axis=1)
+                neigh_atoms_indices_max = np.where(distance <= first_neigh_distance + eps)[0]
+                neigh_atoms_indices_min = np.where(first_neigh_distance - eps < distance)[0]
+                neigh_atoms_indices = np.intersect1d(neigh_atoms_indices_max, neigh_atoms_indices_min)
+                for i in neigh_atoms_indices:
+                    bonds.append([n, i, cell])
+        
+        return bonds
 
-
-    def find_neighbours(self, mode="minimal", r=None):
+    def find_neighbours(self, mode="minimal", nn = 1, r=None):
         """ Given a list of atoms (motif), it returns a list in which each
         index corresponds to a list of atoms that are first neighbours to that index
         on the initial atom list.
@@ -144,13 +179,17 @@ class System(Crystal):
         For amorphous systems the option radius is available to determine neighbours within a given radius R.
         Boundary conditions can also be set, either PBC (default) or OBC.
         :param mode: Search mode, can be either 'minimal' or 'radius'. Defaults to 'minimal'.
-        :param r: Value for radius sphere to detect neighbours """
+        :param nn: Next neighbour, used to specify up to which neighbour there are hoppings if mode='minimal'
+        :param r: Value for radius sphere to detect neighbours if mode='radius' """
 
         if self.bonds is not None:
             self.bonds = []
         eps = 1E-2
-        if mode is "radius" and r is None:
-            raise Exception("Error: Search mode is radius but no r given, exiting...")
+        if mode is "radius":
+            if r is None:
+                raise Exception("Error: Search mode is radius but no r given, exiting...")
+            nn = 1 # Set nn to 1 in case it has other value
+
         elif mode is "minimal" and r is not None:
             print("Search mode is minimal but a radius was given (will not be used)")
 
@@ -158,30 +197,39 @@ class System(Crystal):
         if self.boundary == "OBC":
             near_cells = np.array([[0.0, 0.0, 0.0]])
         else:
-            near_cells = generate_near_cells(self.bravais_lattice)
+            near_cells = generate_near_cells(self.bravais_lattice, nn)
 
-        # Determine neighbour distance from one fixed atom
-        neigh_distance = self.compute_first_neighbour_distance(near_cells)
-        if mode == "radius" and r < neigh_distance:
+        # Determine neighbour distances up to nn
+        neigh_distances = self.compute_neighbour_distances(nn)
+        if mode == "radius" and r < neigh_distances[0]:
             print("Warning: Radius smaller than first neighbour distance")
-        elif mode == "minimal":
-            r = neigh_distance
 
-        # Determine list of neighbours for each atom of the motif
-        index = 0
+        # Look for neighbours
+        # First in mode='minimal'
         atoms = np.copy(self.motif)
-        for n, reference_atom in enumerate(self.motif):
-            for cell in near_cells:
-                distance = np.linalg.norm(atoms[:, :3] + cell - reference_atom[:3], axis=1)
-                neigh_atoms_indices_max = np.where(distance <= r + eps)[0]
-                if mode == "minimal":
-                    neigh_atoms_indices_min = np.where(r - eps < distance)[0]
-                else:
+        if mode == 'minimal':
+            for n, reference_atom in enumerate(self.motif):
+                for cell in near_cells:
+                    distance = np.linalg.norm(atoms[:, :3] + cell - reference_atom[:3], axis=1)
+                    for nn, nn_distance in enumerate(neigh_distances):
+                        neigh_atoms_indices_max = np.where(distance <= nn_distance + eps)[0]
+                        neigh_atoms_indices_min = np.where(nn_distance - eps < distance)[0]
+
+                        neigh_atoms_indices = np.intersect1d(neigh_atoms_indices_max, neigh_atoms_indices_min)
+                        for i in neigh_atoms_indices:
+                            self.add_bond(n, i, cell, str(nn + 1))
+
+
+        # Then in mode='radius'
+        else:
+            for n, reference_atom in enumerate(self.motif):
+                for cell in near_cells:
+                    distance = np.linalg.norm(atoms[:, :3] + cell - reference_atom[:3], axis=1)
+                    neigh_atoms_indices_max = np.where(distance <= r + eps)[0]
                     neigh_atoms_indices_min = np.where(eps < distance)[0]
-                neigh_atoms_indices = np.intersect1d(neigh_atoms_indices_max, neigh_atoms_indices_min)
-                for i in neigh_atoms_indices:
-                    self.add_bond(n, i, cell)
-            index += 1
+                    neigh_atoms_indices = np.intersect1d(neigh_atoms_indices_max, neigh_atoms_indices_min)
+                    for i in neigh_atoms_indices:
+                        self.add_bond(n, i, cell)
 
         print("Done")
 
@@ -486,12 +534,12 @@ def search_neighbour(reference_atom, i, atom, cell, radius):
             return
 
 
-def generate_all_combinations(ndim):
+def generate_all_combinations(ndim, n=1):
     """ Auxiliary routine to generate an array of combinations of possible neighbouring
      unit cells. """
     mesh_points = []
     for i in range(ndim):
-        mesh_points.append(list(range(-1, 2)))
+        mesh_points.append(list(range(-n, n+1)))
     mesh_points = np.array(np.meshgrid(*mesh_points)).T.reshape(-1, ndim)
 
     return mesh_points
@@ -512,7 +560,7 @@ def generate_half_combinations(ndim):
     return points
 
 
-def generate_near_cells(bravais_lattice, half=False):
+def generate_near_cells(bravais_lattice, n=1, half=False):
     """ Auxiliary routine to generate the Bravais vectors corresponding to unit cells
      neighbouring the origin one. NB: It only generates half of them, since we are going to use hermiticity to
      generate the Hamiltonian """
