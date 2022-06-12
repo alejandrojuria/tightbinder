@@ -289,7 +289,6 @@ class SlaterKoster(System):
         self.find_neighbours(mode=self.__mode, nn=self.neighbours, r=self.__r)
         self._determine_connected_unit_cells()
 
-
         hamiltonian = []
         for _ in self._unit_cell_list:
             hamiltonian.append(np.zeros(([self.basisdim, self.basisdim]), dtype=np.complex_))

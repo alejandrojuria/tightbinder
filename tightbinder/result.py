@@ -72,7 +72,7 @@ class Spectrum:
             xpos = (nk - 1)/number_of_paths*n
             x_ticks.append(xpos)
         for eigen_energy_k in self.eigen_energy:
-            ax.plot(x_points, eigen_energy_k, 'g-')
+            ax.plot(x_points, eigen_energy_k, 'g-', linewidth=3)
 
         if edge_states and filling is not None:
             edge_states_indices = [int(filling) + i for i in range(-2, 2)]

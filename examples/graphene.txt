@@ -49,11 +49,11 @@ s, px, py, pz
 ! Determine whether the model is spinless (spin polarized) or spinful
 ! Must be either True (spinful) or False (spinless); if left blank it will default to False
 ! NOTE: True or False must be capitalized
-True
+False
 
 #Spin-orbit coupling
 ! Note: Using a non-zero value will automatically produce a spinful model
-1.5
+0
 
 ! --------------------- Simulation parameters ---------------------
 #Mesh

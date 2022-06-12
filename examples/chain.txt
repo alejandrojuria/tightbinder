@@ -58,3 +58,7 @@ True
 ! Number of kpoints in each direction. Syntax is Nx Ny Nz
 ! It suffices to provide the required number of points depending on the system's dimension
 100
+
+#High symmetry points
+! Label of points which make the path to evalute the bands of the system
+K G K

@@ -45,10 +45,10 @@ px py pz
 #SK amplitudes
 ! Order is fixed: Vsss, Vsps, Vpps, Vppp, Vsds, Vpds, Vpdp, Vdds, Vddp, Vddd (separated by spaces)
 ! Not present amplitudes can be omitted but ordering has te be respected always
-! In case of having two atomic species, two lines must be appended, one for each element
-0, 0 -1.153 0.612 0.086
-0, 1 -9.880 4.196
-1, 1 12.734 -2.175
+! Species must be specified using brackets. 
+[0, 0; 1] -1.153 0.612 0.086
+[0, 1; 1] -9.880 4.196
+[1, 1; 1] 12.734 -2.175
 
 #Spin
 ! Determine whether the model is spinless (spin polarized) or spinful

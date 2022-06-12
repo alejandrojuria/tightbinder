@@ -56,11 +56,6 @@ False
 0.0
 
 ! --------------------- Simulation parameters ---------------------
-#Radius
-! If present, SlaterKoster model runs in "radius" mode, meaning that it will look
-! for neighbours up to the given radius value
-3.16
-
 #Mesh
 ! Number of kpoints in each direction. Syntax is Nx Ny Nz
 ! It suffices to provide the required number of points depending on the system's dimension

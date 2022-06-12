@@ -34,6 +34,11 @@ Bi(111) bilayer w/ SOC
 ! NOTE: Order must be kept
 s, px, py, pz
 
+#Filling
+! Specify number of electrons in the unit cell. Maximum number of electrons
+! is given by natoms*orbitals_per_atom
+5
+
 #Onsite energy
 ! One for each different orbital defined above
 ! In case of having two atomic species, two lines must be appended, one for each element
@@ -43,7 +48,8 @@ s, px, py, pz
 ! Order is fixed: Vsss, Vsps, Vpps, Vppp, Vsds, Vpds, Vpdp, Vdds, Vddp, Vddd (separated by spaces)
 ! Not present amplitudes can be omitted but ordering has te be respected always
 ! In case of having two atomic species, two lines must be appended, one for each element
-0, 0 -0.608 1.320 1.854 -0.600
+[0, 0; 1] -0.608 1.320 1.854 -0.600
+[0, 0; 2] 0.0 0.0 0.156 0.0
 
 #Spin
 ! Determine whether the model is spinless (spin polarized) or spinful
@@ -56,11 +62,6 @@ True
 1.5
 
 ! --------------------- Simulation parameters ---------------------
-#Radius
-! If present, SlaterKoster model runs in "radius" mode, meaning that it will look
-! for neighbours up to the given radius value
-3.16
-
 #Mesh
 ! Number of kpoints in each direction. Syntax is Nx Ny Nz
 ! It suffices to provide the required number of points depending on the system's dimension
