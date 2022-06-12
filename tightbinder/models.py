@@ -555,7 +555,8 @@ class AmorphousSlaterKoster(SlaterKoster):
         if self.decay_mode == "exponential":
             hopping *= np.exp(-self.decay_amplitude*(r - reference_bond_length))
         else:
-            hopping *= 1./(1 + self.decay_amplitude*(r - reference_bond_length))
+            # hopping *= 1./(1 + self.decay_amplitude*(r - reference_bond_length))
+            hopping *= (r/reference_bond_length)**(-self.decay_amplitude)
         return hopping
 
     @overrides(SlaterKoster)
