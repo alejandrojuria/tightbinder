@@ -52,7 +52,7 @@ def shape_arguments(arguments):
                 print(f'{type(e).__name__}: No system name given')
                 raise
 
-        elif arg in ['Dimensionality', 'Species']:
+        elif arg in ['Dimensionality', 'Species', 'Filling']:
             try:
                 arguments[arg] = int(arguments[arg][0])
             except IndexError as e:
@@ -158,6 +158,7 @@ def shape_arguments(arguments):
                         dictionary[neigh][species] = amplitudes
                     except ValueError as e:
                         raise Exception('Slater-Koster amplitudes must be numbers') from e
+            
             arguments[arg] = dictionary
 
         elif arg == 'Spin':
@@ -212,8 +213,6 @@ def shape_arguments(arguments):
         else:
             raise NotImplementedError(f'{arg} is not a parameter')
 
-
-
     return arguments
 
 
@@ -250,23 +249,25 @@ def check_coherence(arguments):
                 raise
 
             if atom_element > arguments['Species']:
-                raise AssertionError('Error: Incorrect species labeling in motif')
+                raise AssertionError('Incorrect species labeling in motif')
 
     # Check onsite energies are present for all species
     if len(arguments['Onsite energy']) != arguments['Species']:
-        raise AssertionError('Error: Missing onsite energies for both atomic species')
+        raise AssertionError('Missing onsite energies for both atomic species')
 
     # Check orbitals present for all species
     if (len(arguments['Orbitals']) != arguments['Species']):
-        raise AssertionError("Error: Orbitals must be specified for each species")
+        raise AssertionError("Orbitals must be specified for each species")
 
     # Check number of SK coefficients
-    if len(arguments['SK amplitudes']) > arguments['Species']*(arguments['Species'] + 1)/2:
-        raise AssertionError('Error: Expected only one row of SK coefficients')
+    for neighbour in arguments["SK amplitudes"].keys():
+        nspecies_pairs = len(arguments['SK amplitudes'][neighbour].keys())
+        if nspecies_pairs > arguments['Species']*(arguments['Species'] + 1)/2:
+            raise AssertionError('Too many rows of SK coefficients')
 
     # Check number of SOC strenghts
     if arguments['Spin'] and len(arguments['Spin-orbit coupling']) != arguments["Species"]:
-        raise AssertionError("Error: Values for SOC strength must match number of species")
+        raise AssertionError("Values for SOC strength must match number of species")
 
     # Check if SOC are non-zero
     for soc in arguments['Spin-orbit coupling']:
@@ -307,17 +308,20 @@ def check_coherence(arguments):
                     needed_SK_coefs += amplitudes_per_orbitals[key]
 
             if needed_SK_coefs != len(coefs):
-                raise AssertionError("Error: Wrong number of SK amplitudes for given orbitals")
+                raise AssertionError("Wrong number of SK amplitudes for given orbitals")
 
 
             # Check whether all necessary SK coefs are present for all orbitals
             if len(coefs) != needed_SK_coefs:
-                raise AssertionError('Error: Mismatch between orbitals and required SK amplitudes')
+                raise AssertionError('Mismatch between orbitals and required SK amplitudes')
 
     # ---------------- Simulation ----------------
     # Check mesh matches dimension
     if len(arguments['Mesh']) != arguments['Dimensionality']:
-        raise AssertionError('Error: Mesh dimension does not match system dimension')
+        raise AssertionError('Mesh dimension does not match system dimension')
+
+    if 'Radius' in arguments and len(arguments['SK amplitudes'].keys()) > 1:
+        raise AssertionError('Must not specify neighbours in radius mode')
 
     return None
 
@@ -378,7 +382,7 @@ def transform_sk_coefficients(configuration):
 
             dict[neighbour][species] = amplitudes
         
-        configuration['SK amplitudes'] = dict
+    configuration['SK amplitudes'] = dict
 
     return None
 
