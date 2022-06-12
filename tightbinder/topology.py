@@ -2,6 +2,7 @@
 # as well as the topological invariants derived from it. Local markers such as the Bott index or the
 # local Chern number are implemented as well.
 
+from multiprocessing.sharedctypes import Value
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
@@ -82,6 +83,8 @@ def calculate_wannier_centre_flow(system, number_of_points, additional_k=None, n
     """ Routine to compute the evolution of the Wannier charge centres through Wilson loop calculation """
 
     print("Computing Wannier centre flow...")
+    if system.filling is None:
+        raise ValueError('Filling must be specified to compute WCC')
     wcc_results = []
     # cell_side = crystal.high_symmetry_points
     # k_fixed_list = np.linspace(-cell_side/2, cell_side/2, number_of_points)
@@ -177,8 +180,8 @@ def calculate_z2_invariant(wcc_flow):
     for i in range(int(nk/2), nk - 1):
         wcc = np.copy(wcc_flow[i, :])
         next_wcc = wcc_flow[i + 1, :]
-        midpoint, position = __find_wcc_midpoint_gap(wcc)
-        next_midpoint, next_position = __find_wcc_midpoint_gap(next_wcc)
+        midpoint, _ = __find_wcc_midpoint_gap(wcc)
+        next_midpoint, _ = __find_wcc_midpoint_gap(next_wcc)
         num_crosses += count_crossings(next_wcc, midpoint, next_midpoint)
 
         # Do same trick as in find midpoints to ensure all crosses are correctly found
