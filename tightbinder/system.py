@@ -136,12 +136,13 @@ class System(Crystal):
             near_cells = generate_near_cells(self.bravais_lattice, nni)
 
         neigh_distance = np.array([])
-        atoms = np.kron(np.array(self.motif)[:, :3], np.ones((near_cells.shape[0], 1))) + np.kron(near_cells, np.ones((len(self.motif), 1)))
+        atoms = np.kron(np.array(self.motif)[:, :3], np.ones((near_cells.shape[0], 1))) + np.kron(np.ones((len(self.motif), 1)), near_cells)
         for reference_atom in self.motif:
             distance = np.linalg.norm(atoms - reference_atom[:3], axis=1)
-            distance = np.sort(distance)[1:] # Remove 0 from distances
+            distance = np.unique(distance)[1:] # Remove 0 from distances
             neigh_distance = np.concatenate((neigh_distance, distance[:nni]))
         
+        neigh_distance = neigh_distance.round(2)
         neigh_distance = np.unique(neigh_distance)[:nni]
 
         return neigh_distance
@@ -201,6 +202,7 @@ class System(Crystal):
 
         # Determine neighbour distances up to nn
         neigh_distances = self.compute_neighbour_distances(nn)
+        print(neigh_distances)
         if mode == "radius" and r < neigh_distances[0]:
             print("Warning: Radius smaller than first neighbour distance")
 
@@ -252,8 +254,8 @@ class System(Crystal):
          only computes one-way hoppings (i.e. i->j and not j->i) """
         all_bonds = self.bonds[:]
         for bond in self.bonds:
-            initial, final, cell = bond
-            all_bonds.append([final, initial, cell])
+            initial, final, cell, nn = bond
+            all_bonds.append([final, initial, cell, nn])
 
         return np.array(all_bonds)
 
