@@ -242,9 +242,9 @@ class Crystal:
                 special_points.update({'K': self.reciprocal_basis[0]/2 + self.reciprocal_basis[1]/2})
 
             elif self.group == 'Rectangular':
-                special_points.update({'M*': self.reciprocal_basis[1]/2})
-                special_points.update({'K':  self.reciprocal_basis[0]/2 + self.reciprocal_basis[1]/2})
-                special_points.update({'K*': -self.reciprocal_basis[0]/2 + self.reciprocal_basis[1]/2})
+                special_points.update({'X': special_points['M']})
+                special_points.update({'Y': self.reciprocal_basis[1]/2})
+                special_points.update({'M': self.reciprocal_basis[0]/2 + self.reciprocal_basis[1]/2})
 
             elif self.group == 'Hexagonal':
                 # special_points.update({'K',: reciprocal_basis[0]/2 + reciprocal_basis[1]/2})
@@ -423,9 +423,8 @@ class CrystalView:
 
     def __compute_atom_radius(self):
         first_neigh_distance = 0
-        for initial_atom, final_atom, cell in self.neighbours:
-            unit_cell = self.vp.vector(*cell)
-            bond_length = np.linalg.norm(self.motif[initial_atom, :3] - self.motif[initial_atom, :3] - cell)
+        for initial_atom, final_atom, cell, _ in self.neighbours:
+            bond_length = np.linalg.norm(self.motif[initial_atom, :3] - self.motif[final_atom, :3] - cell)
             if (bond_length < first_neigh_distance) or first_neigh_distance == 0:
                 first_neigh_distance = bond_length
 
@@ -460,7 +459,7 @@ class CrystalView:
         mesh_points = generate_basis_combinations(self.ndim)
         try:
             # Origin cell
-            for initial_atom, final_atom, cell in self.neighbours:
+            for initial_atom, final_atom, cell, nn in self.neighbours:
                 unit_cell = self.vp.vector(*cell)
                 bond = self.vp.curve(self.atoms[initial_atom].pos, self.atoms[final_atom].pos + unit_cell)
                 self.bonds.append(bond)
