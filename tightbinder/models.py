@@ -50,8 +50,8 @@ class SlaterKoster(System):
         if mode not in ['minimal', 'radius']:
             print('Error: Incorrect mode')
             sys.exit(1)
-        self.__mode = mode
-        self.__r = r
+        self._mode = mode
+        self._r = r
 
         self.boundary = boundary
         self.__zeeman = None
@@ -73,6 +73,7 @@ class SlaterKoster(System):
     def _hopping_amplitude(self, position_diff, *orbitals):
         """ Routine to compute the hopping amplitude from one atom to another depending on the
         participating orbitals, following the Slater-Koster approxiamtion """
+
 
         initial_orbital = orbitals[0][0]
         initial_species = int(orbitals[0][1])
@@ -286,7 +287,7 @@ class SlaterKoster(System):
             self.filling = self.configuration['Filling']/self.basisdim
 
         print('Computing first neighbours...\n')
-        self.find_neighbours(mode=self.__mode, nn=self.neighbours, r=self.__r)
+        self.find_neighbours(mode=self._mode, nn=self.neighbours, r=self._r)
         self._determine_connected_unit_cells()
 
         hamiltonian = []
@@ -473,12 +474,13 @@ class AmorphousSlaterKoster(SlaterKoster):
     taking the crystalline solid as the reference point. This model by default works in radius mode. """
 
     def __init__(self, configuration=None, r=None, boundary="PBC"):
-        super.__init__(configuration, mode='radius', r=r, boundary=boundary)
+        super().__init__(configuration, mode='radius', r=r, boundary=boundary)
 
         # Specific attributes of AmorphousSlaterKoster
         self._reference_lengths = None
         self._decay_amplitude   = None
         self._decay_mode        = 'exponential'
+        self._mode               = 'radius'
 
     # Properties
     @property
@@ -505,7 +507,7 @@ class AmorphousSlaterKoster(SlaterKoster):
     
     @decay_mode.setter
     def decay_mode(self, mode):
-        if mode != "exponential" or mode != "polynomial":
+        if mode != "exponential" and mode != "polynomial":
             raise ValueError('decay_mode: mode must be either exponential or polynomial')
         self._decay_mode = mode
 
@@ -525,17 +527,21 @@ class AmorphousSlaterKoster(SlaterKoster):
         To be used only when the model is initialized with a configuration file corresponding to a crystalline solid. """
 
         # First compute neighbours in crystalline solid
-        self.find_neighbours(mode=self.mode, r = self.r)
+        self.find_neighbours(mode=self._mode, r = self._r)
         length_dict = {}
-        for i, j, cell in self.bonds:
-            distance = np.linalg.norm(self.motif[i, :3] - self.motif[j, :3] - cell)
-            species_pair = str(j) + str(i) if (i > j) else str(i) + str(j)
+        motif = np.array(self.motif)
+        for i, j, cell, _ in self.bonds:
+            initial_species = int(self.motif[i][3])
+            final_species   = int(self.motif[j][3])
+            distance = np.linalg.norm(motif[i, :3] - motif[j, :3] - cell)
+            species_pair = str(final_species) + str(initial_species) if (i > j) else str(initial_species) + str(final_species)
             if species_pair in length_dict:
                 if distance < length_dict[species_pair]:
                     length_dict[species_pair] = distance
             else:
                 length_dict[species_pair] = distance
 
+        print(length_dict)
         self._reference_lengths = length_dict
 
     @overrides(SlaterKoster)
@@ -543,8 +549,8 @@ class AmorphousSlaterKoster(SlaterKoster):
         """ Method to incorporate a decay to the hoppings as computed within a Slater-Koster model to describe
         variable length bonds """
 
-        initial_species = int(orbitals[1])
-        final_species   = int(orbitals[3])
+        initial_species = int(orbitals[0][1])
+        final_species   = int(orbitals[0][3])
         species_pair = str(initial_species) + str(final_species)
         if species_pair not in self.reference_lengths.keys():
             species_pair = str(final_species) + str(initial_species)
