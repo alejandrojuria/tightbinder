@@ -149,7 +149,7 @@ def shape_arguments(arguments):
                     if neigh not in dictionary:
                         dictionary[species_neigh[2]] = {}
 
-                    amplitudes = re.split(' |, |,|; |;', line[-1].strip())
+                    amplitudes = list(filter(None, re.split(' |, |,|; |;', line[-1].strip())))
                     try:
                         amplitudes = [float(num) for num in amplitudes]
                         species = species_neigh[0] + species_neigh[1]
@@ -157,8 +157,8 @@ def shape_arguments(arguments):
                             print(f'\033[93m Warning: Overwriting SK amplitudes for species pair ' + species + '\033[0m')
                         dictionary[neigh][species] = amplitudes
                     except ValueError as e:
-                        raise Exception('Slater-Koster amplitudes must be numbers') from e
-            
+                        raise Exception(f'Slater-Koster amplitudes must be numbers ({amplitudes})') from e
+
             arguments[arg] = dictionary
 
         elif arg == 'Spin':
@@ -252,7 +252,9 @@ def check_coherence(arguments):
                 raise AssertionError('Incorrect species labeling in motif')
 
     # Check onsite energies are present for all species
-    if len(arguments['Onsite energy']) != arguments['Species']:
+    if len(arguments['Onsite energy']) > arguments['Species']:
+        raise AssertionError('Too many onsite energies for given species')
+    elif len(arguments['Orbitals']) < arguments['Species']:
         raise AssertionError('Missing onsite energies for both atomic species')
 
     # Check orbitals present for all species
