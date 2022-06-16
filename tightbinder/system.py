@@ -140,7 +140,7 @@ class System(Crystal):
         for reference_atom in self.motif:
             distance = np.linalg.norm(atoms - reference_atom[:3], axis=1)
             distance = np.unique(distance)[1:] # Remove 0 from distances
-            neigh_distance = np.concatenate((neigh_distance, distance[:nni]))
+            neigh_distance = np.concatenate((neigh_distance, distance))
         
         neigh_distance = neigh_distance.round(2)
         neigh_distance = np.unique(neigh_distance)[:nni]
