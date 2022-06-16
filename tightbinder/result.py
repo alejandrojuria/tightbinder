@@ -54,14 +54,17 @@ class Spectrum:
 
         plt.show()
 
-    def plot_along_path(self, labels, title='', filling=None, fermi_level=False,
-                        edge_states=False, ax=None, y_values=[], fontsize=10):
+    def plot_along_path(self, labels, title='', edge_states=False, rescale=True,
+                        ax=None, y_values=[], fontsize=10):
         """ Method to plot the bands along a path in reciprocal space, normally along high symmetry points """
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
         if y_values and len(y_values) != 2:
             raise ValueError("y_values must be [y_min, y_max]")
+
+        if rescale:
+            self.rescale_bands_to_fermi_level()
 
         nk = len(self.kpoints)
         x_points = np.arange(0, nk)
@@ -74,14 +77,10 @@ class Spectrum:
         for eigen_energy_k in self.eigen_energy:
             ax.plot(x_points, eigen_energy_k, 'g-', linewidth=3)
 
-        if edge_states and filling is not None:
-            edge_states_indices = [int(filling) + i for i in range(-2, 2)]
+        if edge_states and self.system.filling is not None:
+            edge_states_indices = [int(self.system.filling) + i for i in range(-2, 2)]
             for state in edge_states_indices:
                 ax.plot(x_points, self.eigen_energy[state], 'r-')
-
-        if fermi_level and filling is not None:
-            fermi_energy = self.calculate_fermi_level(filling)
-            ax.axhline(y=fermi_energy, linewidth=2, color='r', label=r"$E_F$")
 
         ax.set_xticks(x_ticks)
         ax.set_xticklabels(labels, fontsize=fontsize)
@@ -146,14 +145,19 @@ class Spectrum:
 
         return edge_states
 
-    def calculate_fermi_level(self, filling):
+    def calculate_fermi_energy(self, filling):
         """ Routine to compute the Fermi level energy according to the given filling """
-        filling *= self.eigen_energy.shape[1]
+        filling *= self.eigen_energy.shape[1]*self.system.basisdim
         all_energies = self.eigen_energy.reshape(-1)
         all_energies = np.sort(all_energies)
-        fermi_energy = all_energies[filling - 1]
+        fermi_energy = all_energies[int(filling) - 1]
 
         return fermi_energy
+
+    def rescale_bands_to_fermi_level(self):
+        """ Routine to set the Fermi energy to zero """
+        fermi_energy = self.calculate_fermi_energy(self.system.filling)
+        self.eigen_energy -= fermi_energy
 
     def calculate_gap(self, filling):
         """ Routine to compute the gap of a material based on its Fermi level/filling """
