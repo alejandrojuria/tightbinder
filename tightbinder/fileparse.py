@@ -2,6 +2,8 @@
 # the input file. Config file can have blank spaces or comments starting with "!" 
 # (without commas) which are ommited at parsing
 
+from distutils.command.config import config
+from multiprocessing.sharedctypes import Value
 import re
 from tightbinder.utils import pretty_print_dictionary
 
@@ -193,7 +195,7 @@ def shape_arguments(arguments):
                 print(f'{type(e).__name__}: Mesh must be integer numbers')
                 raise
 
-        elif arg == 'Radius':
+        elif arg in ['Radius', 'Mixing']:
             try:
                 arguments[arg] = float(arguments[arg][0])
             except IndexError as e:
@@ -254,7 +256,7 @@ def check_coherence(arguments):
     # Check onsite energies are present for all species
     if len(arguments['Onsite energy']) > arguments['Species']:
         raise AssertionError('Too many onsite energies for given species')
-    elif len(arguments['Orbitals']) < arguments['Species']:
+    elif len(arguments['Onsite energy']) < arguments['Species']:
         raise AssertionError('Missing onsite energies for both atomic species')
 
     # Check orbitals present for all species
@@ -277,6 +279,15 @@ def check_coherence(arguments):
             print('Warning: Spin-orbit coupling is non-zero but spin was set to False. ')
             arguments['Spin'] = True
     
+    # Check if mixing has a valid value if it is present
+    if 'Mixing' in arguments:
+        if arguments["Mixing"] < 0 or arguments["Mixing"] > 1:
+            raise AssertionError("Mixing must be a value between 0 and 1")
+    
+    if 'Radius' in arguments:
+        if arguments['Radius'] < 0:
+            raise AssertionError("Radius must be a positive number")
+
     # ------------ Orbital consistency ------------
     # Check onsite energy per orbital per species
     for n, onsite_energies in enumerate(arguments["Onsite energy"]):
@@ -389,6 +400,25 @@ def transform_sk_coefficients(configuration):
     return None
 
 
+def mix_parameters(configuration):
+    """ Method to mix the given parameters in case that some are missing in presence of multiple species """
+
+    if 'Mixing' not in configuration:
+        mixing = 0.5
+    else:
+        mixing = configuration['Mixing']
+
+    for i in range(configuration['Species']):
+        for j in range(i + 1, configuration['Species']):
+            species   = str(i) + str(j)
+            species_i = str(i) + str(i)
+            species_j = str(j) + str(j)
+            for neighbour in configuration['SK amplitudes'].keys():
+                SK_dictionary = configuration['SK amplitudes'][neighbour]
+                if species not in SK_dictionary and species_i in SK_dictionary and species_j in SK_dictionary:
+                    SK_dictionary[species] = SK_dictionary[species_i]*mixing + SK_dictionary[species_j]*(1 - mixing)
+
+
 def parse_config_file(file):
     """ Routine to obtain all the information from the configuration file, already shaped and verified """
 
@@ -400,6 +430,7 @@ def parse_config_file(file):
     check_coherence(configuration)
 
     transform_sk_coefficients(configuration)
+    mix_parameters(configuration)
     print("Done\n")
 
     return configuration
