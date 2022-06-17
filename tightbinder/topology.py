@@ -133,6 +133,7 @@ def __find_wcc_midpoint_gap(wcc):
 
     midpoint_gap = biggest_gap/2 + wcc_extended[position_gap]
     midpoint_gap = round(midpoint_gap, 3)
+    midpoint_gap = midpoint_gap + 2 if midpoint_gap < -1 else midpoint_gap
 
     return midpoint_gap, position_gap
 
