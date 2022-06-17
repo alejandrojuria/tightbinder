@@ -477,7 +477,7 @@ class AmorphousSlaterKoster(SlaterKoster):
         super().__init__(configuration, mode='radius', r=r, boundary=boundary)
 
         # Specific attributes of AmorphousSlaterKoster
-        self._reference_lengths = None
+        self._reference_lengths = {}
         self._decay_amplitude   = None
         self._decay_mode        = 'exponential'
         self._mode               = 'radius'
@@ -521,6 +521,7 @@ class AmorphousSlaterKoster(SlaterKoster):
         else:
             species_pair = str(first_species) + str(second_species)
         self._reference_lengths[species_pair] = length
+        print(f"Reference lengths for species: {self._reference_lengths}")
 
     def __compute_reference_lengths(self):
         """ Private method to compute the length between different chemical species in the crystalline solid. 
@@ -541,7 +542,7 @@ class AmorphousSlaterKoster(SlaterKoster):
             else:
                 length_dict[species_pair] = distance
 
-        print(length_dict)
+        print(f"Reference lengths for species: {length_dict}")
         self._reference_lengths = length_dict
 
     @overrides(SlaterKoster)
@@ -565,8 +566,9 @@ class AmorphousSlaterKoster(SlaterKoster):
         return hopping
 
     @overrides(SlaterKoster)
-    def initialize_hamiltonian(self):
-        self.__compute_reference_lengths()
+    def initialize_hamiltonian(self, override_bond_lengths=False):
+        if not override_bond_lengths:
+            self.__compute_reference_lengths()
         return super().initialize_hamiltonian()
 
 
