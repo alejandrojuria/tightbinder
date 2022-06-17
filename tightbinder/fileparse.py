@@ -283,6 +283,9 @@ def check_coherence(arguments):
     if 'Mixing' in arguments:
         if arguments["Mixing"] < 0 or arguments["Mixing"] > 1:
             raise AssertionError("Mixing must be a value between 0 and 1")
+
+        if not all([len(orbitals)==len(arguments["Orbitals"][0]) for orbitals in arguments["Orbitals"]]):
+            raise AssertionError("Mixing can only be used with isoelectronic species")
     
     if 'Radius' in arguments:
         if arguments['Radius'] < 0:
@@ -416,7 +419,7 @@ def mix_parameters(configuration):
             for neighbour in configuration['SK amplitudes'].keys():
                 SK_dictionary = configuration['SK amplitudes'][neighbour]
                 if species not in SK_dictionary and species_i in SK_dictionary and species_j in SK_dictionary:
-                    SK_dictionary[species] = SK_dictionary[species_i]*mixing + SK_dictionary[species_j]*(1 - mixing)
+                    SK_dictionary[species] = [SK_dictionary[species_i][n]*mixing + SK_dictionary[species_j][n]*(1 - mixing) for n in range(len(configuration["Orbitals"][0]))]
 
 
 def parse_config_file(file):
@@ -429,8 +432,9 @@ def parse_config_file(file):
     check_arguments(configuration, required_arguments)
     check_coherence(configuration)
 
-    transform_sk_coefficients(configuration)
     mix_parameters(configuration)
+    transform_sk_coefficients(configuration)
+    
     print("Done\n")
 
     return configuration
