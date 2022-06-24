@@ -8,6 +8,7 @@
 # alternatively we can specify which atoms
 
 import numpy as np
+from tightbinder.models import SlaterKoster
 from tightbinder.system import System
 import sys
 
@@ -142,6 +143,7 @@ def remove_atoms(system: System, indices):
       :param indices: List with indices of those atoms we want to remove, following the same
       ordering as those atoms in the motif
       :param system: Crystal class or subclass derived from it (typically System) """
+
     all_atoms = list(range(len(system.natoms)))
     remaining_atoms = [index for index in all_atoms if index not in indices]
     system.motif = system.motif[remaining_atoms]
@@ -164,6 +166,23 @@ def set_impurities(system: System, indices, energy=0.1):
         system.hamiltonian[0][atom_interval, atom_interval] = energy * np.ones(system.norbitals)
 
     return system
+
+
+def change_species(system: SlaterKoster, indices):
+    """ Routine to change the species of the atoms of the motif according to 
+    the array indices, which contains the new species for each atom of the motif.
+    :param system: SlaterKoster object
+    :param indices: List of indices denoting the chemical species of each atom. Must have length equal
+    to system.natoms """
+
+    if(len(indices) != system.natoms):
+        raise ValueError("Indices array must have the same length as system.natoms")
+    if np.any(indices >= system.species):
+        raise ValueError('Indices array must not contain indices equal or higher than the number of species')
+    if np.any(indices < 0):
+        raise ValueError('Indices must be positive numbers')
+
+    system.motif[:, 3] = indices
 
 
 
