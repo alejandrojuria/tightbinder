@@ -289,7 +289,6 @@ class System(Crystal):
 
         return atoms
 
-
     def compute_first_neighbour_distance(self, near_cells=None):
         if near_cells is None:
             near_cells = generate_near_cells(self.bravais_lattice)
@@ -304,7 +303,6 @@ class System(Crystal):
         self.first_neighbour_distance = neigh_distance
 
         return neigh_distance
-
 
     def _determine_connected_unit_cells(self):
         """ Method to calculate which unit cells connect with the origin from the neighbour list """
@@ -353,8 +351,6 @@ class System(Crystal):
 
         if update:
             self.update()
-
-        self.basisdim = self.norbitals * len(self.motif)
 
         return self
 
