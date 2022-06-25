@@ -14,7 +14,7 @@ def __wilson_loop(system, path):
 
     result = system.solve(path)
 
-    filling = int(system.filling * system.basisdim)
+    filling = system.filling
     wilson_loop = np.eye(filling)
     for i in range(len(path) - 1):
         overlap_matrix = np.dot(np.conj(np.transpose(result.eigen_states[i][:, :filling])),
@@ -248,8 +248,7 @@ def plot_polarization_flow(wcc_flow):
 def __truncate_eigenvectors(eigenvectors, sector, system):
     """ Routine to truncate the eigenvectors according to the filling and the
     atoms that are on a specific partition, accounting for orbitals and spin structure """
-    filling = int(system.filling * system.norbitals * len(system.motif))
-    basisdim = len(system.motif) * system.norbitals
+    filling = system.filling
     if system.ordering == "atomic" or system.configuration["Spin"] == "False":
         sector = sector * system.norbitals
         orbitals = np.copy(sector)
@@ -260,10 +259,10 @@ def __truncate_eigenvectors(eigenvectors, sector, system):
     else:
         sector = sector * (system.norbitals//2)
         orbitals = np.copy(sector)
-        orbitals = np.concatenate((orbitals, sector + basisdim//2))
+        orbitals = np.concatenate((orbitals, sector + system.basisdim//2))
         for n in range(1, system.norbitals//2):
             orbitals = np.concatenate((orbitals, sector + n))
-            orbitals = np.concatenate((orbitals, sector + basisdim//2 + n))
+            orbitals = np.concatenate((orbitals, sector + system.basisdim//2 + n))
         orbitals = np.sort(orbitals)
 
     truncated_eigenvectors = eigenvectors[orbitals]

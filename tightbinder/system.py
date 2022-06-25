@@ -63,8 +63,8 @@ class System(Crystal):
 
     @filling.setter
     def filling(self, filling):
-        if filling > 1 or filling < 0:
-            print("Error: filling attribute must be between 0 and 1")
+        if filling < 0:
+            print("Error: filling attribute must be between 0 and norbitals")
         else:
             self._filling = filling
 
@@ -351,6 +351,8 @@ class System(Crystal):
 
         if update:
             self.update()
+            for key in ncells.keys():
+                self.filling *= ncells[key]
 
         return self
 

@@ -147,7 +147,7 @@ class Spectrum:
 
     def calculate_fermi_energy(self, filling):
         """ Routine to compute the Fermi level energy according to the given filling """
-        filling *= self.eigen_energy.shape[1]*self.system.basisdim
+        filling *= self.eigen_energy.shape[1]
         all_energies = self.eigen_energy.reshape(-1)
         all_energies = np.sort(all_energies)
         fermi_energy = all_energies[int(filling) - 1]

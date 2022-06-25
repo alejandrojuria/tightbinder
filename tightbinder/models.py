@@ -43,6 +43,9 @@ class SlaterKoster(System):
         self.configuration = configuration
         self.species = configuration['Species']
 
+        if 'Filling' in self.configuration:
+            self.filling = self.configuration['Filling']
+
         self.hamiltonian = None
         self.neighbours = None
         self.spin_orbit_hamiltonian = None
@@ -73,7 +76,6 @@ class SlaterKoster(System):
     def _hopping_amplitude(self, position_diff, *orbitals):
         """ Routine to compute the hopping amplitude from one atom to another depending on the
         participating orbitals, following the Slater-Koster approxiamtion """
-
 
         initial_orbital = orbitals[0][0]
         initial_species = int(orbitals[0][1])
@@ -281,10 +283,9 @@ class SlaterKoster(System):
 
     def initialize_hamiltonian(self):
         """ Routine to initialize the hamiltonian matrices which describe the system. """
+
         self.norbitals = [len(orbitals) for orbitals in self.configuration["Orbitals"]]
         self.basisdim = np.sum([self.norbitals[int(atom[3])] for atom in self.motif])
-        if 'Filling' in self.configuration:
-            self.filling = self.configuration['Filling']/self.basisdim
 
         print('Computing first neighbours...\n')
         self.find_neighbours(mode=self._mode, nn=self.neighbours, r=self._r)
