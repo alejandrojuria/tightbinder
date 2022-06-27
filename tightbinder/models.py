@@ -1,13 +1,14 @@
 # Module with all the models declarations, from the Slater-Koster tight-binding model
 # to toy models such as the BHZ model or Wilson fermions.
 
+from multiprocessing.sharedctypes import Value
+from xmlrpc.client import boolean
 from .system import System, FrozenClass
 from .crystal import Crystal
 import numpy as np
 import sys
 import math
 import cmath
-import itertools
 
 # Module-level variables
 sigma_x = np.array([[0, 1],
@@ -928,6 +929,95 @@ class RealSpace(System):
         return hamiltonian_k
 
 
+class Stack(System):
+    """ Class that implements stacking of bidimensional systems. Its main task is stacking
+    correctly the different layers and adding the hoppings between layers. The hamiltonian within
+    each layer is delegated upon the class responsible of creating given system. """
+
+    def __init__(self, height, bottom_layer: System, top_layer: System = None):
+        if bottom_layer.ndim != 2 or top_layer != 2:
+            raise TypeError("Systems must be two-dimensional")
+        if height < 0:
+            raise ValueError("Interlayer height must be a positive number")
+
+        if top_layer:
+            for vector_bottom, vector_top in zip(bottom_layer.bravais_lattice, top_layer.bravais_lattice):
+                if np.linalg.norm(vector_bottom - vector_top) < 1E-2:
+                    raise ValueError('Both systems must have the same Bravais lattice')
+        else:
+            top_layer = bottom_layer
+
+        super().__init__()
+        
+        self.bottom_layer = bottom_layer
+        self.top_layer    = top_layer
+        self.height       = height
+
+    def __find_closest_atom_from_next_layer(self, atom_index: int) -> int:
+        """ Routine to find closest atom from next layer. """
+
+        atom_position = self.bottom_layer.motif[atom_index][:3]
+        distances = np.linalg.norm(self.top_layer.motif[:, :3] + self.height - atom_position, axis=1)
+        closest_atom_index = np.argmin(distances)
+
+        return closest_atom_index
+
+
+    def find_interlayer_bonds(self, vertical : bool = False) -> list:
+        """ Routine to find list of all bonds between layers. If vertical, bonds are
+        created directly without search. """
+
+        interlayer_bonds = []
+        origin = np.array([0., 0., 0.])
+        for atom_index in range(self.bottom_layer.natoms):
+            if vertical:
+                next_layer_atom_index = atom_index
+            else:
+                next_layer_atom_index = self.__find_closest_atom_from_next_layer(atom_index)
+            interlayer_bonds.append([atom_index, next_layer_atom_index + self.bottom_layer.natoms, origin, 1])
+        
+        return interlayer_bonds
+
+    
+    def initialize_hamiltonian(self):
+        pass
+
+    def hamiltonian_k(self, k):
+        pass
+
+    
+
+
+    # TODO: Stack functionality
+    def stack(self, height, layers=1, connect_vertically=True):
+        """ Method to stack layers of a two-dimensional material vertically.
+        The returned system is still two-dimensional.
+        :param height: Distance in the z axis between two contiguous layers, measured
+        from one fixed atom of the motif. Units are those used in the lattice.
+        :param layers: Number of layers to stack. Defaults to 1.
+        :param connect_vertically: Boolean, defaults to True. If True, bonds between the layers are 
+        """
+        if self.ndim != 2:
+            raise Exception("Error: System dimension must be 2 to stack, exiting...")
+        if layers <= 0 or type(layers) != int:
+            raise Exception("Error: Layers must be a positive integer")
+        if height < 0:
+            raise Exception("Error: Height must be strictly positive ")
+
+        motif = np.copy(self.motif)
+        interlayer_bonds = []
+        for layer in range(1, layers + 1):
+            displaced_layer = np.copy(motif)
+            displaced_layer[:, :3] += np.array([0., 0., -height*layer])
+            motif = np.append(motif, displaced_layer, axis=0)
+            for i in range(self.natoms):
+                pass
+
+        self.motif = motif
+
+        return self
+
+
 def bethe_lattice(z=3, depth=3, length=1):
     """ Routine to generate a Bethe lattice
      :param z: Coordination number. Defaults to 3
@@ -952,7 +1042,7 @@ def bethe_lattice(z=3, depth=3, length=1):
             motif.append(atom)
             distance = np.linalg.norm(atom[:3] - np.array(motif_previous_shell)[:, :3], axis=1)
             neighbour = np.where(distance == np.min(distance))[0][0]
-            bonds.append([atom_index, neighbour, cell])
+            bonds.append([atom_index, neighbour, cell, 1])
             atom_index += 1
 
         motif_previous_shell = np.copy(motif)

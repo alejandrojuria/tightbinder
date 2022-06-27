@@ -42,6 +42,7 @@ class System(Crystal):
         self._unit_cell_list = None
         self.hamiltonian = None
         self.first_neighbour_distance = None
+        self.hidden = [False] * self.natoms
         # TODO add flag for initialize_hamiltonian
 
     # ####################################################################################
@@ -434,29 +435,6 @@ class System(Crystal):
                 sys.exit(1)
 
             return self
-
-    def stack(self, height, layers=1):
-        """ Method to stack layers of a two-dimensional material vertically.
-        The returned system is still two-dimensional.
-        :param height: Distance in the z axis between two contiguous layers, measured
-        from one fixed atom of the motif. Units are those used in the lattice.
-        :param layers: Number of layers to stack. Defaults to 1. """
-        if self.ndim != 2:
-            raise Exception("Error: System dimension must be 2 to stack, exiting...")
-        if layers <= 0 or type(layers) != int:
-            raise Exception("Error: Layers must be a positive integer")
-        if height < 0:
-            raise Exception("Error: Height must be strictly positive ")
-
-        motif = np.copy(self.motif)
-        for layer in range(1, layers + 1):
-            displaced_layer = np.copy(motif)
-            displaced_layer[:, :3] += np.array([0., 0., -height*layer])
-            motif = np.append(motif, displaced_layer, axis=0)
-
-        self.motif = motif
-
-        return self
 
     def _restrict_lattice2rectangle(self, vectors):
         """ TO BE IMPLEMENTED YET (is it really necessary?) """
