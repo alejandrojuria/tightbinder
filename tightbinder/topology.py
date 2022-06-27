@@ -250,7 +250,6 @@ def __truncate_eigenvectors(eigenvectors, sector, system):
     atoms that are on a specific partition, accounting for orbitals and spin structure """
 
     orbitals = []
-    print(system.filling)
     counter = 0
     for n in range(system.natoms):
         norb = system.norbitals[int(system.motif[n, 3])]
@@ -323,11 +322,12 @@ def entanglement_spectrum(system, partition, kpoints=None):
     """ Routine to obtain the eigenvalues from the correlation/density matrix, which is directly
      related with the entangled Hamiltonian. Should be computable for both PBC and OBC """
     if kpoints is None and system.boundary != "OBC":
-        raise Exception("Error: kpoints argument must be given when using PBC. Exiting...")
+        print('PBC: Defaulting kpoints to origin...')
+        kpoints = [[0., 0., 0.]]
     if system.boundary == "OBC":
         if kpoints is not None:
             print("Warning: kpoints argument given but system uses OBC")
-            print("Defaulting kpoints to origin...")
+            print("OBC: Defaulting kpoints to origin...")
         kpoints = [[0., 0., 0.]]
 
     print("Computing entanglement spectrum...")
