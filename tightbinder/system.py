@@ -349,10 +349,11 @@ class System(Crystal):
             self.bravais_lattice[key_to_index[key]] *= ncells[key]
             self.motif = new_motif
 
+        for key in ncells.keys():
+                self.filling *= ncells[key]
+        
         if update:
             self.update()
-            for key in ncells.keys():
-                self.filling *= ncells[key]
 
         return self
 

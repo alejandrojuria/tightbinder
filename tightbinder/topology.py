@@ -248,25 +248,21 @@ def plot_polarization_flow(wcc_flow):
 def __truncate_eigenvectors(eigenvectors, sector, system):
     """ Routine to truncate the eigenvectors according to the filling and the
     atoms that are on a specific partition, accounting for orbitals and spin structure """
-    filling = system.filling
-    if system.ordering == "atomic" or system.configuration["Spin"] == "False":
-        sector = sector * system.norbitals
-        orbitals = np.copy(sector)
-        for n in range(1, system.norbitals):
-            orbitals = np.concatenate((orbitals, sector + n))
-        orbitals = np.sort(orbitals)
 
-    else:
-        sector = sector * (system.norbitals//2)
-        orbitals = np.copy(sector)
-        orbitals = np.concatenate((orbitals, sector + system.basisdim//2))
-        for n in range(1, system.norbitals//2):
-            orbitals = np.concatenate((orbitals, sector + n))
-            orbitals = np.concatenate((orbitals, sector + system.basisdim//2 + n))
-        orbitals = np.sort(orbitals)
+    orbitals = []
+    print(system.filling)
+    counter = 0
+    for n in range(system.natoms):
+        norb = system.norbitals[int(system.motif[n, 3])]
+        if n in sector:
+            for _ in range(0, norb):
+                orbitals.append(counter)
+                counter += 1
+        else:
+            counter += norb
 
     truncated_eigenvectors = eigenvectors[orbitals]
-    truncated_eigenvectors = truncated_eigenvectors[:, :filling]
+    truncated_eigenvectors = truncated_eigenvectors[:, :system.filling]
 
     return truncated_eigenvectors
 
@@ -339,14 +335,15 @@ def entanglement_spectrum(system, partition, kpoints=None):
     nk = len(kpoints)
     results = system.solve(kpoints)
 
-    spectrum = np.zeros([len(partition) * system.norbitals, nk])
+    basisdim = np.sum([system.norbitals[int(system.motif[atom, 3])] for atom in partition])
+    spectrum = np.zeros([basisdim, nk])
     print("Computing density matrices...")
     for i in range(len(kpoints)):
         truncated_eigenvectors = __truncate_eigenvectors(results.eigen_states[i],
                                                          partition, system)
 
         density_matrix = __density_matrix(truncated_eigenvectors)
-        eigenvalues, eigenvectors = np.linalg.eigh(density_matrix)
+        eigenvalues, _ = np.linalg.eigh(density_matrix)
 
         spectrum[:, i] = eigenvalues
 
