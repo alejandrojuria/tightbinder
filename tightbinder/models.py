@@ -947,11 +947,23 @@ class Stack(System):
         else:
             top_layer = bottom_layer
 
-        super().__init__()
-        
+        super().__init__()        
         self.bottom_layer = bottom_layer
         self.top_layer    = top_layer
         self.height       = height
+        self.vertical = False if top_layer else True
+        self.__interlayer_hopping = None
+        self.basisdim     = None
+
+    @property
+    def interlayer_hopping(self):
+        return self.__interlayer_hoppings
+
+    @interlayer_hopping.setter
+    def interlayer_hopping(self, hoppings: int):
+        """ Setter for interlayer hopping. Note that it is a single value instead
+        of multiple values for different orbitals as in SK models. """
+        self.__interlayer_hopping = hoppings
 
     def __find_closest_atom_from_next_layer(self, atom_index: int) -> int:
         """ Routine to find closest atom from next layer. """
@@ -961,7 +973,6 @@ class Stack(System):
         closest_atom_index = np.argmin(distances)
 
         return closest_atom_index
-
 
     def find_interlayer_bonds(self, vertical : bool = False) -> list:
         """ Routine to find list of all bonds between layers. If vertical, bonds are
@@ -977,45 +988,60 @@ class Stack(System):
             interlayer_bonds.append([atom_index, next_layer_atom_index + self.bottom_layer.natoms, origin, 1])
         
         return interlayer_bonds
-
     
     def initialize_hamiltonian(self):
-        pass
+        """ Init. hamiltonian method for Stack class. """
+
+        # First initialize hamiltonian of each layer and bonds between layers
+        self.bottom_layer.initialize_hamiltonian()
+        self.top_layer.initialize_hamiltonian()
+        self.interlayer_bonds = self.find_interlayer_bonds(self.vertical)
+
+        # Compute basisdim
+        self.basisdim = self.bottom_layer.basisdim + self.top_layer.basisdim
+
+        # Now glue the hamiltonians of each layer together
+        self.hamiltonian = [] * len(self.bottom_layer.hamiltonian)
+        for cell_index in range(len(self.bottom_layer._unit_cell_list)):
+            h_cell = np.zeros([self.basisdim, self.basisdim], dtype=np.complex_)
+            h_cell[:self.bottom_layer.basisdim, 
+                   :self.bottom_layer.basisdim] = self.bottom_layer.hamiltonian[cell_index]
+            h_cell[self.bottom_layer.basisdim:self.top_layer.basisdim, 
+                   self.bottom_layer.basisdim:self.top_layer.basisdim] = self.top_layer.hamiltonian[cell_index]
+            
+            self.hamiltonian[cell_index] = h_cell
+
+        # Precompute dictionary with positions of each atom within the hamiltonian
+        bottom_atom_index_dictionary, top_atom_index_dictionary = {}, {}
+        counter = 0
+        for index, atom in enumerate(self.bottom_layer.motif):
+            bottom_atom_index_dictionary[index] = counter
+            counter += self.bottom_layer.norbitals[atom[3]]
+        counter = 0
+        for index, atom in enumerate(self.top_layer.motif):
+            top_atom_index_dictionary[index] = counter
+            counter += self.top_layer.norbitals[atom[3]]
+
+        # Add hopping between layers
+        h = np.zeros([self.basisdim, self.basisdim])
+        for initial_atom, final_atom, _, _ in self.interlayer_bonds:
+            initial_species = int(self.bottom_layer.motif[initial_atom][3])
+            final_species   = int(self.top_layer.motif[final_atom][3])
+            i = bottom_atom_index_dictionary[initial_atom]
+            i_orbitals = self.bottom_layer.norbitals[initial_species]
+            f = top_atom_index_dictionary[final_atom]
+            f_orbitals = self.top_layer.norbitals[final_species]
+            h[i : i + i_orbitals, f : f + f_orbitals] = self.interlayer_hopping
+        
+        self.hamiltonian[0] += h
+
 
     def hamiltonian_k(self, k):
-        pass
+        hamiltonian_k = np.zeros([self.basisdim, self.basisdim], dtype=np.complex_)
+        for cell_index, cell in enumerate(self._unit_cell_list):
+            hamiltonian_k += self.hamiltonian[cell_index] * cmath.exp(1j*np.dot(k, cell))
 
-    
-
-
-    # TODO: Stack functionality
-    def stack(self, height, layers=1, connect_vertically=True):
-        """ Method to stack layers of a two-dimensional material vertically.
-        The returned system is still two-dimensional.
-        :param height: Distance in the z axis between two contiguous layers, measured
-        from one fixed atom of the motif. Units are those used in the lattice.
-        :param layers: Number of layers to stack. Defaults to 1.
-        :param connect_vertically: Boolean, defaults to True. If True, bonds between the layers are 
-        """
-        if self.ndim != 2:
-            raise Exception("Error: System dimension must be 2 to stack, exiting...")
-        if layers <= 0 or type(layers) != int:
-            raise Exception("Error: Layers must be a positive integer")
-        if height < 0:
-            raise Exception("Error: Height must be strictly positive ")
-
-        motif = np.copy(self.motif)
-        interlayer_bonds = []
-        for layer in range(1, layers + 1):
-            displaced_layer = np.copy(motif)
-            displaced_layer[:, :3] += np.array([0., 0., -height*layer])
-            motif = np.append(motif, displaced_layer, axis=0)
-            for i in range(self.natoms):
-                pass
-
-        self.motif = motif
-
-        return self
+        return hamiltonian_k
 
 
 def bethe_lattice(z=3, depth=3, length=1):
