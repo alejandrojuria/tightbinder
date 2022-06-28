@@ -42,7 +42,6 @@ class System(Crystal):
         self._unit_cell_list = None
         self.hamiltonian = None
         self.first_neighbour_distance = None
-        self.hidden = [False] * self.natoms
         # TODO add flag for initialize_hamiltonian
 
     # ####################################################################################
