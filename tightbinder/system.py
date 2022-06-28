@@ -203,7 +203,7 @@ class System(Crystal):
 
         # Determine neighbour distances up to nn
         neigh_distances = self.compute_neighbour_distances(nn)
-        print(neigh_distances)
+        print(f"Neighbour distances: {neigh_distances}")
         if mode == "radius" and r < neigh_distances[0]:
             print("Warning: Radius smaller than first neighbour distance")
 
