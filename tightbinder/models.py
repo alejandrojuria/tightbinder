@@ -970,13 +970,12 @@ class Stack(System):
     def initialize_system_attributes(self):
         """ Routine to initialize all System atttributes from the bottom layer """
 
-        print("Working")
         # Bravais lattice
         self.bravais_lattice = self.bottom_layer.bravais_lattice
 
         # Motif
         top_layer_motif = np.copy(self.top_layer.motif)
-        top_layer_motif[:, 2] += self.height
+        top_layer_motif[:, 2] += np.max(np.array(self.bottom_layer.motif)[:, 2]) + self.height
         self.motif  = np.concatenate((self.bottom_layer.motif, top_layer_motif), axis=0)
         self.natoms = len(self.motif)
 
