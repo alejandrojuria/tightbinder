@@ -176,7 +176,7 @@ def shape_arguments(arguments):
             aux_array = []
             for line in arguments[arg]:
                 try:
-                    aux_array.append(float(arguments[arg][0]))
+                    aux_array.append(float(line))
                 except IndexError as e:
                     print(f'Warning: No spin-orbit coupling given, defaulting to 0...')
                     arguments[arg] = 0.0

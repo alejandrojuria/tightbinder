@@ -90,7 +90,7 @@ class Spectrum:
             ax.set_title(title + " band structure", fontsize=fontsize)
         ax.set_xlim([min(x_points), max(x_points)])
         if y_values:
-            ax.yaxis.set_ticks(np.arange(y_values[0], y_values[1] + 1, 1))
+            ax.yaxis.set_ticks(np.arange(np.round(y_values[0]), np.round(y_values[1]) + 1, 1))
             ax.set_ylim(y_values)
 
         ax.grid(linestyle='--')
