@@ -5,6 +5,7 @@
 # Definition of all routines to build and solve the tight-binding hamiltonian
 # constructed from the parameters of the configuration file
 
+from typing import final
 import numpy as np
 from scipy.spatial import ConvexHull
 import matplotlib.pyplot as plt
@@ -244,12 +245,30 @@ class Crystal:
             elif self.group == 'Rectangular':
                 special_points.update({'X': special_points['M']})
                 special_points.update({'Y': self.reciprocal_basis[1]/2})
-                special_points.update({'M': self.reciprocal_basis[0]/2 + self.reciprocal_basis[1]/2})
+                special_points.update({'S': self.reciprocal_basis[0]/2 + self.reciprocal_basis[1]/2})
 
             elif self.group == 'Hexagonal':
-                # special_points.update({'K',: reciprocal_basis[0]/2 + reciprocal_basis[1]/2})
+                # special_points.update({'K',: reciprocal_basis[0]/3 + reciprocal_basis[1]/3})
                 special_points.update({'K': norm/math.sqrt(3)*(self.reciprocal_basis[0]/2 - self.reciprocal_basis[1]/2)/(
                                              np.linalg.norm(self.reciprocal_basis[0]/2 - self.reciprocal_basis[1]/2))})
+
+            elif self.group == 'Oblique' or self.group == 'Centered rectangular':
+                if np.linalg.norm(self.bravais_lattice[0]) > np.linalg.norm(self.bravais_lattice[1]):
+                    a = np.linalg.norm(self.bravais_lattice[0])
+                    b = np.linalg.norm(self.bravais_lattice[1])
+                else:
+                    a = np.linalg.norm(self.bravais_lattice[1])
+                    b = np.linalg.norm(self.bravais_lattice[0])
+                gamma = math.acos(np.dot(self.bravais_lattice[0], 
+                                         self.bravais_lattice[1])/(a*b))
+                eta = (1 - b*math.cos(gamma)/a)/(2*(math.sin(gamma)**2))
+                nu = 0.5 - eta*a*math.cos(gamma)/b
+
+                special_points.update({'X': special_points['M']})
+                special_points.update({'Y': self.reciprocal_basis[1]/2})
+                special_points.update({'C': self.reciprocal_basis[0]/2 + self.reciprocal_basis[1]/2})
+                special_points.update({'H': eta*self.reciprocal_basis[0] + (1 - nu)*self.reciprocal_basis[1]})
+                special_points.update({r"$H_1$": (1- eta)*self.reciprocal_basis[0] + nu*self.reciprocal_basis[1]})
 
             else:
                 print('High symmetry points not implemented yet')
@@ -299,6 +318,8 @@ class Crystal:
         for n, point in enumerate(points):
             if point == "G":
                 points[n] = r"$\Gamma$"
+            elif point == "H1":
+                points[n] = r"$H_1$"
 
         kpoints = []
         number_of_points = len(points)
