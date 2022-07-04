@@ -5,7 +5,6 @@
 # Definition of all routines to build and solve the tight-binding hamiltonian
 # constructed from the parameters of the configuration file
 
-from typing import final
 import numpy as np
 from scipy.spatial import ConvexHull
 import matplotlib.pyplot as plt
@@ -33,6 +32,7 @@ class Crystal:
 
         self._ndim = None
         self.natoms = None
+        self.unit_cell_area = None
         self._bravais_lattice = None
         self.bravais_lattice = bravais_lattice
         self._motif = None
@@ -123,6 +123,14 @@ class Crystal:
         self.crystallographic_group()
         self.reciprocal_lattice()
         self.determine_high_symmetry_points()
+        self.compute_unit_cell_area()
+
+    def compute_unit_cell_area(self):
+        """ Method to compute the area of the unit cell. 
+        TODO: Adapt for 1D and 3D """
+        if self.ndim == 2:
+            area = np.linalg.norm(np.cross(self.bravais_lattice[0], self.bravais_lattice[1]))
+            self.unit_cell_area = area
 
     def crystallographic_group(self):
         """ Determines the crystallographic group associated to the material from
