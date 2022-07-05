@@ -5,7 +5,7 @@ from tightbinder.result import Spectrum
 from tightbinder.system import System
 import numpy as np
 import matplotlib.pyplot as plt
-import scipy.sparse.linalg as sp
+import scipy.sparse as sp
 
 def _retarded_green_function(w: float, e: float, delta: float) -> complex:
     """ Routine to compute the retarded Green function, to be used to obtain
@@ -21,14 +21,17 @@ def dos(result: Spectrum, energy: float = None, delta: float = 0.1, npoints: int
     nkpoints = result.eigen_energy.shape[1]
     eigval = result.eigen_energy.reshape(-1, )
     if not energy:
-        emin, emax = np.min(result.eigen_energy), np.max(result.eigen_energy)
+        emin, emax = np.min(result.eigen_energy)*1.5, np.max(result.eigen_energy)*1.5
         energies = np.linspace(emin, emax, npoints, endpoint=True)
     else:
         energies = [energy]
 
     energies = np.array(energies)
-    dos = (np.sum(-np.imag(_retarded_green_function(energies, eigval, delta))/np.pi)
+    dos = []
+    for energy in energies:
+        density = (np.sum(-np.imag(_retarded_green_function(energy, eigval, delta))/np.pi)
                 /(nkpoints*result.system.unit_cell_area))
+        dos.append(density)
 
     return dos, energies
 
@@ -37,10 +40,12 @@ def dos_kpm(system: System, energy: float = None, npoints: int = 200, nmoments: 
     """ Routine to compute the density of states using the Kernel Polynomial Method.
     Intended to be used with supercells and k=0. """
 
+    print("Computing DOS using the KPM...")
     h = system.hamiltonian_k([[0., 0., 0.]])
     # h spectrum has to be between -1 and 1
     h_norm = np.linalg.norm(h, ord=np.inf)
     h /= h_norm
+    h = sp.csr_array(h)
 
     if not energy:
         emin, emax = -1, 1
@@ -72,16 +77,6 @@ def jackson_kernel(nmoments: int) -> list[float]:
     return g
 
 
-def chebyshev_polynomial_operators(n: int, h: np.ndarray) -> list[np.ndarray]:
-    """ Chebyshev polynomial of order n of an operator h """
-    
-    polynomials = [np.eye(h.shape[0], h.shape[1]), h]
-    if n >= 2:
-        for i in range(2, n):
-            polynomials.append(2*np.dot(h, polynomials[i - 1]) - polynomials[i - 2]) 
-    return polynomials
-
-
 def chebyshev_polynomial_values(n: int, e: float) -> np.ndarray:
     """ Chebyshev polynomial of order n on value e. """
     polynomials = [1, e]
@@ -91,7 +86,7 @@ def chebyshev_polynomial_values(n: int, e: float) -> np.ndarray:
     return np.array(polynomials)
 
 
-def compute_dos_momentum(n: int, h: np.ndarray, r: int) -> np.ndarray:
+def compute_dos_momentum(n: int, h, r: int) -> np.ndarray:
     """ Routine to compute the n-th momentum associated to a Chebyshev polynomial expansion
     of the density of states. Instead of computing the whole trace of h, we perform the stochastic
     evaluation of the trace over a small set of random vectors. """
@@ -101,20 +96,16 @@ def compute_dos_momentum(n: int, h: np.ndarray, r: int) -> np.ndarray:
     vectors = np.random.uniform(-1, 1, (r, d))
     norm = np.sqrt(np.diag(np.dot(vectors, vectors.T)))
     vectors = vectors / norm[:, None]
-
-    polynomials = [np.eye(h.shape[0], h.shape[1]), h]
-    if n >= 2:
-        for i in range(2, n):
-            polynomials.append(2*np.dot(h, polynomials[i - 1]) - polynomials[i - 2]) 
+    vectors = vectors.T
 
     # Evaluate each momentum
     momentum = []
-    operators = [np.eye(h.shape[0], h.shape[1]), h]
-    momentum.append(np.sum(np.dot(vectors, np.dot(operators[0], vectors.T)))/(r*d))
-    momentum.append(np.sum(np.dot(vectors, np.dot(operators[1], vectors.T)))/(r*d))
+    operators = [sp.eye(h.shape[0], h.shape[1]).dot(vectors), h.dot(vectors)]
+    momentum.append(np.sum(vectors.T.dot(operators[0]).diagonal())/(r*d))
+    momentum.append(np.sum(vectors.T.dot(operators[1]).diagonal())/(r*d))
     for i in range(2, n):
-        operator = 2*np.dot(h, operators[1]) - operators[0]
-        mu = np.sum(np.diag(np.dot(vectors, np.dot(operator, vectors.T))))/(r*d)
+        operator = 2*h.dot(operators[1]) - operators[0]
+        mu = np.sum(vectors.T.dot(operator).diagonal())/(r*d)
         momentum.append(mu)
         operators[0] = operators[1]
         operators[1] = operator
@@ -182,38 +173,34 @@ def ground_state_projector(nmoments: int, h: np.ndarray, energy: int):
 
     h_norm = np.linalg.norm(h)
     h /= h_norm
+    h = sp.bsr_matrix(h)
+    print("Cast to sparse done")
     energy /= h_norm
 
+    print("Computing moments...")
     moments = compute_projector_momentum(nmoments, energy)
     jackson = jackson_kernel(nmoments)
     moments = moments * jackson
-    operators = [np.eye(h.shape[0], h.shape[1]), h]
+    operators = [sp.eye(h.shape[0], h.shape[1], format='csr'), h]
     projector = moments[0]*operators[0] + moments[1]*operators[1]
     for i in range(2, nmoments):
-        operator = 2*np.dot(h, operators[1]) - operators[0]
+        print(f"Moment: {i}")
+        operator = 2*h.dot(operators[1]) - operators[0]
         projector += moments[i] * operator
         operators[0] = operators[1]
         operators[1] = operator
 
-    return projector
+    return projector.toarray()
 
 
 def restricted_density_matrix(system: System, partition: list, nmoments: int = 100, r: int = 10):
     """ Routine to compute the one-particle density matrix, restricted to"""
     
     h = system.hamiltonian_k([[0., 0., 0.]])
+    h_norm = np.linalg.norm(h)
+    h /= h_norm
+    h = sp.bsr_matrix(h)
 
-    # Compute first fermi energy from DOS
-    print("Computing DOS...")
-    dos, energy = dos_kpm(system, nmoments=nmoments, r=r)
-    efermi = fermi_energy(dos, energy, system)
-    print(f"Fermi energy at: {efermi}")
-
-    # Compute then ground state projector
-    print("Computing ground state projector...")
-    projector = ground_state_projector(nmoments, h, efermi)
-
-    # Finally restrict projector to desired positions
     orbitals = []
     counter = 0
     for n in range(system.natoms):
@@ -224,7 +211,25 @@ def restricted_density_matrix(system: System, partition: list, nmoments: int = 1
                 counter += 1
         else:
             counter += norb
+    
+    orbital_cols = np.arange(len(orbitals))
+    orbital_values = np.ones(len(orbitals))
+    orbital_matrix = sp.csr_matrix((orbital_values, (orbitals, orbital_cols)), shape=(system.basisdim, len(orbitals)))
 
-    density_matrix = projector[np.ix_(orbitals, orbitals)]
+    fermi_en = 0
+    moments = compute_projector_momentum(nmoments, 0)
+    jackson = jackson_kernel(nmoments)
+    moments = moments * jackson
+    operators = [orbital_matrix, h.dot(orbital_matrix)]
+
+    density_matrix = moments[0]*operators[0] + moments[1]*operators[1]
+    for i in range(2, nmoments):
+        print(f"Moment: {i}")
+        operator = 2*h.dot(operators[1]) - operators[0]
+        density_matrix += moments[i] * operator
+        operators[0] = operators[1]
+        operators[1] = operator
+
+    density_matrix = orbital_matrix.transpose().dot(density_matrix).toarray()
 
     return density_matrix
