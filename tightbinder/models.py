@@ -6,6 +6,7 @@ from xmlrpc.client import boolean
 from .system import System, FrozenClass
 from .crystal import Crystal
 import numpy as np
+import scipy.sparse as sp
 import sys
 import math
 import cmath
@@ -272,7 +273,7 @@ class SlaterKoster(System):
             species = int(atom[3])
             orbitals = self.configuration["Orbitals"][species]
             norbitals = self.norbitals[species]
-            orbitals_indices = [index + i for i in [0, npossible_orbitals] for index, orbital in enumerate(possible_orbitals) 
+            orbitals_indices = [index + i for index, orbital in enumerate(possible_orbitals) for i in [0, npossible_orbitals]
                                 if orbital in orbitals]
             
             soc = (self.spin_orbit_hamiltonian[np.ix_(orbitals_indices, orbitals_indices)] *
@@ -324,6 +325,7 @@ class SlaterKoster(System):
                     hopping_amplitude = self._hopping_amplitude(position_difference, orbital_config)
                     hamiltonian[h_cell][atom_index[initial_atom_index] + i,
                                         atom_index[final_atom_index] + j] += hopping_amplitude
+        print("Hoppings computed")
 
         # Substract half-diagonal from all hamiltonian matrices to compensate transposing later
         #for h in hamiltonian:
@@ -335,20 +337,7 @@ class SlaterKoster(System):
             self.basisdim = self.basisdim * 2
 
             for index, cell in enumerate(self._unit_cell_list):
-                aux_hamiltonian = np.zeros([self.basisdim, self.basisdim], dtype=np.complex_)
-                for n, r_atom in enumerate(self.motif):
-                    r_species = int(r_atom[3])
-                    for m, c_atom in enumerate(self.motif):
-                        c_species = int(c_atom[3])
-                        atom_block = np.kron(
-                            np.eye(2, 2),
-                            hamiltonian[index][atom_index[n]: atom_index[n] + self.norbitals[r_species]//2,
-                                               atom_index[m]: atom_index[m] + self.norbitals[c_species]//2]
-                                            )
-
-                        aux_hamiltonian[atom_index[n]*2: atom_index[n]*2 + self.norbitals[r_species],
-                                        atom_index[m]*2: atom_index[m]*2 + self.norbitals[c_species]] += atom_block
-                hamiltonian[index] = aux_hamiltonian
+                hamiltonian[index] = np.kron(hamiltonian[index], np.eye(2, 2))
 
             # Add Zeeman term
             self.__zeeman_term(1E-7)
@@ -359,7 +348,6 @@ class SlaterKoster(System):
                 self.__spin_orbit_h()
 
                 hamiltonian[0] += self.spin_orbit_hamiltonian
-
         self.hamiltonian = hamiltonian
 
     def __zeeman_term(self, intensity):
