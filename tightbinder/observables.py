@@ -162,7 +162,7 @@ def fermi_energy(dos: list, energy: list, system: System) -> float:
 def compute_projector_momentum(nmoments: int, energy: int):
     """ Routine to compute the momentum from the KPM expansion of the ground state projector """
 
-    first_moment = [1 - 1./np.arccos(energy)]
+    first_moment = [1 - np.arccos(energy)/np.pi]
     moments = [-2*np.sin(m*np.arccos(energy))/(m*np.pi) for m in np.arange(1, nmoments)]
     moments = first_moment + moments
 
