@@ -184,6 +184,8 @@ def change_species(system: SlaterKoster, indices):
 
     system.motif[:, 3] = indices
 
+    return system
+
 
 
 
