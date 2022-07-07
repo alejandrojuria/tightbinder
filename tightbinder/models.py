@@ -267,7 +267,7 @@ class SlaterKoster(System):
 
         possible_orbitals = ['s', 'px', 'py', 'pz', 'dxy', 'dyz', 'dzx', 'dx2-y2', 'd3z2-r2']
         npossible_orbitals = len(possible_orbitals)
-        spin_orbit_hamiltonian = np.zeros([self.basisdim, self.basisdim], dtype=np.complex_)
+        spin_orbit_hamiltonian = sp.lil_array((self.basisdim, self.basisdim), dtype=np.complex_)
         matrix_index = 0
         for n, atom in enumerate(self.motif):
             species = int(atom[3])
@@ -295,12 +295,12 @@ class SlaterKoster(System):
 
         hamiltonian = []
         for _ in self._unit_cell_list:
-            hamiltonian.append(np.zeros(([self.basisdim, self.basisdim]), dtype=np.complex_))
+            hamiltonian.append(sp.lil_array((self.basisdim, self.basisdim), dtype=np.complex_))
 
         matrix_index = 0
         for n, atom in enumerate(self.motif):
             species = int(atom[3])  # To match list beginning on zero
-            hamiltonian_atom_block = np.diag(np.array(self.configuration['Onsite energy'][species]))
+            hamiltonian_atom_block = sp.diags(np.array(self.configuration['Onsite energy'][species]), format='lil')
             hamiltonian[0][matrix_index : matrix_index + self.norbitals[species],
                            matrix_index : matrix_index + self.norbitals[species]] = hamiltonian_atom_block
             matrix_index += self.norbitals[species]
@@ -329,7 +329,7 @@ class SlaterKoster(System):
 
         # Substract half-diagonal from all hamiltonian matrices to compensate transposing later
         #for h in hamiltonian:
-        #    h -= np.diag(np.diag(h)/2)
+        #    h -= sp.diags(h.diagonal()/2)
 
         # Check spinless or spinful model and initialize spin-orbit coupling
         if self.configuration['Spin']:
@@ -337,7 +337,7 @@ class SlaterKoster(System):
             self.basisdim = self.basisdim * 2
 
             for index, cell in enumerate(self._unit_cell_list):
-                hamiltonian[index] = np.kron(hamiltonian[index], np.eye(2, 2))
+                hamiltonian[index] = sp.kron(hamiltonian[index], sp.eye(2, 2))
 
             # Add Zeeman term
             self.__zeeman_term(1E-7)
@@ -348,19 +348,23 @@ class SlaterKoster(System):
                 self.__spin_orbit_h()
 
                 hamiltonian[0] += self.spin_orbit_hamiltonian
-        self.hamiltonian = hamiltonian
+        
+        if self.matrix_type == "dense":
+            self.hamiltonian = [h.toarray() for h in hamiltonian]
+        else:
+            self.hamiltonian = [h.tocsr() for h in hamiltonian]
 
     def __zeeman_term(self, intensity):
         """ Routine to incorporate a Zeeman term to the Hamiltonian """
 
-        zeeman_h = np.zeros([self.basisdim, self.basisdim])
+        zeeman_h = sp.lil_array((self.basisdim, self.basisdim))
         matrix_index = 0
         for atom in self.motif:
             species = int(atom[3])
             zeeman_h[matrix_index: matrix_index + self.norbitals[species], 
-                     matrix_index: matrix_index + self.norbitals[species]] = np.kron(
+                     matrix_index: matrix_index + self.norbitals[species]] = sp.kron(
                      np.array([[1, 0], [0, -1]]), 
-                     np.eye(self.norbitals[species]//2))
+                     sp.eye(self.norbitals[species]//2))
             matrix_index += self.norbitals[species]
 
         zeeman_h *= intensity
@@ -370,11 +374,14 @@ class SlaterKoster(System):
         """ Add the k dependency of the Bloch Hamiltonian through the complex exponential
          and adds the spin-orbit term in case it is present """
 
-        hamiltonian_k = np.zeros([self.basisdim, self.basisdim], dtype=np.complex_)
+        if self.matrix_type == "dense":
+            hamiltonian_k = np.zeros((self.basisdim, self.basisdim), dtype=np.complex_)
+        else:
+            hamiltonian_k = sp.csr_array((self.basisdim, self.basisdim), dtype=np.complex_)
+            
         for cell_index, cell in enumerate(self._unit_cell_list):
             hamiltonian_k += self.hamiltonian[cell_index] * cmath.exp(1j*np.dot(k, cell))
 
-        # hamiltonian_k = (hamiltonian_k + np.transpose(np.conjugate(hamiltonian_k)))
         return hamiltonian_k
 
     # ---------------------------- IO routines ----------------------------
