@@ -267,7 +267,7 @@ class SlaterKoster(System):
 
         possible_orbitals = ['s', 'px', 'py', 'pz', 'dxy', 'dyz', 'dzx', 'dx2-y2', 'd3z2-r2']
         npossible_orbitals = len(possible_orbitals)
-        spin_orbit_hamiltonian = sp.lil_array((self.basisdim, self.basisdim), dtype=np.complex_)
+        spin_orbit_hamiltonian = sp.lil_matrix((self.basisdim, self.basisdim), dtype=np.complex_)
         matrix_index = 0
         for n, atom in enumerate(self.motif):
             species = int(atom[3])
@@ -295,7 +295,7 @@ class SlaterKoster(System):
 
         hamiltonian = []
         for _ in self._unit_cell_list:
-            hamiltonian.append(sp.lil_array((self.basisdim, self.basisdim), dtype=np.complex_))
+            hamiltonian.append(sp.lil_matrix((self.basisdim, self.basisdim), dtype=np.complex_))
 
         matrix_index = 0
         for n, atom in enumerate(self.motif):
@@ -357,7 +357,7 @@ class SlaterKoster(System):
     def __zeeman_term(self, intensity):
         """ Routine to incorporate a Zeeman term to the Hamiltonian """
 
-        zeeman_h = sp.lil_array((self.basisdim, self.basisdim))
+        zeeman_h = sp.lil_matrix((self.basisdim, self.basisdim))
         matrix_index = 0
         for atom in self.motif:
             species = int(atom[3])
@@ -377,8 +377,8 @@ class SlaterKoster(System):
         if self.matrix_type == "dense":
             hamiltonian_k = np.zeros((self.basisdim, self.basisdim), dtype=np.complex_)
         else:
-            hamiltonian_k = sp.csr_array((self.basisdim, self.basisdim), dtype=np.complex_)
-            
+            hamiltonian_k = sp.csr_matrix((self.basisdim, self.basisdim), dtype=np.complex_)
+
         for cell_index, cell in enumerate(self._unit_cell_list):
             hamiltonian_k += self.hamiltonian[cell_index] * cmath.exp(1j*np.dot(k, cell))
 
