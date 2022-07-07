@@ -7,9 +7,12 @@
 # from it
 # System has the basic functionality for the other models to derive from it.
 
+from multiprocessing.sharedctypes import Value
 from .crystal import Crystal
 from .result import Spectrum
 import numpy as np
+import scipy.sparse as sp
+import scipy.sparse.linalg
 import sys
 from multiprocessing import cpu_count, Pool
 from itertools import product
@@ -42,6 +45,7 @@ class System(Crystal):
         self._unit_cell_list = None
         self.hamiltonian = None
         self.first_neighbour_distance = None
+        self._matrix_type = "dense"
         # TODO add flag for initialize_hamiltonian
 
     # ####################################################################################
@@ -88,6 +92,18 @@ class System(Crystal):
         if basisdim < self.natoms:
             raise ValueError(f"basisdim has to be at least equal to the number of atoms (motif, {self.natoms})")
         self._basisdim = basisdim
+
+    @property
+    def matrix_type(self):
+        return self._matrix_type
+
+    @matrix_type.setter
+    def matrix_type(self, type):
+        if type not in ["dense", "sparse"]:
+            raise ValueError("Invalid matrix type. Must be either dense or sparse.")
+        self._matrix_type = type
+
+
     # ####################################################################################
     # ################################# Bonds/Neighbours #################################
     # ####################################################################################
@@ -209,6 +225,7 @@ class System(Crystal):
         # Look for neighbours
         # First in mode='minimal'
         atoms = np.copy(self.motif)
+        index = 0
         if mode == 'minimal':
             for n, reference_atom in enumerate(self.motif):
                 for cell in near_cells:
@@ -462,18 +479,26 @@ class System(Crystal):
             by specific implementations of System """
         print("Has to be implemented by child class")
 
-    def solve(self, kpoints=None):
+    def solve(self, kpoints: list = None, neigval: int = None):
         """ Diagonalize the Hamiltonian to obtain the band structure and the eigenstates """
+        
         if kpoints is None:
             kpoints = np.array([[0., 0., 0.]])
+        if neigval is None and self.matrix_type == "sparse":
+            neigval = int(self.filling)
 
         nk = len(kpoints)
         eigen_energy = np.zeros([self.basisdim, nk])
         eigen_states = []
 
+        if self.matrix_type == "dense":
+            solver = lambda h: np.linalg.eigh(h)
+        else:
+            solver = lambda h: scipy.sparse.linalg.eigsh(h, k=neigval)
+
         for n, k in enumerate(kpoints):
             hamiltonian = self.hamiltonian_k(k)
-            results = np.linalg.eigh(hamiltonian)
+            results = solver(hamiltonian)
             eigen_energy[:, n] = results[0]
             eigen_states.append(results[1])
 
