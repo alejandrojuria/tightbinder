@@ -40,6 +40,9 @@ def dos_kpm(system: System, energy: float = None, npoints: int = 200, nmoments: 
     """ Routine to compute the density of states using the Kernel Polynomial Method.
     Intended to be used with supercells and k=0. """
 
+    if system.matrix_type != "sparse":
+        print("Warning: KPM computations are intended to be run with sparse matrices (faster and less memory usage)")
+
     print("Computing DOS using the KPM...")
     h = system.hamiltonian_k([[0., 0., 0.]])
     # h spectrum has to be between -1 and 1
@@ -194,12 +197,19 @@ def ground_state_projector(nmoments: int, h: np.ndarray, energy: int):
 
 
 def restricted_density_matrix(system: System, partition: list, nmoments: int = 100, r: int = 10):
-    """ Routine to compute the one-particle density matrix, restricted to"""
+    """ Routine to compute the one-particle density matrix, restricted to one spatial partition of the system """
+
+    if system.matrix_type != "sparse":
+        print("Warning: KPM computations are intended to be run with sparse matrices (faster and less memory usage)")
     
     h = system.hamiltonian_k([[0., 0., 0.]])
     h_norm = np.linalg.norm(h)
     h /= h_norm
     h = sp.bsr_matrix(h)
+
+    # First compute fermi energy from dos
+    dos, energy = dos_kpm(system, npoints=300, nmoments=int(nmoments), r=r)
+    efermi = fermi_energy(dos, energy, system)/h_norm
 
     orbitals = []
     counter = 0
@@ -217,7 +227,7 @@ def restricted_density_matrix(system: System, partition: list, nmoments: int = 1
     orbital_matrix = sp.csr_matrix((orbital_values, (orbitals, orbital_cols)), shape=(system.basisdim, len(orbitals)))
 
     fermi_en = 0
-    moments = compute_projector_momentum(nmoments, 0)
+    moments = compute_projector_momentum(nmoments, efermi)
     jackson = jackson_kernel(nmoments)
     moments = moments * jackson
     operators = [orbital_matrix, h.dot(orbital_matrix)]
