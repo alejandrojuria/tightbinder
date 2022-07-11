@@ -7,10 +7,12 @@
 # - Listing: Instead of generating pseudorandom numbers to select the target atoms,
 # alternatively we can specify which atoms
 
+from multiprocessing.sharedctypes import Value
 import numpy as np
 from tightbinder.models import SlaterKoster
 from tightbinder.system import System
 import sys
+import random
 
 
 # ----------------------------- Random routines -----------------------------
@@ -122,18 +124,23 @@ def alloy(system: System, *concentrations: float):
     """ Routine to alloy a material with two or more chemical species. In practice this means that each atom
     is reasigned to a random chemical species, while keeping its position.
     For two chemical species, is is only necessary to specify the concentration x of the first one, Ax B1-x.
-    For n species, one has to specify n-1, so that An1 Bn2 Cn3 ... Znn. """
+    For n species, one has to specify n-1, so that An1 Bn2 Cn3 ... Mnn-1 """
 
-    prob_array    = np.random.uniform(0, 1, system.natoms)
-    final_species = np.zeros([system.natoms, system.natoms])
-    total_concentration = 0
-    for species, concentration in enumerate(concentrations):
-        new_species    = prob_array[total_concentration < prob_array < total_concentration + concentration]*species
-        final_species += new_species
-        total_concentration += concentration
+    if len(concentrations) != system.species - 1:
+        raise ValueError("Must give nspecies - 1 concentrations")
+
+    natoms_species = [int(system.natoms*x) for x in concentrations]
+    remaining_indices = np.arange(system.natoms)
+    final_species = np.zeros([system.natoms])
+    for index, natoms in enumerate(natoms_species):
+        indices = np.random.choice(remaining_indices, natoms, replace=False)
+        final_species[indices] = index
+        remaining_indices = np.delete(remaining_indices, indices)
     
-    final_species = final_species[final_species > total_concentration]*len(concentrations)
+    final_species[remaining_indices] = len(concentrations)
     system.motif[:, 3] = final_species
+
+    return system
 
 
 # ----------------------------- Listing routines -----------------------------
