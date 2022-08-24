@@ -2,10 +2,12 @@
 # as well as the topological invariants derived from it. Local markers such as the Bott index or the
 # local Chern number are implemented as well.
 
+from audioop import add
 from multiprocessing.sharedctypes import Value
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
+import scipy as sp
 
 
 def __wilson_loop(system, path):
@@ -79,28 +81,76 @@ def __extract_wcc_from_wilson_loop(wilson_loop):
     return eigval
 
 
-def calculate_wannier_centre_flow(system, number_of_points, additional_k=None, nk_subpath=50):
-    """ Routine to compute the evolution of the Wannier charge centres through Wilson loop calculation """
+def calculate_wannier_centre_flow(system, number_of_points, additional_k=None, nk_subpath=50, 
+                                  refine_mesh=True, pos_tol=5E-2, max_iterations=10):
+    """ Routine to compute the evolution of the Wannier charge centres through Wilson loop calculation. """
 
     print("Computing Wannier centre flow...")
     if system.filling is None:
         raise ValueError('Filling must be specified to compute WCC')
-    wcc_results = []
-    # cell_side = crystal.high_symmetry_points
-    # k_fixed_list = np.linspace(-cell_side/2, cell_side/2, number_of_points)
-    for i in range(-number_of_points, number_of_points + 1):
+
+    all_wcc = []
+    fixed_kpoints = []
+
+    # First generate uniform mesh in BZ
+    for i in range(0, number_of_points + 1):
         k_fixed = system.reciprocal_basis[1]*i/(2*number_of_points)
         if additional_k is not None:
             k_fixed += additional_k
-        # k_fixed = np.array([0, k_fixed_list[i], 0])
+        fixed_kpoints.append(k_fixed)
+
+    # Compute WCC on uniform mesh
+    for k_fixed in fixed_kpoints:
         path = __generate_path(k_fixed, system, nk_subpath)
         wilson_loop = __wilson_loop(system, path)
         wcc = __extract_wcc_from_wilson_loop(wilson_loop)
 
-        wcc_results.append(wcc)
+        all_wcc.append(wcc)
+    
+    # Now check if WCC evolution is smooth. If not, refine mesh where needed
+    if refine_mesh:
+        refined_mesh_count = 0
+        converged = False
+        n_iterations = 0
+        while not converged:
+            print(f"iteration {n_iterations}")
+            n_iterations += 1
+            added_points_iteration = 0
+            all_wcc_copy = np.copy(all_wcc)
+            kpoints_copy = np.copy(fixed_kpoints)
+            for i, wcc in enumerate(all_wcc_copy[:-1]):
+                next_wcc = all_wcc_copy[i + 1]
 
-    return np.array(wcc_results)
+                if __detect_wcc_position_difference(wcc, next_wcc, pos_tol):
+                    new_kpoint = (kpoints_copy[i] + kpoints_copy[i + 1])/2
+                    path = __generate_path(new_kpoint, system, nk_subpath)
+                    wilson_loop = __wilson_loop(system, path)
+                    new_wcc = __extract_wcc_from_wilson_loop(wilson_loop)
 
+                    all_wcc.insert(i + added_points_iteration + 1, new_wcc)
+                    fixed_kpoints.insert(i + added_points_iteration + 1, new_kpoint)
+                    added_points_iteration += 1
+
+            refined_mesh_count += added_points_iteration
+            if (added_points_iteration == 0 or n_iterations == max_iterations):
+                converged = True
+        
+        print(f"Invariant required computing {refined_mesh_count} extra points")
+    print(fixed_kpoints)
+    return np.array(all_wcc)
+
+
+def __detect_wcc_position_difference(wcc, next_wcc, pos_tol):
+    """ Routine to check the difference in positions of contiguous WCC. If there are not centers
+    such that the difference is below the tolerance, returns true. If there are, then returns false. """
+
+    # First check positions within (-1, 1)
+    for center in wcc:
+        wcc_diff = np.abs(center - next_wcc)
+        if np.min(wcc_diff) > pos_tol:
+            return True
+    
+    return False
 
 # ---------------------------- Chern number ----------------------------
 def calculate_polarization(wcc):
@@ -178,30 +228,20 @@ def calculate_z2_invariant(wcc_flow):
      max gap midpoint does across different WCC bands """
     nk = len(wcc_flow[:, 0])
     num_crosses = 0
-    for i in range(int(nk/2), nk - 1):
+    for i in range(nk - 1):
         wcc = np.copy(wcc_flow[i, :])
         next_wcc = wcc_flow[i + 1, :]
+
         midpoint, _ = __find_wcc_midpoint_gap(wcc)
         next_midpoint, _ = __find_wcc_midpoint_gap(next_wcc)
         num_crosses += count_crossings(next_wcc, midpoint, next_midpoint)
-
-        # Do same trick as in find midpoints to ensure all crosses are correctly found
-        # next_wcc = np.append(next_wcc[-1] - 2, next_wcc)
-        # for position in next_wcc:
-        #    triangle = __directed_triangle(np.pi*midpoint, np.pi*next_midpoint, np.pi*position)
-        #    sign *= np.sign(triangle)
-        # if sign == 1:
-        #    crosses = 0
-        # else:
-        #    crosses = 1
-        # num_crosses += crosses
 
     invariant = num_crosses % 2
     return invariant
 
 
 def plot_wannier_centre_flow(wcc_flow, show_midpoints=False, ax=None, title=None,
-                             fontsize=10):
+                             fontsize=10, symmetry=False):
     """ Routine to plot the WCC evolution """
 
     if ax is None:
@@ -219,8 +259,9 @@ def plot_wannier_centre_flow(wcc_flow, show_midpoints=False, ax=None, title=None
         ax.set_title('WCC flow ' + title)
     ax.set_xlabel(r'$k_y$', fontsize=fontsize)
     ax.set_ylabel(r'$\hat{x}_n$', fontsize=fontsize)
-    ax.set_xticks([0, wcc_flow.shape[0]/2 - 1/2, wcc_flow.shape[0] - 1])
-    ax.set_xticklabels([r'$\pi$', "0", r'$\pi$'], fontsize=fontsize)
+    # ax.set_xticks([0, wcc_flow.shape[0]/2 - 1/2, wcc_flow.shape[0] - 1])
+    ax.set_xticks([0, wcc_flow.shape[0] - 1])
+    ax.set_xticklabels([r"0", r'$\pi$'], fontsize=fontsize)
     ax.tick_params(axis="both", labelsize=fontsize)
     ax.set_xlim([0, wcc_flow.shape[0] - 1])
     ax.set_ylim(bottom=-1, top=1)
@@ -394,7 +435,7 @@ def plot_entanglement_spectrum(spectrum, system, ax=None,
         fig = plt.figure(figsize=(5, 5))
         ax = fig.add_subplot(111)
 
-    if system.boundary == "OBC" or spectrum.shape[1] == 1:
+    if system.boundary == "OBC" or len(spectrum.shape) == 1 or spectrum.shape[1] == 1:
         ax.plot(spectrum, 'o', c=color, markersize=markersize)
         ax.set_xlim(0, len(spectrum))
     else:
