@@ -82,7 +82,7 @@ def __extract_wcc_from_wilson_loop(wilson_loop):
 
 
 def calculate_wannier_centre_flow(system, number_of_points, additional_k=None, nk_subpath=50, 
-                                  refine_mesh=True, pos_tol=5E-2, max_iterations=10):
+                                  refine_mesh=True, pos_tol=5E-2, max_iterations=50):
     """ Routine to compute the evolution of the Wannier charge centres through Wilson loop calculation. """
 
     print("Computing Wannier centre flow...")
@@ -136,7 +136,6 @@ def calculate_wannier_centre_flow(system, number_of_points, additional_k=None, n
                 converged = True
         
         print(f"Invariant required computing {refined_mesh_count} extra points")
-    print(fixed_kpoints)
     return np.array(all_wcc)
 
 
@@ -144,9 +143,19 @@ def __detect_wcc_position_difference(wcc, next_wcc, pos_tol):
     """ Routine to check the difference in positions of contiguous WCC. If there are not centers
     such that the difference is below the tolerance, returns true. If there are, then returns false. """
 
-    # First check positions within (-1, 1)
+    # Forward pass
+    next_wcc_copy = np.append([next_wcc[-1] - 2], next_wcc)
+    next_wcc_copy = np.append(next_wcc_copy, [next_wcc[0] + 2])
     for center in wcc:
-        wcc_diff = np.abs(center - next_wcc)
+        wcc_diff = np.abs(center - next_wcc_copy)
+        if np.min(wcc_diff) > pos_tol:
+            return True
+
+    # Backward pass
+    wcc_copy = np.append([wcc[-1] - 2], wcc)
+    wcc_copy = np.append(wcc_copy, [wcc[0] + 2])
+    for center in next_wcc:
+        wcc_diff = np.abs(center - wcc_copy)
         if np.min(wcc_diff) > pos_tol:
             return True
     
