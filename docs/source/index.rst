@@ -16,7 +16,7 @@ tightbinder main
 
 tightbinder system
 =======================================
-.. autoclass:: tightbinder.system
+.. automodule:: tightbinder.system
    :members:
 
 tightbinder crystal
@@ -26,7 +26,7 @@ tightbinder crystal
 
 tightbinder result
 =======================================
-.. autoclass:: tightbinder.result
+.. automodule:: tightbinder.result
    :members:
 
 tightbinder fileparse
