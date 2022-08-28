@@ -1,4 +1,4 @@
-# tight-binder
+# tightbinder
 ## Introduction
 General purpose tight-binding code for electronic structure calculations based on the Slater-Koster approximation.
 The code is yet to be finished: so far the modules include the strictly necessary routines to compute band structures
