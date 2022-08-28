@@ -14,9 +14,9 @@ tightbinder main
 .. automodule:: tightbinder.main
    :members:
 
-tightbinder Hamiltonian
+tightbinder system
 =======================================
-.. autoclass:: tightbinder.hamiltonian.Hamiltonian
+.. autoclass:: tightbinder.system
    :members:
 
 tightbinder crystal
@@ -26,12 +26,22 @@ tightbinder crystal
 
 tightbinder result
 =======================================
-.. autoclass:: tightbinder.result.Result
+.. autoclass:: tightbinder.result
    :members:
 
 tightbinder fileparse
 =======================================
 .. automodule:: tightbinder.fileparse
+   :members:
+
+tightbinder models
+=======================================
+.. automodule:: tightbinder.models
+   :members:
+
+tightbinder disorder
+=======================================
+.. automodule:: tightbinder.disorder
    :members:
 
 

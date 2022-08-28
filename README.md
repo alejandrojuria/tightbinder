@@ -1,4 +1,4 @@
-# tightbinder
+![logo](images/logo.png)
 [![Documentation Status](https://readthedocs.org/projects/tightbinder/badge/?version=latest)](https://tightbinder.readthedocs.io/en/latest/?badge=latest)
 ## Introduction
 General purpose tight-binding code for electronic structure calculations based on the Slater-Koster approximation.
@@ -42,7 +42,7 @@ To run the example do ```$ python bin/app.py examples/chain.txt ```
 This model is analytically solvable, its band dispersion relation is:
 <img src="https://latex.codecogs.com/gif.latex?%5Cinline%20%5Cvarepsilon%28k%29%20%3D%20%5Cvarepsilon_0%20-%202t%5Ccos%28ka%29"/> 
 
-![alt text](screenshots/test_chain_band.png)
+![alt text](images/test_chain_band.png)
 
 * Bi(111) bilayer:
 To run it: ```$python bin/app.py examples/bi(111).txt```
@@ -50,7 +50,7 @@ In this case we use a four-orbital model (s, px, py and pz). Since we are modell
 
 The resulting band structure is:
 
-![alt text](screenshots/bi(111)_w_soc.png)
+![alt text](images/bi(111)_w_soc.png)
 
 Bi(111) bilayers are known to be topological insulators. To confirm this, one can use the routines provided in the ```topology``` module to calculate its 
 <img src="http://latex.codecogs.com/svg.latex?\mathbb{Z}_2" title="http://latex.codecogs.com/svg.latex?\mathbb{Z}_2"/> invariant.
