@@ -12,7 +12,8 @@ from mpl_toolkits.mplot3d import Axes3D
 from numpy.linalg import LinAlgError
 import math
 import sys
-from .utils import generate_basis_combinations
+from typing import Union
+from .utils import generate_basis_combinations, alpha_shape_2d
 
 
 # --------------- Constants ---------------
@@ -22,10 +23,13 @@ EPS = 0.001
 
 # --------------- Routines ---------------
 class Crystal:
-    """ Implementation of Crystal class. Defaults to square lattice if no input is given. """
+    """
+    Implementation of Crystal class. Defaults to square lattice if no input is given.
+    :param bravais_lattice: List with the bravais vectors 
+    :param motif: List with positions and chemical species of atoms of the motif
+    """
 
-    def __init__(self, bravais_lattice=None, motif=None):
-        # To be initialized in methods
+    def __init__(self, bravais_lattice: Union[list, np.ndarray] = None, motif: Union[list, np.ndarray] = None) -> None:
         self.group = None
         self.reciprocal_basis = None
         self.high_symmetry_points = None
@@ -43,7 +47,7 @@ class Crystal:
         return self._ndim
 
     @ndim.setter
-    def ndim(self, ndim):
+    def ndim(self, ndim: int) -> None:
         assert type(ndim) == int
         if ndim > 3 or ndim < (-1):
             print("Incorrect dimension for system, exiting...")
@@ -55,7 +59,7 @@ class Crystal:
         return self._bravais_lattice
 
     @bravais_lattice.setter
-    def bravais_lattice(self, bravais_lattice):
+    def bravais_lattice(self, bravais_lattice: Union[list, np.ndarray]) -> None:
         if bravais_lattice is None:
             self._bravais_lattice = None
         else:
@@ -68,11 +72,11 @@ class Crystal:
             self.update()
 
     @property
-    def motif(self):
+    def motif(self) -> Union[list, np.ndarray]:
         return self._motif
 
     @motif.setter
-    def motif(self, motif):
+    def motif(self, motif: Union[list, np.ndarray]) -> None:
         if motif is None:
             self._motif = None
         else:
@@ -83,63 +87,95 @@ class Crystal:
             self._motif = motif
             self.natoms = len(motif)
 
-    def add_atom(self, position, species=0):
-        """ Method to add one atom from some numbered species into a specific position.
-        Parameters:
-            array position: len(3)
-            int species: Used to number the species. Defaults to 0 """
+    def add_atom(self, position: Union[list, np.ndarray], species: int = 0) -> None:
+        """
+        Method to add one atom from a numbered species into a specific position.
+        :param position: Array with atom coordinaes. Must be three-dimensional.
+        :param species: Index of corresponding chemical species. Defaults to 0. 
+        """
+
         assert type(position) == list or type(position) == np.ndarray
         if len(position) != 3:
             raise Exception("Vector must have three components")
+        
+        position = np.concatenate([position, [species]])
 
-        self.motif.append(position)
+        if type(self.motif) == list:
+            self.motif.append(position)
+        elif type(self.motif) == np.ndarray:
+            self.motif = np.concatenate([self.motif, [position]], axis=0)
 
-    def add_atoms(self, atoms, species=None):
-        """ Method to add a list of atoms of specified species at some positions.
-         Built on top of method add_atom.
-         Parameters:
-             matrix atoms: natoms x 3 (each row are the coordinates of an atom)
-             list species: list of size natoms """
+    def add_atoms(self, atoms: Union[list, np.ndarray], species: list = None) -> None:
+        """ 
+        Method to add a list of atoms of specified species at some positions.
+        Built on top of method add_atom.
+        :param atoms: List of length n, containing the positions of each atom.
+        :param species: List with the indices of the chemical species. If None, all default to zero. 
+        """
+
         if species is None:
             species = np.zeros(len(atoms))
         for n, atom in enumerate(atoms):
             self.add_atom(atom, species[n])
 
-    def remove_atom(self, index):
+    def remove_atom(self, index: int) -> None:
+        """ 
+        Method to remove the atom at the specified index from the motif. Note
+        that this method does not remove existing bonds corresponding to the removed atom.
+        :param index: Index of atom to be removed. 
+        """
+
         if type(self.motif) == list:
             self.motif.pop(index)
         elif type(self.motif) == np.ndarray:
             self.motif = np.delete(self.motif, index, 0)
 
-    def remove_atoms(self, indices):
+    def remove_atoms(self, indices: list) -> None:
+        """ 
+        Method to remove the atoms specified in a list with all their indices. 
+        Built upon the method remove_atom.
+        :param indices: List with the indices of the atoms to be removed. 
+        """
+
         indices = np.sort(indices)
         for n, index in enumerate(indices):
             self.remove_atom(index - n)
 
-    def update(self):
-        """ Routine to initialize or update the intrinsic attributes of the Crystal class whenever
-        the Bravais lattice is changed """
-        # Init methods
+    def update(self) -> None:
+        """ 
+        Routine to initialize or update the intrinsic attributes of the Crystal class whenever
+        the Bravais lattice is changed. 
+        """
+
         self.crystallographic_group()
         self.reciprocal_lattice()
         self.determine_high_symmetry_points()
         self.compute_unit_cell_area()
 
-    def compute_unit_cell_area(self):
-        """ Method to compute the area of the unit cell. 
-        TODO: Adapt for 1D and 3D """
+    def compute_unit_cell_area(self) -> float:
+        """ 
+        Method to compute the area of the unit cell. 
+        :return: Value of unit cell area.
+        TODO: Adapt for 1D and 3D 
+        """
+        
+        area = 0.0
         if self.ndim == 2:
             area = np.linalg.norm(np.cross(self.bravais_lattice[0], self.bravais_lattice[1]))
             self.unit_cell_area = area
 
-    def crystallographic_group(self):
-        """ Determines the crystallographic group associated to the material from
+        return area
+
+    def crystallographic_group(self) -> None:
+        """ 
+        Determines the crystallographic group associated to the material from
         the configuration file. NOTE: Only the group associated to the Bravais lattice,
         reduced symmetry due to presence of motif is not taken into account. Its purpose is to
         provide a path in k-space to plot the band structure.
         Workflow is the following: First determine length and angles between basis vectors.
         Then we separate by dimensionality: first we check angles, and then length to
-        determine the crystal group. """
+        determine the crystal group. 
+        """
 
         basis_norm = [np.linalg.norm(vector) for vector in self.bravais_lattice]
         group = ''
@@ -179,12 +215,14 @@ class Crystal:
 
         self.group = group
 
-    def reciprocal_lattice(self):
-        """ Routine to compute the reciprocal lattice basis vectors from
+    def reciprocal_lattice(self) -> None:
+        """ 
+        Routine to compute the reciprocal lattice basis vectors from
         the Bravais lattice basis. The algorithm is based on the fact that
         a_i\dot b_j=2PI\delta_ij, which can be written as a linear system of
         equations to solve for b_j. Resulting vectors have 3 components independently
-        of the dimension of the vector space they span."""
+        of the dimension of the vector space they span.
+        """
 
         if self.bravais_lattice is None:
             self.reciprocal_basis = None
@@ -211,9 +249,13 @@ class Crystal:
 
         self.reciprocal_basis = reciprocal_basis
 
-    def brillouin_zone_mesh(self, mesh):
-        """ Routine to compute a mesh of the first Brillouin zone using the
-        Monkhorst-Pack algorithm. Returns a list of k vectors. """
+    def brillouin_zone_mesh(self, mesh: list) -> np.ndarray:
+        """ 
+        Routine to compute a mesh of the first Brillouin zone using the
+        Monkhorst-Pack algorithm.
+        :param mesh: List with the number of kpoints along each axis.
+        :return: Array with all kpoints, nk x 3 
+        """
 
         if len(mesh) != self.ndim:
             print('Error: Mesh does not match dimension of the system')
@@ -234,11 +276,13 @@ class Crystal:
 
         return np.array(kpoints)
 
-    def determine_high_symmetry_points(self):
-        """ Routine to compute high symmetry points depending on the dimension of the system.
+    def determine_high_symmetry_points(self) -> None:
+        """ 
+        Routine to compute high symmetry points depending on the dimension of the system.
         These symmetry points will be used to plot the band structure along the main
         reciprocal paths of the system (irreducible BZ). Returns a dictionary with pairs
-        {letter denoting high symmetry point: its coordinates} """
+        {letter denoting high symmetry point: its coordinates} 
+        """
 
         norm = np.linalg.norm(self.reciprocal_basis[0])
         special_points = {r"$\Gamma$": np.array([0., 0., 0.])}
@@ -293,10 +337,12 @@ class Crystal:
 
         self.high_symmetry_points = special_points
 
-    def __reorder_high_symmetry_points(self, labels):
-        """ Routine to reorder the high symmetry points according to a given vector of labels
+    def __reorder_high_symmetry_points(self, labels: list) -> None:
+        """ 
+        Routine to reorder the high symmetry points according to a given vector of labels
          for later representation.
-         DEPRECATED with the dictionary update """
+         DEPRECATED with the dictionary update 
+         """
         points = []
         for label in labels:
             appended = False
@@ -309,18 +355,23 @@ class Crystal:
 
         self.high_symmetry_points = points
 
-    def __strip_labels_from_high_symmetry_points(self):
-        """ Routine to output both labels and array corresponding to high symmetry points
-         DEPRECATED with the dictionary update """
+    def __strip_labels_from_high_symmetry_points(self) -> None:
+        """ 
+        Routine to output both labels and array corresponding to high symmetry points
+        DEPRECATED with the dictionary update 
+        """
 
         for n, point in enumerate(self.high_symmetry_points):
             self.high_symmetry_points[n] = point[1]
 
-    def high_symmetry_path(self, nk, points):
-        """ Routine to generate a path in reciprocal space along the high symmetry points """
-
-        # self.__reorder_high_symmetry_points(points)
-        # self.__strip_labels_from_high_symmetry_points()
+    def high_symmetry_path(self, nk: int, points: list[str]) -> list:
+        """ 
+        Routine to generate a path in reciprocal space along the high symmetry points (HSPs) indicated.
+        The HSPs must be within those corresponding to the associated symmetry group, otherwise the method will throw an error.
+        :param nk: Number of kpoints in the path. They are evenly distributed between HSPs.
+        :param points: List of labels of desired HSPs.
+        :return: List of kpoints following the path specified with the labels. 
+        """
 
         # Transform possible Gamma point to latex
         for n, point in enumerate(points):
@@ -341,14 +392,47 @@ class Crystal:
 
         return kpoints
 
-    def identify_edges(self, loop=6):
-        """ Method to obtain the atoms that correspond to the edges of the system.
-         This method uses directly the ConvexHull method from Scipy to identify the outmost points
-         of the motif. Compute the ConvexHull three times, each time removing the points detected in the
-         previous iteration.
-          Returns: Indices of atoms belonging to edges of motif
-           NB: If given 3d points, they must not be coplanar for the algorithm
-           to work. If they are, then the points must be given as 2d """
+    def identify_motif_edges(self, alpha: float = 0.4, ndim: int = 2) -> np.ndarray:
+        """
+        Method to obtain the indices of the outermost atoms of the motif.
+        Note that this method returns exclusively the outermost atoms, independently
+        of the boundary conditions. To take into account boundary conditions, one should
+        call identify_boundary() from System.
+        :param alpha: This parameters tunes the shape of the boundary. For alpha=0,
+        the boundary is a convex hull; as alpha increases the boundary becomes more
+        concave. Default value is 0.4
+        :param ndim: Dimension of the boundary. If the system lies on a plane, the boundary
+        is two-dimensional, so ndim = 2 (default value).
+        :return: Indices of atoms in the boundary.
+        :raises AssertionError: Crystal dimension different from two raises error.
+        :raises ValueError: Crystal motif must have at least three atoms. Raised by Delaunay class.
+        NB: Currently works only in 2D
+        """
+
+        if ndim == 2:
+            points = np.array(self.motif)[:, :2]
+            points[:, 0] = (points[:, 0] - np.min(points[:, 0]))/np.max(points[:, 0])
+            points[:, 1] = (points[:, 1] - np.min(points[:, 1]))/np.max(points[:, 1])
+
+            edges = alpha_shape_2d(points, alpha)
+
+            return edges
+
+        else:
+            raise AssertionError("Currently working only for ndim=2")
+
+    def identify_convex_hull(self, loop: int = 6) -> np.ndarray:
+        """
+        Deprecated in favour of identify_motif_edges. 
+        Method to obtain the atoms that correspond to the edges of the system.
+        This method uses directly the ConvexHull method from Scipy to identify the outmost points
+        of the motif. Compute the ConvexHull three times, each time removing the points detected in the
+        previous iteration.
+        :param loop: Number of times the ConvexHull is applied, to increase number of points in the edge.
+        :return: Indices of atoms belonging to edges of motif.
+        NB: If given 3d points, they must not be coplanar for the algorithm
+        to work. If they are, then the points must be given as 2d 
+        """
 
         atoms_coordinates = np.copy(self.motif[:, :2])
         hull = ConvexHull(atoms_coordinates)
@@ -370,12 +454,22 @@ class Crystal:
 
         return edge_indices
 
-    def plot_crystal(self, cell_number=1, crystal_name=''):
+    def crystal_center(self) -> np.ndarray:
+        """ 
+        Method to compute the geometric center of the crystal from the positions of the atoms
+        of the motif. Calculated as the average of all atomic positions.
+        :returns: Numpy array with the cartesian coordinates of the center 
         """
+
+        center = np.sum(self.motif[:, :3], axis=0)/self.natoms
+        return center
+
+
+    def plot_crystal(self, cell_number: int = 1, crystal_name: str = '') -> None:
+        """ 
         Method to visualize the crystalline structure (Bravais lattice + motif).
-        Parameters:
-            (optional) cell_number: Number of cells appended in each direction with respect to the origin
-            By default, cell_number = 1 (zero = only motif)
+        :param cell_number: Number of cells appended in each direction with respect to the origin. Defaults to 1.
+        :param crystal_name: Name of the crystal. Defaults to the empty string. 
         """
 
         bravais_lattice = np.array(self.bravais_lattice)
@@ -415,13 +509,24 @@ class Crystal:
         plt.axis('off')
         plt.show()
 
-    def visualize(self):
+    def visualize(self) -> None:
+        """ Method to render a 3d visualization of the crystal using the self.vpython library. """
+
         CrystalView(self).visualize()
+        print("\nPress Ctrl+c to exit visualization or close the window.")
+        while True:
+            pass
 
 
 class CrystalView:
-    vp = __import__('vpython')
-    def __init__(self, crystal):
+    """ 
+    The CrystalView class' aim is to wrap all the logic relative to the visualization of the crystal using the
+    vpython library. This is, rendering the solid appropriately, and also rendering a minimal user interface to interact
+    with the visualization. 
+    """
+
+    import vpython as vp
+    def __init__(self, crystal: Crystal) -> None:
         self.bravais_lattice = crystal.bravais_lattice
         self.motif = np.array(crystal.motif)
         self.ndim = crystal.ndim
@@ -432,7 +537,7 @@ class CrystalView:
         self.atom_radius = None
 
         try:
-            self.edge_atoms = crystal.find_lowest_coordination_atoms()
+            self.edge_atoms = crystal.identify_boundary()
             self.neighbours = crystal.bonds
         except IndexError or AttributeError as e:
             print('visualize(): System must be initialized first')
@@ -450,7 +555,11 @@ class CrystalView:
         self.cell_vectors = None
         self.cell_boundary = None
 
-    def __compute_atom_radius(self):
+    def __compute_atom_radius(self) -> None:
+        """ 
+        Private method to estimate an adequate radius for the atoms based on the distance between first neighbours. 
+        """
+
         first_neigh_distance = 0
         for initial_atom, final_atom, cell, _ in self.neighbours:
             bond_length = np.linalg.norm(self.motif[initial_atom, :3] - self.motif[final_atom, :3] - cell)
@@ -459,10 +568,14 @@ class CrystalView:
 
         self.atom_radius = first_neigh_distance/7
 
-    def __create_atoms(self):
+    def __create_atoms(self) -> None:
+        """ 
+        Private method to initialize the atoms as spheres. 
+        """
+
         # Origin cell
         mesh_points = generate_basis_combinations(self.ndim)
-        color_list = [self.vp.color.yellow, self.vp.color.red]
+        color_list = [self.vp.color.yellow, self.vp.color.red, self.vp.color.white, self.vp.color.blue, self.vp.color.green]
         for position in self.motif:
             species = int(position[3])
             atom = self.vp.sphere(radius=self.atom_radius, color=color_list[species])
@@ -484,7 +597,11 @@ class CrystalView:
                     atom.pos.x, atom.pos.y, atom.pos.z = (position[:3] + unit_cell)
                     self.extra_atoms.append(atom)
 
-    def __create_bonds(self):
+    def __create_bonds(self) -> None:
+        """ 
+        Private method to initialized the bonds between atoms as solid lines. 
+        """
+
         mesh_points = generate_basis_combinations(self.ndim)
         try:
             # Origin cell
@@ -511,7 +628,12 @@ class CrystalView:
         except AttributeError:
             print("Warning: To visualize bonds, Viewer must receive an initialized System")
 
-    def visualize(self):
+    def visualize(self) -> None:
+        """ 
+        Method to render the 3d visualization of the crystal. It also renders a GUI to interact
+        with the visualization. 
+        """
+
         self.vp.scene.visible = True
         self.vp.button(text="supercell", bind=self.__add_unit_cells)
         self.vp.button(text="primitive unit cell", bind=self.__remove_unit_cells)
@@ -523,42 +645,71 @@ class CrystalView:
         self.vp.scene.bind("mousedown", self.__mousedown)
         self.vp.scene.bind("mouseup", self.__mouseup)
 
-    def __mousedown(self):
+    def __mousedown(self, event: vp.event_return) -> None:
+        """ 
+        Private method to detect mouse buttons press. 
+        """
+
         self.initial_position = self.vp.scene.mouse.pos
         self.drag = True
 
-    def __mouseup(self):
+    def __mouseup(self, event: vp.event_return) -> None:
+        """ 
+        Private method to detect mouse buttons release. 
+        """
+
         if self.drag:
             increment = self.vp.scene.mouse.pos - self.initial_position
             self.initial_position = self.vp.scene.mouse.pos
             self.vp.scene.camera.pos -= increment
         self.drag = False
 
-    def __add_unit_cells(self):
+    def __add_unit_cells(self, button: vp.button) -> None:
+        """ 
+        Private method to render additional unit cells from the origin. 
+        """
+
         for atom in self.extra_atoms:
             atom.visible = True
 
-    def __show_bonds(self):
+    def __show_bonds(self, button: vp.button) -> None:
+        """ 
+        Private method to render the bonds between atoms 
+        """
+
         for bond in self.bonds:
             bond.visible = True
         if self.extra_atoms[0].visible:
             for bond in self.extra_bonds:
                 bond.visible = True
 
-    def __remove_unit_cells(self):
+    def __remove_unit_cells(self, button: vp.button) -> None:
+        """ 
+        Private method to derender the additional unit cells. 
+        """
+
         for atom in self.extra_atoms:
             atom.visible = False
         if self.extra_bonds[0].visible:
             for bond in self.extra_bonds:
                 bond.visible = False
 
-    def __remove_bonds(self):
+    def __remove_bonds(self, button: vp.button) -> None:
+        """ 
+        Private method to derender the bonds between atoms. 
+        """
+
         for bond in self.bonds:
             bond.visible = False
         for bond in self.extra_bonds:
             bond.visible = False
 
-    def __draw_boundary(self):
+    def __draw_boundary(self, button: vp.button) -> None:
+        """ 
+        Private method to draw the boundary of the unit cell.
+        TODO: Requires fixing. 
+        """
+
         self.cell_vectors = []
         mid_point = np.array([0., 0., 0.])
         size_vector = [0., 0., 0.]
@@ -576,15 +727,20 @@ class CrystalView:
                               shaftwidth=0.1)
             self.cell_vectors.append(vector)
 
-    def __remove_boundary(self):
+    def __remove_boundary(self, button: vp.button) -> None:
+        """ 
+        Private method to remove the boundary of the unit cell. 
+        """
+
         self.cell_boundary.visible = False
         for vector in self.cell_vectors:
             vector.visible = False
 
-    def __highlight_edge(self):
+    def __highlight_edge(self, button: vp.button) -> None:
+        """ 
+        Private method to highlight the edges of the atom of the solid. 
+        """
+
         for atom_index in self.edge_atoms:
             self.atoms[atom_index].color = self.vp.color.green
-
-
-
 
