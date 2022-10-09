@@ -1,23 +1,36 @@
 # Definition of Result class to handle diagonalization results from Hamiltonian and observable calculation
 
 import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
+from matplotlib.cm import get_cmap
+from matplotlib.collections import LineCollection
 import numpy as np
+from scipy.interpolate import interp2d 
 import math
 import sys
 from .utils import condense_vector, scale_array
 
-
 class Spectrum:
-    def __init__(self, eigen_energy=None, eigen_states=None, kpoints=None, system=None):
+    """
+    The Spectrum class is designed to store the results from the Hamiltonian diagonalization, 
+    and to perform manipulations on the eigenvectors and eigenvalues and extract information
+    about the system.
+    """
+
+    def __init__(self, eigen_energy: np.ndarray = None, eigen_states: np.ndarray = None, kpoints: np.ndarray = None, 
+                system: 'System' = None) -> None:
+
         self.eigen_energy = eigen_energy
         self.eigen_states = eigen_states
         self.kpoints = kpoints
         self.system = system
 
-    def __simplify_kpoints(self):
-        """ Routine to reduce the k-points of the mesh from 3d to the corresponding dimension,
-         for later graphical representation
-         DEPRECATED """
+    def __simplify_kpoints(self) -> np.ndarray:
+        """ 
+        Routine to reduce the k-points of the mesh from 3d to the corresponding dimension,
+        for later graphical representation
+        DEPRECATED 
+        """
 
         dimension = self.configuration['Dimensionality']
         new_kpoints = np.zeros([len(self.kpoints), dimension])
@@ -34,8 +47,11 @@ class Spectrum:
 
         return new_kpoints
 
-    def plot_bands(self, title=''):
-        """ Method to plot bands from diagonalization in the whole Brillouin zone """
+    def plot_bands(self, title: str = '') -> None:
+        """ 
+        Method to plot bands from diagonalization in the whole Brillouin zone.
+        :param title: Title for plot. Defaults to empty string.
+        """
 
         fig = plt.figure()
         ax = plt.axes(projection='3d')
@@ -54,14 +70,26 @@ class Spectrum:
 
         plt.show()
 
-    def plot_along_path(self, labels, title='', edge_states=False, rescale=True,
-                        ax=None, y_values=[], fontsize=10):
-        """ Method to plot the bands along a path in reciprocal space, normally along high symmetry points """
+    def plot_along_path(self, labels: list[str], title: str = '', edge_states: bool = False, rescale: bool = True,
+                        ax: Axes = None, e_values: list[float] = [], fontsize: float = 10) -> None:
+        """ 
+        Method to plot the bands along a path in reciprocal space, normally along high symmetry points.
+        :param labels: Labels of the High Symmetry Points of the path.
+        :param title: Title of the plot. Defaults to empty string.
+        :param edge_states: Boolean parameter to toggle on or off edge bands in a different color. 
+        Edge bands are defined as those immediately above and below the Fermi level. Defaults to False.
+        :param rescale: Boolean to rescale the energy spectrum to the Fermi energy. I.e. highest occupied
+        state has energy zero. Defaults to True.
+        :param ax: Axes object from matplotlib to plot bands there. Useful for figures with subplots.
+        :param e_values: List with two values, [e_min, e_max] to show bands only in that energy range.
+        :param fontsize: Adjusts size of lines and text.
+        """
+
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
-        if y_values and len(y_values) != 2:
-            raise ValueError("y_values must be [y_min, y_max]")
+        if e_values and len(e_values) != 2:
+            raise ValueError("e_values must be [e_min, e_max]")
 
         if rescale:
             self.rescale_bands_to_fermi_level()
@@ -74,6 +102,7 @@ class Spectrum:
         for n, label in enumerate(labels):
             xpos = (nk - 1)/number_of_paths*n
             x_ticks.append(xpos)
+        
         for eigen_energy_k in self.eigen_energy:
             ax.plot(x_points, eigen_energy_k, 'g-', linewidth=3)
 
@@ -89,12 +118,77 @@ class Spectrum:
         if title != '':
             ax.set_title(title + " band structure", fontsize=fontsize)
         ax.set_xlim([min(x_points), max(x_points)])
-        if y_values:
-            ax.yaxis.set_ticks(np.arange(np.round(y_values[0]), np.round(y_values[1]) + 1, 1))
-            ax.set_ylim(y_values)
+        if e_values:
+            ax.yaxis.set_ticks(np.arange(np.round(e_values[0]), np.round(e_values[1]) + 1, 1))
+            ax.set_ylim(e_values)
 
-        ax.grid(linestyle='--')
+        # ax.grid(linestyle='--')
 
+    def plot_bands_w_atomic_occupation(self, labels, atom_indices, title='', rescale=True, 
+                                       ax=None, e_values=[], fontsize=10):
+    
+        """ 
+        Method to plot bands as function of k, but also as a colormap to show edge occupation of 
+        each state. 
+        :param labels: Labels of the High Symmetry Points of the path.
+        :param atom_indices: List of indices of atoms where we want to measure the occupation.
+        :param title: Title of the plot. Defaults to empty string.
+        :param edge_states: Boolean parameter to toggle on or off edge bands in a different color. 
+        Edge bands are defined as those immediately above and below the Fermi level. Defaults to False.
+        :param rescale: Boolean to rescale the energy spectrum to the Fermi energy. I.e. highest occupied
+        state has energy zero. Defaults to True.
+        :param ax: Axes object from matplotlib to plot bands there. Useful for figures with subplots.
+        :param e_values: List with two values, [e_min, e_max] to show bands only in that energy range.
+        :param fontsize: Adjusts size of lines and text.
+        """
+
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+        if e_values and len(e_values) != 2:
+            raise ValueError("e_values must be [y_min, y_max]")
+
+        if rescale:
+            self.rescale_bands_to_fermi_level()
+
+        nk = len(self.kpoints)
+        x_points = np.arange(0, nk)
+        x_ticks = []
+        number_of_paths = len(labels) - 1
+
+        for n, _ in enumerate(labels):
+            xpos = (nk - 1)/number_of_paths*n
+            x_ticks.append(xpos)
+        
+        occupation_matrix = self.calculate_occupation(atom_indices)            
+        
+        cmap = get_cmap("viridis")
+        segments = []
+        colors = []
+        for i, eigen_energy_k in enumerate(self.eigen_energy):
+            for j in x_points[:-1]:
+                segments.append([(x_points[j], eigen_energy_k[j]), (x_points[j + 1], eigen_energy_k[j + 1])])
+                colors.append(cmap(occupation_matrix[i, j]))
+
+        lines = LineCollection(segments, colors=colors, linewidth=3)
+        ax.add_collection(lines)
+        print(np.max(occupation_matrix))
+
+        # im = ax.pcolormesh(x, y, z, cmap='viridis')
+        # fig.colorbar(im, ax=ax)
+
+        ax.set_xticks(x_ticks)
+        ax.set_xticklabels(labels, fontsize=fontsize)
+        ax.set_ylabel(r'$\epsilon$ (eV)', fontsize=fontsize)
+        ax.tick_params('y', labelsize=fontsize)
+        if title != '':
+            ax.set_title(title + " band structure", fontsize=fontsize)
+        ax.set_xlim([min(x_points), max(x_points)])
+        if e_values:
+            ax.yaxis.set_ticks(np.arange(np.round(e_values[0]), np.round(e_values[1]) + 1, 1))
+            ax.set_ylim(e_values)
+
+        # ax.grid(linestyle='--')
 
     def plot_spectrum(self, title=''):
         """ Routine to plot all the eigenvalues coming from the Bloch Hamiltonian diagonalization
@@ -131,19 +225,23 @@ class Spectrum:
 
         return is_edge_state
 
-    def identify_edge_states(self, crystal, penetration=0.1):
+    def identify_edge_states(self, system, penetration=0.1):
         """ Routine to identify edge states according to a given penetration parameter """
         if self.eigen_states.shape[0] != 1:
             print("Error: identify_edge_states can only be used with OBC, exiting...")
             sys.exit(1)
-        edge_indices = crystal.identify_edges()
-        norbitals = len(self.eigen_states[0][:, 0])//len(crystal.motif)
+        edge_indices = system.identify_edges()
+        edge_indices = system.find_lowest_coordination_atoms()
+        norbitals = len(self.eigen_states[0][:, 0])//len(system.motif)
         edge_states = []
         for n, state in enumerate(self.eigen_states[0].T):
             if self.is_edge_state(state, norbitals, edge_indices, penetration):
                 edge_states.append(n)
 
         return edge_states
+
+    def sort_states_by_edge_occupation(self, system):
+        """ Method to compute the edge occupation of each state, and  """
 
     def calculate_fermi_energy(self, filling):
         """ Routine to compute the Fermi level energy according to the given filling """
@@ -157,6 +255,7 @@ class Spectrum:
     def rescale_bands_to_fermi_level(self):
         """ Routine to set the Fermi energy to zero """
         fermi_energy = self.calculate_fermi_energy(self.system.filling)
+        print(self.system.filling)
         self.eigen_energy -= fermi_energy
 
     def calculate_gap(self, filling):
@@ -190,16 +289,19 @@ class Spectrum:
         average_ipr /= len(states)
         return average_ipr
 
-    def calculate_specific_occupation(self, atoms_indices, states=None):
-        """ Method to compute the occupation for all the states in the spectrum
-         on the specified atoms """
-        if states is None:
-            states = np.copy(self.eigen_states.reshape(self.system.basisdim, -1).T)
-        occupations = []
-        for eigenvector in states:
-            state = State(eigenvector, self.system)
-            occupation = state.compute_specific_occupation(atoms_indices)
-            occupations.append(occupation)
+    def calculate_occupation(self, atom_indices: list[int]) -> np.ndarray:
+        """ 
+        Method to compute the occupation for all the states in the spectrum
+        on the specified atoms
+        :param atom_indices: List with the indices of the atoms where we want to obtain the occupation.
+        :return: Matrix with the occupations of the states, with the shape of eigen_energy.
+        """
+        
+        occupations = np.zeros(self.eigen_energy.shape)
+        for kIndex, k_eigenstates in enumerate(self.eigen_states):
+            for i, eigenstate in enumerate(k_eigenstates.T):
+                state = State(eigenstate, self.system)
+                occupations[i, kIndex] = state.compute_specific_occupation(atom_indices)
 
         return occupations
 
@@ -234,10 +336,20 @@ class State:
         """ Method to obtain the probability amplitude corresponding to each atom.
          Returns:
              array amplitude [len(eigenvector)/norbitals] """
-        amplitude = np.abs(self.eigenvector) ** 2
-        return condense_vector(amplitude, self.norbitals)
 
-    def plot_amplitude(self, ax=None, title=None, linewidth=3):
+        amplitudes = np.abs(self.eigenvector) ** 2
+        reduced_vector = []
+        counter = 0
+        for atom_index in range(self.motif.shape[0]):
+            species = self.motif[atom_index, 3]
+            orbitals = self.norbitals[int(species)]
+            atom_amplitude = amplitudes[counter:counter + orbitals]
+            reduced_vector.append(np.sum(atom_amplitude))
+            counter += orbitals
+
+        return np.array(reduced_vector)
+
+    def plot_amplitude(self, ax=None, title=None, linewidth=3, bonds=True):
         """ Method to plot the atomic amplitude of the state on top of the crystalline positions"""
         amplitude = np.array(self.atomic_amplitude())
         scaled_amplitude = scale_array(amplitude, factor=30)
@@ -247,10 +359,11 @@ class State:
             ax = fig.add_subplot(111)
 
         atoms = np.array(self.motif)[:, :3]
-        for n, bond in enumerate(self.hoppings):
-            x0, y0 = atoms[bond[0], :2]
-            xneigh, yneigh = atoms[bond[1], :2]
-            ax.plot([x0, xneigh], [y0, yneigh], "-k", linewidth=1.5)
+        if bonds:
+            for n, bond in enumerate(self.hoppings):
+                x0, y0 = atoms[bond[0], :2]
+                xneigh, yneigh = atoms[bond[1], :2]
+                ax.plot([x0, xneigh], [y0, yneigh], "-k", linewidth=1.)
         ax.scatter(atoms[:, 0], atoms[:, 1],
                    c="royalblue", alpha=0.9,
                    s=scaled_amplitude)
