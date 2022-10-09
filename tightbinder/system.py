@@ -7,18 +7,12 @@
 # from it
 # System has the basic functionality for the other models to derive from it.
 
-from multiprocessing.sharedctypes import Value
 from .crystal import Crystal
-from .result import Spectrum
 import numpy as np
 import scipy.sparse as sp
 import scipy.sparse.linalg
 import sys
-from multiprocessing import cpu_count, Pool
 from itertools import product
-
-
-num_cores = cpu_count()
 
 
 class System(Crystal):
@@ -218,8 +212,9 @@ class System(Crystal):
 
         # Determine neighbour distances up to nn
         neigh_distances = self.compute_neighbour_distances(nn)
+        self.first_neighbour_distance = neigh_distances[0]
         print(f"Neighbour distances: {neigh_distances}")
-        if mode == "radius" and r < neigh_distances[0]:
+        if mode == "radius" and r < self.first_neighbour_distance:
             print("Warning: Radius smaller than first neighbour distance")
 
         # Look for neighbours
@@ -284,26 +279,42 @@ class System(Crystal):
         return len(neighbours)
 
     def coordination_number(self):
-        """ Method to find the coordination number of the solid """
-        bonds = self.__reconstruct_all_bonds()
+        """ Method to find the coordination number of the solid. Returns coordination number of solid,
+        and a list with the different individual coordinations numbers found within the solid. """
+        # bonds = self.__reconstruct_all_bonds()
+        bonds = np.array(self.bonds, dtype=object)
         coordination = 0
+        coordination_list = []
         for index in range(self.natoms):
-            coordination += self.atom_coordination_number(index, bonds)
+            coordination_number = self.atom_coordination_number(index, bonds)
+            coordination += coordination_number
+            if coordination_number not in coordination_list:
+                coordination_list.append(coordination_number)
 
+        coordination_list = np.sort(coordination_list)
         coordination /= self.natoms
-        return coordination
+        return coordination, coordination_list
 
-    def find_lowest_coordination_atoms(self):
-        bonds = self.__reconstruct_all_bonds()
-        coordination = self.coordination_number()
+    def find_lowest_coordination_atoms(self, include_first_neighbours=False, ):
+        # bonds = self.__reconstruct_all_bonds()
+        bonds = np.array(self.bonds, dtype=object)
+        if bonds.size == 0:
+            raise RuntimeError("Model must be initialized first")
+
+        coordination, coordination_list = self.coordination_number()
         atoms = []
         for index in range(self.natoms):
             atom_coordination = self.atom_coordination_number(index, bonds)
-            if coordination >= 3 and atom_coordination <= 3:
-                atoms.append(index)
-            elif coordination < 3 and atom_coordination <= 2:
+            if atom_coordination < coordination_list[-1]:
                 atoms.append(index)
 
+        if include_first_neighbours:
+            for atom in np.copy(atoms):
+                neighbours = np.where(bonds[:, 0] == atom)[0]
+                for index in neighbours:
+                    neighbour = bonds[index][1]
+                    if neighbour not in atoms:
+                        atoms.append(neighbour)
         return atoms
 
     def compute_first_neighbour_distance(self, near_cells=None):
@@ -332,6 +343,59 @@ class System(Crystal):
                     unit_cell_list.append(unit_cell)
 
         self._unit_cell_list = unit_cell_list
+
+    def identify_boundary(self, alpha: float = 0.4, ndim: int = 2, verbose: bool = False) -> np.ndarray:
+        """ 
+        Method to obtain the indices of the outermost atoms of the motif, taking into account
+        boundary conditions.
+        :param alpha: This parameters tunes the shape of the boundary. For alpha=0,
+        the boundary is a convex hull; as alpha increases the boundary becomes more
+        concave. Default value is 0.4
+        :param ndim: Dimension of the expected boundary. Defaults to 2.
+        :param verbose: Boolean parameter to print indices of boundary atoms. Defaults to False.
+        :return: Indices of atoms in the boundary.
+        :raises AssertionError: Crystal dimension different from two raises error. Also 
+        raises if bonds are not computed.
+        NB: Currently works only in 2D
+        """
+
+        edges = self.identify_motif_edges(alpha, ndim)
+        boundary_atoms = [edge[i] for edge in edges for i in range(2)]
+        boundary_atoms = np.unique(boundary_atoms)
+
+        # Remove boundary atoms from the periodic boundary
+        # Requires having computed the bonds previously
+        if not self.bonds:
+            raise AssertionError("Bonds must be computed first")
+        # First compute atoms in the periodic boundary
+        periodic_boundary_atoms = []
+        for bond in self.bonds:
+            cell = bond[2]
+            if np.linalg.norm(cell) != 0:
+                periodic_boundary_atoms.append(bond[0])
+                periodic_boundary_atoms.append(bond[1])
+        periodic_boundary_atoms = np.unique(periodic_boundary_atoms)      
+
+        boundary_atoms = np.setdiff1d(boundary_atoms, periodic_boundary_atoms)
+
+        # Detect atoms in the corner between periodic and finite boundary
+        corner_atoms = []
+        for atom in boundary_atoms:
+            for bond in self.bonds:
+                if bond[0] == atom and bond[1] in periodic_boundary_atoms:
+                    corner_atoms.append(bond[1])
+        
+        corner_atoms = np.unique(corner_atoms)
+        boundary_atoms = np.concatenate([boundary_atoms, corner_atoms])
+
+        if verbose:
+            print(f"Atoms in boundary: {boundary_atoms}")
+
+        if len(boundary_atoms) == 0:
+            print("Warning: No boundary atoms found")
+
+        return boundary_atoms
+
 
     # ####################################################################################
     # ############################### System modifications ###############################
@@ -365,9 +429,6 @@ class System(Crystal):
             # Update Bravais lattice and motif
             self.bravais_lattice[key_to_index[key]] *= ncells[key]
             self.motif = new_motif
-
-        for key in ncells.keys():
-                self.filling *= ncells[key]
         
         if update:
             self.update()
@@ -481,6 +542,9 @@ class System(Crystal):
 
     def solve(self, kpoints: list = None, neigval: int = None):
         """ Diagonalize the Hamiltonian to obtain the band structure and the eigenstates """
+
+        # Import result here to avoid circular import
+        from . import result
         
         if kpoints is None:
             kpoints = np.array([[0., 0., 0.]])
@@ -502,7 +566,7 @@ class System(Crystal):
             eigen_energy[:, n] = results[0]
             eigen_states.append(results[1])
 
-        return Spectrum(eigen_energy, np.array(eigen_states), kpoints, self)
+        return result.Spectrum(eigen_energy, np.array(eigen_states), kpoints, self)
 
 
 class FrozenClass:
@@ -561,6 +625,10 @@ def generate_near_cells(bravais_lattice, n=1, half=False):
     """ Auxiliary routine to generate the Bravais vectors corresponding to unit cells
      neighbouring the origin one. NB: It only generates half of them, since we are going to use hermiticity to
      generate the Hamiltonian """
+    
+    if bravais_lattice is None:
+        return np.array([[0., 0., 0.]])
+        
     ndim = len(bravais_lattice)
     if not half:
         mesh_points = generate_all_combinations(ndim)
