@@ -1,8 +1,6 @@
 # Module with all the models declarations, from the Slater-Koster tight-binding model
 # to toy models such as the BHZ model or Wilson fermions.
 
-from multiprocessing.sharedctypes import Value
-from xmlrpc.client import boolean
 from .system import System, FrozenClass
 from .crystal import Crystal
 import numpy as np
@@ -10,6 +8,7 @@ import scipy.sparse as sp
 import sys
 import math
 import cmath
+from .utils import overrides
 
 # Module-level variables
 sigma_x = np.array([[0, 1],
@@ -22,17 +21,12 @@ sigma_z = np.array([[1, 0],
 # ------------------ Constants and auxiliary methods ------------------
 PI = 3.14159265359
 
-def overrides(interface_class):
-    def overrider(method):
-        assert(method.__name__ in dir(interface_class))
-        return method
-    return overrider
-
 # ------------------------------ Models ------------------------------
 
 
 class SlaterKoster(System):
     """ Implementation of Slater-Koster tight-binding model """
+
     def __init__(self, configuration=None, mode='minimal', r=None, boundary="PBC"):
         if configuration is not None:
             super().__init__(system_name=configuration["System name"],
@@ -41,27 +35,23 @@ class SlaterKoster(System):
         else:
             super().__init__()
 
-        # Specific attributes of SKModel
         self.configuration = configuration
         self.species = configuration['Species']
-
-        if 'Filling' in self.configuration:
-            self.filling = self.configuration['Filling']
-
-        self.hamiltonian = None
-        self.neighbours = None
-        self.spin_orbit_hamiltonian = None
-        self._unit_cell_list = None
-        if mode not in ['minimal', 'radius']:
-            print('Error: Incorrect mode')
-            sys.exit(1)
+        self.boundary = boundary
         self._mode = mode
         self._r = r
 
-        self.boundary = boundary
+        self.hamiltonian = None
+        self.neighbours = None
+        self.spin_orbit_hamiltonian = None        
         self.__zeeman = None
         self.__ordering = None
+        self._unit_cell_list = None
 
+        if mode not in ['minimal', 'radius']:
+            print('Error: Incorrect mode')
+            sys.exit(1)
+        
         self.neighbours = len(configuration['SK amplitudes'].keys())
 
     @property
@@ -69,10 +59,25 @@ class SlaterKoster(System):
         return self.__ordering
 
     @ordering.setter
-    def ordering(self, ordering):
+    def ordering(self, ordering: str):
         if ordering != "atomic" and ordering != "spin":
             raise ValueError("ordering must be either atomic or spin")
         self.__ordering = ordering
+
+    @property
+    def nspecies(self):
+        return self.configuration["Species"]
+
+    @property
+    def filling(self) -> int:
+        if 'Filling' in self.configuration:
+            nelectrons = 0
+            for atom in self.motif:
+                species = int(atom[3])
+                nelectrons += self.configuration['Filling'][species]
+
+            return nelectrons
+
 
     # --------------- Methods ---------------
     def _hopping_amplitude(self, position_diff, *orbitals):
@@ -283,14 +288,15 @@ class SlaterKoster(System):
 
         self.spin_orbit_hamiltonian = spin_orbit_hamiltonian
 
-    def initialize_hamiltonian(self):
+    def initialize_hamiltonian(self, find_bonds=True):
         """ Routine to initialize the hamiltonian matrices which describe the system. """
 
         self.norbitals = [len(orbitals) for orbitals in self.configuration["Orbitals"]]
         self.basisdim = np.sum([self.norbitals[int(atom[3])] for atom in self.motif])
 
-        print('Computing first neighbours...\n')
-        self.find_neighbours(mode=self._mode, nn=self.neighbours, r=self._r)
+        if find_bonds:
+            print('Computing first neighbours...\n')
+            self.find_neighbours(mode=self._mode, nn=self.neighbours, r=self._r)
         self._determine_connected_unit_cells()
 
         hamiltonian = []
@@ -346,7 +352,6 @@ class SlaterKoster(System):
             if self.configuration['Spin-orbit coupling'] != 0:
                 self.__initialize_spin_orbit_coupling()
                 self.__spin_orbit_h()
-
                 hamiltonian[0] += self.spin_orbit_hamiltonian
         
         if self.matrix_type == "dense":
@@ -404,7 +409,7 @@ class SlaterKoster(System):
             for h in self.hamiltonian:
                 np.savetxt(file, h)
                 file.write("&\n")
-            if self.filling:
+            if self.configuration["Filling"]:
                 file.write("# filling\n" + str(self.filling) + "\n")
             file.write("#")
 
@@ -477,7 +482,7 @@ class AmorphousSlaterKoster(SlaterKoster):
         self._reference_lengths = {}
         self._decay_amplitude   = None
         self._decay_mode        = 'exponential'
-        self._mode               = 'radius'
+        self._mode              = 'radius'
 
     # Properties
     @property
@@ -552,6 +557,7 @@ class AmorphousSlaterKoster(SlaterKoster):
         species_pair = str(initial_species) + str(final_species)
         if species_pair not in self.reference_lengths.keys():
             species_pair = str(final_species) + str(initial_species)
+        
         reference_bond_length = self.reference_lengths[species_pair]
         r = np.linalg.norm(position_diff)
         hopping = super()._hopping_amplitude(position_diff, *orbitals)
@@ -563,10 +569,10 @@ class AmorphousSlaterKoster(SlaterKoster):
         return hopping
 
     @overrides(SlaterKoster)
-    def initialize_hamiltonian(self, override_bond_lengths=False):
+    def initialize_hamiltonian(self, find_bonds=True, override_bond_lengths=False):
         if not override_bond_lengths:
             self.__compute_reference_lengths()
-        return super().initialize_hamiltonian()
+        super().initialize_hamiltonian(find_bonds=find_bonds)
 
 
 class BHZ(System, FrozenClass):
@@ -953,6 +959,11 @@ class Stack(System):
         self.initialize_system_attributes()  
 
     @property
+    def filling(self):
+        nelectrons = self.bottom_layer.filling + self.top_layer.filling
+        return nelectrons
+
+    @property
     def interlayer_hopping(self):
         return self.__interlayer_hopping
 
@@ -1010,7 +1021,7 @@ class Stack(System):
         self.top_layer.initialize_hamiltonian()
         self._unit_cell_list = self.bottom_layer._unit_cell_list
         self.interlayer_bonds = self.find_interlayer_bonds(self.vertical)
-        self.filling = self.bottom_layer.filling + self.top_layer.filling
+        
 
         # Works only for
         self.norbitals = self.bottom_layer.norbitals
