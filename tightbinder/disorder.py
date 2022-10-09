@@ -16,15 +16,18 @@ import random
 
 
 # ----------------------------- Random routines -----------------------------
-def introduce_vacancies(system: System, probability=0.5):
-    """ Routine to introduce vacancies in a system, i.e. to remove atoms. It is a
-     statistical method, meaning that each atom in the motif has a probability of being removed
-     or not. Thus each call to this method would generate a different structure.
-     :param system: Instance of System class or subclass derived from it
-      NB: Strictly speaking, this can be used on Crystal class as well
-     :param probability: Parameter to specify probability of removing an atom;
-            defaults to 0.5
+def introduce_vacancies(system: System, probability: float = 0.5) -> System:
+    """ 
+    Routine to introduce vacancies in a system, i.e. to remove atoms. It is a
+    statistical method, meaning that each atom in the motif has a probability of being removed
+    or not. Thus each call to this method would generate a different structure.
+    :param system: Instance of System class or subclass derived from it
+    NB: Strictly speaking, this can be used on Crystal class as well
+    :param probability: Parameter to specify probability of removing an atom;
+    defaults to 0.5
+    :return: Modified system
     """
+
     prob_array = np.random.uniform(0, 1, system.natoms)
     remaining_atoms = np.where(prob_array > probability)
     system.motif = system.motif[remaining_atoms]
@@ -32,20 +35,23 @@ def introduce_vacancies(system: System, probability=0.5):
     return system
 
 
-def introduce_impurities(system: System, energy=2, probability=0.5):
-    """ Routine to introduce impurities in the system. These impurities are implemented
-     via a change in the on-site energies of the randomly selected atoms. This routine
-     randomly chooses atoms according to the specified probability, meaning that each call
-     will generate a different distribution.
-     NB: This routine will override ALL on-site energies for the selected atoms,
-     in a multi-orbital scenario.
-     NB2: Current implementation requires already having initialized the Hamiltonian
-     to modify the corresponding matrix elements
-     :param system: Instance of System class or subclass derived from it
-     :param probability: Parameter to specify probability of selecting an atom as
-      an impurity. Defaults to 0.5
-     :param energy: Value of on-site energy of impurities. Default to 2
+def introduce_impurities(system: System, energy: float = 2, probability: float = 0.5) -> System:
+    """ 
+    Routine to introduce impurities in the system. These impurities are implemented
+    via a change in the on-site energies of the randomly selected atoms. This routine
+    randomly chooses atoms according to the specified probability, meaning that each call
+    will generate a different distribution.
+    NB: This routine will override ALL on-site energies for the selected atoms,
+    in a multi-orbital scenario.
+    NB2: Current implementation requires already having initialized the Hamiltonian
+    to modify the corresponding matrix elements
+    :param system: Instance of System class or subclass derived from it
+    :param probability: Parameter to specify probability of selecting an atom as
+    an impurity. Defaults to 0.5.
+    :param energy: Value of on-site energy of impurities. Defaults to 2.
+    :return: Modified system.
     """
+
     if system.hamiltonian is None:
         print("Error: Hamiltonian must be initialized before calling introduce_impurities routine")
         sys.exit(1)
@@ -60,8 +66,9 @@ def introduce_impurities(system: System, energy=2, probability=0.5):
     return system
 
 
-def amorphize(system: System, spread=0.1, distribution="uniform", planar=False):
-    """ Routine to amorphize a crystalline system. This routine takes each atom and displaces
+def amorphize(system: System, spread: float = 0.1, distribution: str = "uniform", planar: bool = False) -> System:
+    """ 
+    Routine to amorphize a crystalline system. This routine takes each atom and displaces
     it with respect to its original position by an amount given by a distribution. Thus
     by specifying the spread of the distribution and the distribution itself, we can
     achieve higher or lesser degrees of amorphization.
@@ -78,7 +85,9 @@ def amorphize(system: System, spread=0.1, distribution="uniform", planar=False):
     the angles are still given by uniform dist.
     Also "gaussian_cartesian", which adds gaussian noise to each cartesian component directly
     :param planar: Optional parameter to enforce atom displacement happening only in the
-    plane defining a 2D system. """
+    plane defining a 2D system. 
+    :return: Modified system.
+    """
 
     first_neighbour_distance = system.compute_first_neighbour_distance()
     max_displacement = spread * first_neighbour_distance
@@ -120,11 +129,17 @@ def amorphize(system: System, spread=0.1, distribution="uniform", planar=False):
     return system
 
 
-def alloy(system: System, *concentrations: float):
-    """ Routine to alloy a material with two or more chemical species. In practice this means that each atom
+def alloy(system: System, *concentrations: float) -> System:
+    """ 
+    Routine to alloy a material with two or more chemical species. In practice this means that each atom
     is reasigned to a random chemical species, while keeping its position.
     For two chemical species, is is only necessary to specify the concentration x of the first one, Ax B1-x.
-    For n species, one has to specify n-1, so that An1 Bn2 Cn3 ... Mnn-1 """
+    For n species, one has to specify n-1, so that Ax1 Bx2 Cx3 ... Mxn-1 
+    :param system: System to modify.
+    :param concentrations: Array of length n - 1, where n is the number of species. Each
+    number must be between 0 and 1, and such that the sum is <= 1.
+    :return: Modified system.
+    """
 
     if len(concentrations) != system.species - 1:
         raise ValueError("Must give nspecies - 1 concentrations")
@@ -144,12 +159,15 @@ def alloy(system: System, *concentrations: float):
 
 
 # ----------------------------- Listing routines -----------------------------
-def remove_atoms(system: System, indices):
-    """ Routine to remove atoms from the system motif (i.e. create vacancies) according to
-     a list of indices provided
-      :param indices: List with indices of those atoms we want to remove, following the same
-      ordering as those atoms in the motif
-      :param system: Crystal class or subclass derived from it (typically System) """
+def remove_atoms(system: System, indices: list[int]) -> System:
+    """ 
+    Routine to remove atoms from the system motif (i.e. create vacancies) according to
+    a list of indices provided
+    :param indices: List with indices of those atoms we want to remove, following the same
+    ordering as those atoms in the motif
+    :param system: Crystal class or subclass derived from it (typically System).
+    :return: Modified system.
+    """
 
     all_atoms = list(range(len(system.natoms)))
     remaining_atoms = [index for index in all_atoms if index not in indices]
@@ -158,12 +176,16 @@ def remove_atoms(system: System, indices):
     return system
 
 
-def set_impurities(system: System, indices, energy=0.1):
-    """ Routine to set impurities on the system on the atoms specified by the list provided
-     :param system: System class or derived subclass. Must have Hamiltonian initialized
-     :param indices: List with indices of those atoms we want to transform into impurities. The indices
-     are referred to the order in the motif
-     :param energy: On-site energy for the impurities. Defaults to 0.1 """
+def set_impurities(system: System, indices: list[int], energy: float = 0.1) -> System:
+    """ 
+    Routine to set impurities on the system on the atoms specified by the list provided
+    :param system: System class or derived subclass. Must have Hamiltonian initialized
+    :param indices: List with indices of those atoms we want to transform into impurities. The indices
+    are referred to the order in the motif
+    :param energy: On-site energy for the impurities. Defaults to 0.1.
+    :return: Modified system.
+    """
+    
     if system.hamiltonian is None:
         print("Error: Hamiltonian must be initialized before calling introduce_impurities routine")
         sys.exit(1)
@@ -175,12 +197,15 @@ def set_impurities(system: System, indices, energy=0.1):
     return system
 
 
-def change_species(system: SlaterKoster, indices):
-    """ Routine to change the species of the atoms of the motif according to 
+def change_species(system: SlaterKoster, indices: list[int]) -> System:
+    """ 
+    Routine to change the species of the atoms of the motif according to 
     the array indices, which contains the new species for each atom of the motif.
     :param system: SlaterKoster object
     :param indices: List of indices denoting the chemical species of each atom. Must have length equal
-    to system.natoms """
+    to system.natoms. 
+    :return: Modified system.
+    """
 
     if(len(indices) != system.natoms):
         raise ValueError("Indices array must have the same length as system.natoms")
@@ -192,9 +217,5 @@ def change_species(system: SlaterKoster, indices):
     system.motif[:, 3] = indices
 
     return system
-
-
-
-
 
 

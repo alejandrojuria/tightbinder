@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.abspath('../..'))
 # -- Project information -----------------------------------------------------
 
 project = 'tightbinder'
-copyright = '2020, Alejandro Jose Uria Alvarez'
+copyright = '2022, Alejandro Jose Uria Alvarez'
 author = 'Alejandro Jose Uria Alvarez'
 
 
