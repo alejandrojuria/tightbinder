@@ -2,14 +2,16 @@
 # the input file. Config file can have blank spaces or comments starting with "!" 
 # (without commas) which are ommited at parsing
 
-from distutils.command.config import config
-from multiprocessing.sharedctypes import Value
+from io import TextIOWrapper
 import re
 from tightbinder.utils import pretty_print_dictionary
 
 
-def parse_raw_arguments(file):
-    """ Routine to parse the arguments raw (without any treatment) from the input file """
+def parse_raw_arguments(file: TextIOWrapper) -> dict:
+    """ Routine to parse the arguments raw (without any treatment) from the input file, following
+    the rules defined for configuration files.
+    :param file: Pointer to configuration file, obtained from call to open().
+    :return: Dictionary with the content corresponding to each flag of the config. file. """
 
     arguments = {}
     value = []
@@ -35,16 +37,25 @@ def parse_raw_arguments(file):
     return arguments
 
 
-def check_arguments(arguments, required_arguments):
-    """ Routine to check whether all required fields for model are present in the input file """
+def check_arguments(arguments: dict, required_arguments: list[str]) -> None:
+    """ Routine to check whether all required fields for model are present in the input file.
+    :param arguments: Dictionary whose keys are the arguments to compare.
+    :param required_arguments: List with expected arguments.
+    :raises KeyError: Raise exception if not all required arguments are present in the arguments. """
 
     for arg in required_arguments:
         if arg not in arguments.keys():
             raise KeyError(f"{arg} not present in input file")
 
 
-def shape_arguments(arguments):
-    """ Routine to rewrite correctly the arguments parsed (raw) from the input file """
+def shape_arguments(arguments: dict) -> dict:
+    """ Routine to rewrite correctly the arguments parsed (raw) from the input file.
+    :param arguments: Dictionary with the raw contents of the config. file.
+    :return: Dictionary with the contents of the config. file in numerical format. 
+    :raises IndexError: Raised if some arguments are missing
+    :raises ValueError: Raised if some arguments have incorrect values (e.g. string instead of numbers).
+    :raises SyntaxError: Raised for the SK amplitudes if not using correctly the brackets.
+    :raises NotImplementedError: Raised if there is an unexpected argument present. """
 
     for arg in arguments:
         if arg == 'System name':
@@ -54,7 +65,7 @@ def shape_arguments(arguments):
                 print(f'{type(e).__name__}: No system name given')
                 raise
 
-        elif arg in ['Dimensionality', 'Species', 'Filling']:
+        elif arg in ['Dimensionality', 'Species']:
             try:
                 arguments[arg] = int(arguments[arg][0])
             except IndexError as e:
@@ -185,6 +196,16 @@ def shape_arguments(arguments):
                     raise
             arguments[arg] = aux_array
 
+        elif arg == 'Filling':
+            aux_array = []
+            for line in arguments[arg]:
+                try:
+                    aux_array.append(float(line))
+                except ValueError as e:
+                    print(f'{type(e).__name__}: Filling must be a number')
+                    raise
+            arguments[arg] = aux_array
+
         elif arg == 'Mesh':
             try:
                 arguments[arg] = [int(num) for num in re.split(' |, |,', arguments[arg][0])]
@@ -213,13 +234,14 @@ def shape_arguments(arguments):
                 raise
 
         else:
-            raise NotImplementedError(f'{arg} is not a parameter')
+            raise NotImplementedError(f'{arg} is not a valid parameter')
 
     return arguments
 
 
-def check_coherence(arguments):
-    """ Routine to check that the present arguments are coherent among them (numbers basically) """
+def check_coherence(arguments: dict) -> None:
+    """ Routine to check that the present arguments are coherent among them.
+    :param arguments: Dictionary with the config. file content already processed with shape_arguments(). """
 
     # --------------- Model ---------------
     # Check dimensions
@@ -228,8 +250,6 @@ def check_coherence(arguments):
 
     # Check species
     if arguments['Species'] < 0:
-        raise ValueError('Error: Species has to be a positive number (1 or 2)')
-    elif arguments['Species'] > 2:
         raise ValueError('Error: Species has to be a positive number (1 or 2)')
 
     # Check vector basis
@@ -284,12 +304,24 @@ def check_coherence(arguments):
         if arguments["Mixing"] < 0 or arguments["Mixing"] > 1:
             raise AssertionError("Mixing must be a value between 0 and 1")
 
-        if not all([len(orbitals)==len(arguments["Orbitals"][0]) for orbitals in arguments["Orbitals"]]):
-            raise AssertionError("Mixing can only be used with isoelectronic species")
+        # TODO: Check if this is necessary
+        #if not all([len(orbitals)==len(arguments["Orbitals"][0]) for orbitals in arguments["Orbitals"]]):
+        #    raise AssertionError("Mixing can only be used with isoelectronic species")
     
     if 'Radius' in arguments:
         if arguments['Radius'] < 0:
             raise AssertionError("Radius must be a positive number")
+
+    if 'Filling' in arguments:
+        if len(arguments['Filling']) != arguments['Species']:
+            raise AssertionError("Must provide number of electrons of each chemical species.")
+
+        total_electrons = 0.0
+        for atom in arguments['Motif']:
+            species = int(atom[3])
+            total_electrons += arguments['Filling'][species]
+        if not total_electrons.is_integer():
+            raise AssertionError('Total number of electrons of the system must be a positive integer.')
 
     # ------------ Orbital consistency ------------
     # Check onsite energy per orbital per species
@@ -339,12 +371,22 @@ def check_coherence(arguments):
     if 'Radius' in arguments and len(arguments['SK amplitudes'].keys()) > 1:
         raise AssertionError('Must not specify neighbours in radius mode')
 
-    return None
 
 
-def transform_sk_coefficients(configuration):
+def sk_coefficients_standard_form(coefficients: list, orbitals: list) -> list:
+    """ Routine to transform the SK coefficients from the parsed form to the
+    standard form.
+    :param coefficients: List with the parsed coefficients
+    :param orbitals: List with orbitals corresponding to the given SK amplitudes
+    :return: List with SK amplitudes in standard form """
+
+    pass
+
+
+def transform_sk_coefficients(configuration: dict) -> None:
     """ Routine to transform SK coefficients into standardized form
-    for later manipulation in hamiltonian """
+    for later manipulation in hamiltonian.
+    :param configuration: Dictionary with the contents of the config. file already shaped. """
 
     dict = {}
     for neighbour in configuration["SK amplitudes"].keys():
@@ -400,11 +442,11 @@ def transform_sk_coefficients(configuration):
         
     configuration['SK amplitudes'] = dict
 
-    return None
 
 
-def mix_parameters(configuration):
-    """ Method to mix the given parameters in case that some are missing in presence of multiple species """
+def mix_parameters(configuration: dict) -> None:
+    """ Method to mix the given parameters in case that some are missing in presence of multiple species.
+    :param configuration: Dictionary with the contents of the config. file already shaped. """
 
     if 'Mixing' not in configuration:
         mixing = 0.5
@@ -419,13 +461,16 @@ def mix_parameters(configuration):
             for neighbour in configuration['SK amplitudes'].keys():
                 SK_dictionary = configuration['SK amplitudes'][neighbour]
                 if species not in SK_dictionary and species_i in SK_dictionary and species_j in SK_dictionary:
-                    SK_dictionary[species] = [SK_dictionary[species_i][n]*mixing + SK_dictionary[species_j][n]*(1 - mixing) for n in range(len(configuration["Orbitals"][0]))]
+                    SK_dictionary[species] = [SK_dictionary[species_i][n]*mixing + SK_dictionary[species_j][n]*(1 - mixing) for n in range(len(SK_dictionary[species_i]))]
 
 
-def parse_config_file(file):
-    """ Routine to obtain all the information from the configuration file, already shaped and verified """
+def parse_config_file(file: TextIOWrapper) -> dict:
+    """ Routine to obtain all the information from the configuration file, already shaped and verified.
+    :param file: Python pointer to config. file as returned by open().
+    :return: Dictionary with the contents of the config. file in standarized form, ready to be used by
+    the class SlaterKoster. """
 
-    print("Parsing configuration file... ")
+    print("Parsing configuration file... ", end='')
     configuration = shape_arguments(parse_raw_arguments(file))
     required_arguments = ['System name', 'Dimensionality', 'Bravais lattice', 'Species',
                           'Motif', 'Orbitals', 'Onsite energy', 'SK amplitudes']
