@@ -9,6 +9,7 @@ from scipy.interpolate import interp2d
 import math
 import sys
 from .utils import condense_vector, scale_array
+from .system import System
 
 class Spectrum:
     """
@@ -18,7 +19,7 @@ class Spectrum:
     """
 
     def __init__(self, eigen_energy: np.ndarray = None, eigen_states: np.ndarray = None, kpoints: np.ndarray = None, 
-                system: 'System' = None) -> None:
+                system: System = None) -> None:
 
         self.eigen_energy = eigen_energy
         self.eigen_states = eigen_states
@@ -191,9 +192,11 @@ class Spectrum:
         # ax.grid(linestyle='--')
 
     def plot_spectrum(self, title=''):
-        """ Routine to plot all the eigenvalues coming from the Bloch Hamiltonian diagonalization
+        """ 
+        Routine to plot all the eigenvalues coming from the Bloch Hamiltonian diagonalization
         in an ordered way.
-         Specially suitable for open systems, although it can be used for periodic systems as well."""
+        Specially suitable for open systems, although it can be used for periodic systems as well.
+        """
 
         all_eigenvalues = self.eigen_energy.reshape(-1, 1)
         all_eigenvalues = np.sort(all_eigenvalues)
