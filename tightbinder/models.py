@@ -822,10 +822,10 @@ class RealSpace(System):
         NB: The hopping has a specified direction, from initial to final. Since the final
         Hamiltonian is computed taking into account hermiticity, it is not necessary to specify the hopping
         in the other direction.
-         Parameters:
-             complex hopping
-             int initial, final: Indices of the atoms in the motif
-             array cell: Bravais vector connecting the cells of the two atoms. Defaults to zero """
+        Parameters:
+        complex hopping
+        int initial, final: Indices of the atoms in the motif
+        array cell: Bravais vector connecting the cells of the two atoms. Defaults to zero """
 
         assert type(initial) == int, "initial must be an integer"
         assert type(final)   == int, "initial must be an integer"
@@ -838,9 +838,10 @@ class RealSpace(System):
     def add_hoppings(self, hoppings, initial, final, cells=None):
         """ Same method as add_hopping but we input a list of hoppings at once.
         Parameters:
-             list hoppings: list of size nhop
-             list initial, final: list of indices
-             matrix cells: Each row denotes the Bravais vector connecting two cells. Defaults to None """
+        list hoppings: list of size nhop
+        list initial, final: list of indices
+        matrix cells: Each row denotes the Bravais vector connecting two cells. Defaults to None """
+        
         if len(hoppings) != len(initial) or len(initial) != len(final):
             raise ValueError("Provided list must have the same length")
 

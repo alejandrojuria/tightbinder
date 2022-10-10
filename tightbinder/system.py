@@ -7,6 +7,7 @@
 # from it
 # System has the basic functionality for the other models to derive from it.
 
+from typing import Union
 from .crystal import Crystal
 import numpy as np
 import scipy.sparse as sp
@@ -102,26 +103,32 @@ class System(Crystal):
     # ################################# Bonds/Neighbours #################################
     # ####################################################################################
 
-    def add_bond(self, initial, final, cell=(0., 0., 0.), neigh='1'):
-        """ Method to add a hopping between two atoms of the motif.
-        NB: The hopping has a specified direction, from initial to final. Since the final
+    def add_bond(self, initial: int, final: int, cell: Union[list, tuple, np.ndarray] = (0., 0., 0.), neigh: str = '1') -> None:
+        """ 
+        Method to add a hopping between two atoms of the motif.
+        NB: The hopping has a specified direction, from initial to final. The HSince the final
         Hamiltonian is computed taking into account hermiticity, it is not necessary to specify the hopping
-        in the other direction.
-         Parameters:
-             int initial, final: Indices of the atoms in the motif
-             array cell: Bravais vector connecting the cells of the two atoms. Defaults to zero
-             neigh: Store neighbour index. Defaults to 1 """
+        in the other direction. (TODO: Change this, no longer working like this.)
+        :param initial: Index of initial atom of the bond.
+        :param final: Index of final atom of the bond.
+        :param cell: Array with cell containing the final atom. Defaults to [0., 0., 0.].
+        :param neigh: String to denote if the bond corresponds to first neighbour, second, etc. 
+        Defaults to '1'.
+        """
 
         hopping_info = [initial, final, cell, neigh]
         self.bonds.append(hopping_info)
 
-    def add_bonds(self, initial, final, cells=None, neigh=None):
-        """ Same method as add_hopping but we input a list of hoppings at once.
-        Parameters:
-             list hoppings: list of size nhop
-             list initial, final: list of indices
-             matrix cells: Each row denotes the Bravais vector connecting two cells. Defaults to None 
-             neigh: list with neighbour indices. Default to none """
+    def add_bonds(self, initial: list[int], final: list[int], cells: Union[list, np.ndarray] = None, neigh: list[str] = None) -> None:
+        """ 
+        Same method as add_hopping but we input a list of hoppings at once.
+        :param initial: List of indices of initial atom of the bond.
+        :param final: List of indices of final atom of the bond.
+        :param cell:  List of cell vectors containing the final atom. Defaults to None, which
+        corresponds to the origin cell.
+        :param neigh: List of strings to denote if the bonds corresponds to first neighbour, second, etc respectively.
+        Defaults to None, which corresponds to all being '1'.
+        """
 
         if len(initial) != len(final):
             raise ValueError("Initial and final lists do not have same size")
