@@ -44,6 +44,11 @@ tightbinder disorder
 .. automodule:: tightbinder.disorder
    :members:
 
+tightbinder topology
+=======================================
+.. automodule:: tightbinder.topology
+   :members:
+
 
 Indices and tables
 ==================
