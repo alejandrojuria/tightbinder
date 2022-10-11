@@ -6,12 +6,14 @@
 # interaction values)
 
 import argparse
+from statistics import mode
 import sys
 from tightbinder.fileparse import parse_config_file
 from tightbinder.topology import calculate_wannier_centre_flow, calculate_z2_invariant, plot_wannier_centre_flow
 import time
 from tightbinder.models import SlaterKoster
 import matplotlib.pyplot as plt
+import vpython
 
 
 def main():
@@ -23,6 +25,7 @@ def main():
     parser.add_argument('-cv', '--crystalview', action='store_true', help='3D view of the crystal')
     parser.add_argument('-z2', '--z2invariant', action='store_true', help='Compute Z2 invariant')
     parser.add_argument('-z2p', '--z2plot', action='store_true', help='Plot Wannier charge centers used for Z2 computation')
+    parser.add_argument('-e', '--export', action='store_true', help='Export model Hamiltonian to file')
     args = parser.parse_args()
 
     try:
@@ -51,13 +54,22 @@ def main():
         if args.z2plot:
             plot_wannier_centre_flow(wcc, show_midpoints=True)
 
+    if args.export:
+        modelfile = args.file
+        # Remove extension if present and blanks
+        modelfile = modelfile.replace(".txt", '').strip() + ".model"
+        model.export_model(modelfile)
+        print(f"Written model to file {modelfile}")
+
     labels = configuration['High symmetry points']
     kpoints = model.high_symmetry_path(configuration['Mesh'][0], labels)
+    print(kpoints)
 
     results = model.solve(kpoints)
     results.plot_along_path(labels, title=f'{model.system_name}')
 
     plt.show()
+
 
 if __name__ == "__main__":
     initial_time = time.time()
