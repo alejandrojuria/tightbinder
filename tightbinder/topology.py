@@ -2,9 +2,8 @@
 # as well as the topological invariants derived from it. Local markers such as the Bott index or the
 # local Chern number are implemented as well.
 
-from audioop import add
-from multiprocessing.sharedctypes import Value
-from typing import Union
+
+from typing import Union, Tuple
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
@@ -248,7 +247,7 @@ def calculate_chern_number(wcc_flow: np.ndarray) -> float:
 
 
 # ---------------------------- Z2 invariant ----------------------------
-def __find_wcc_midpoint_gap(wcc: np.ndarray) -> tuple[float, float]:
+def __find_wcc_midpoint_gap(wcc: np.ndarray) -> Tuple[float, float]:
     """ 
     Routine to find the midpoint of the biggest gap between WCCs. 
     
@@ -272,7 +271,7 @@ def __find_wcc_midpoint_gap(wcc: np.ndarray) -> tuple[float, float]:
     return midpoint_gap, position_gap
 
 
-def calculate_wcc_gap_midpoints(wcc_flow: np.ndarray) -> tuple[list, list]:
+def calculate_wcc_gap_midpoints(wcc_flow: np.ndarray) -> Tuple[list, list]:
     """ 
     Routine to compute the midpoint of the biggest gap for the WCC flow, and
     their relative positions to the WCC.
