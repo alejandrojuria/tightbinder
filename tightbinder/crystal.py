@@ -12,7 +12,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from numpy.linalg import LinAlgError
 import math
 import sys
-from typing import Union
+from typing import Union, List
 from .utils import generate_basis_combinations, alpha_shape_2d
 
 
@@ -364,7 +364,7 @@ class Crystal:
         for n, point in enumerate(self.high_symmetry_points):
             self.high_symmetry_points[n] = point[1]
 
-    def high_symmetry_path(self, nk: int, points: list[str]) -> list:
+    def high_symmetry_path(self, nk: int, points: List[str]) -> list:
         """ 
         Routine to generate a path in reciprocal space along the high symmetry points (HSPs) indicated.
         The HSPs must be within those corresponding to the associated symmetry group, otherwise the method will throw an error.

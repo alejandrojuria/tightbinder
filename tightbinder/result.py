@@ -5,11 +5,11 @@ from matplotlib.axes import Axes
 from matplotlib.cm import get_cmap
 from matplotlib.collections import LineCollection
 import numpy as np
-from scipy.interpolate import interp2d 
 import math
 import sys
 from .utils import condense_vector, scale_array
 from .system import System
+from typing import List
 
 class Spectrum:
     """
@@ -71,8 +71,8 @@ class Spectrum:
 
         plt.show()
 
-    def plot_along_path(self, labels: list[str], title: str = '', edge_states: bool = False, rescale: bool = True,
-                        ax: Axes = None, e_values: list[float] = [], fontsize: float = 10) -> None:
+    def plot_along_path(self, labels: List[str], title: str = '', edge_states: bool = False, rescale: bool = True,
+                        ax: Axes = None, e_values: List[float] = [], fontsize: float = 10) -> None:
         """ 
         Method to plot the bands along a path in reciprocal space, normally along high symmetry points.
         :param labels: Labels of the High Symmetry Points of the path.
@@ -292,7 +292,7 @@ class Spectrum:
         average_ipr /= len(states)
         return average_ipr
 
-    def calculate_occupation(self, atom_indices: list[int]) -> np.ndarray:
+    def calculate_occupation(self, atom_indices: List[int]) -> np.ndarray:
         """ 
         Method to compute the occupation for all the states in the spectrum
         on the specified atoms

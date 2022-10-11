@@ -7,7 +7,7 @@
 # from it
 # System has the basic functionality for the other models to derive from it.
 
-from typing import Union
+from typing import Union, List
 from .crystal import Crystal
 import numpy as np
 import scipy.sparse as sp
@@ -119,7 +119,7 @@ class System(Crystal):
         hopping_info = [initial, final, cell, neigh]
         self.bonds.append(hopping_info)
 
-    def add_bonds(self, initial: list[int], final: list[int], cells: Union[list, np.ndarray] = None, neigh: list[str] = None) -> None:
+    def add_bonds(self, initial: List[int], final: List[int], cells: Union[list, np.ndarray] = None, neigh: List[str] = None) -> None:
         """ 
         Same method as add_hopping but we input a list of hoppings at once.
         :param initial: List of indices of initial atom of the bond.
@@ -366,7 +366,11 @@ class System(Crystal):
         NB: Currently works only in 2D
         """
 
-        edges = self.identify_motif_edges(alpha, ndim)
+        import copy
+
+        original_edges = self.identify_motif_edges(alpha, ndim)
+        bigger_system = copy.deepcopy(self).supercell(n1=2)
+        edges = bigger_system.identify_motif_edges(alpha, ndim)
         boundary_atoms = [edge[i] for edge in edges for i in range(2)]
         boundary_atoms = np.unique(boundary_atoms)
 
@@ -384,6 +388,7 @@ class System(Crystal):
         periodic_boundary_atoms = np.unique(periodic_boundary_atoms)      
 
         boundary_atoms = np.setdiff1d(boundary_atoms, periodic_boundary_atoms)
+        print(boundary_atoms)
 
         # Detect atoms in the corner between periodic and finite boundary
         corner_atoms = []
@@ -395,13 +400,19 @@ class System(Crystal):
         corner_atoms = np.unique(corner_atoms)
         boundary_atoms = np.concatenate([boundary_atoms, corner_atoms])
 
-        if verbose:
-            print(f"Atoms in boundary: {boundary_atoms}")
+        atoms = []
+        for atom in boundary_atoms:
+            if atom in range(len(self.motif)):
+                atoms.append(atom)
+        atoms = np.unique(atoms)
 
-        if len(boundary_atoms) == 0:
+        if verbose:
+            print(f"Atoms in boundary: {atoms}")
+
+        if len(atoms) == 0:
             print("Warning: No boundary atoms found")
 
-        return boundary_atoms
+        return atoms
 
 
     # ####################################################################################

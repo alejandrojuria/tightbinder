@@ -6,18 +6,33 @@ from tightbinder.system import System
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.sparse as sp
+from typing import Tuple, List
 
 def _retarded_green_function(w: float, e: float, delta: float) -> complex:
-    """ Routine to compute the retarded Green function, to be used to obtain
-    the DOS """
+    """ 
+    Routine to compute the retarded Green function, to be used to obtain
+    the DOS.
+    :param w: Value of frequency.
+    :param e: Value of energy.
+    :param delta: Value of broadening.
+    :return: Retarded Green's function evaluated at w, e. 
+    """
+    
     green = 1./(w - e + 1j*delta)
     return green
 
 
-def dos(result: Spectrum, energy: float = None, delta: float = 0.1, npoints: int = 200) -> list[float]:
-    """ Routine to compute the density of states from a Result object.
-    :param result: Result object
-    :param delta: Delta broadening, defaults to 0.01 """
+def dos(result: Spectrum, energy: float = None, delta: float = 0.1, npoints: int = 200) -> Tuple(List[float], List[float]):
+    """ 
+    Routine to compute the density of states from a Result object.
+    :param result: Result object.
+    :param energy: Value of energy where DoS is computed. If None, then the DoS is computed
+    for the whole energy window of the spectrum.
+    :param delta: Delta broadening, defaults to 0.01. 
+    :param npoints: Number of energy points to use if sampling whole DoS.
+    :return: Returns duple with values of dos, and energies where was computed.
+    """
+    
     nkpoints = result.eigen_energy.shape[1]
     eigval = result.eigen_energy.reshape(-1, )
     if not energy:
@@ -37,19 +52,22 @@ def dos(result: Spectrum, energy: float = None, delta: float = 0.1, npoints: int
 
 
 def dos_kpm(system: System, energy: float = None, npoints: int = 200, nmoments: int = 30, r: int = 10) -> float:
-    """ Routine to compute the density of states using the Kernel Polynomial Method.
-    Intended to be used with supercells and k=0. """
+    """ 
+    Routine to compute the density of states using the Kernel Polynomial Method.
+    Intended to be used with supercells and k=0. 
+    """
 
     if system.matrix_type != "sparse":
         print("Warning: KPM computations are intended to be run with sparse matrices (faster and less memory usage)")
 
     print("Computing DOS using the KPM...")
     h = system.hamiltonian_k([[0., 0., 0.]])
+    if system.matrix_type == "dense":
+        h = sp.bsr_matrix(h)
     # h spectrum has to be between -1 and 1
-    h_norm = np.linalg.norm(h, ord=np.inf)
+    h_norm = sp.linalg.norm(h, ord=np.inf)
     h /= h_norm
-    h = sp.csr_array(h)
-
+    
     if not energy:
         emin, emax = -1, 1
         energies = np.linspace(emin, emax, npoints, endpoint=True)[1:-1]
@@ -71,7 +89,7 @@ def dos_kpm(system: System, energy: float = None, npoints: int = 200, nmoments: 
     return densities, energies
 
 
-def jackson_kernel(nmoments: int) -> list[float]:
+def jackson_kernel(nmoments: int) -> List[float]:
     """ Routine to calculate the Jackson kernel to improve the KPM calculations """
     g = [((nmoments - n + 1)*np.cos(np.pi*n/(nmoments + 1)) +
           np.sin(np.pi*n/(nmoments + 1))/np.tan(np.pi*n/(nmoments + 1)))/(nmoments + 1) for n in range(1, nmoments)]
@@ -196,19 +214,22 @@ def ground_state_projector(nmoments: int, h: np.ndarray, energy: int):
     return projector.toarray()
 
 
-def restricted_density_matrix(system: System, partition: list, nmoments: int = 100, r: int = 10):
-    """ Routine to compute the one-particle density matrix, restricted to one spatial partition of the system """
+def restricted_density_matrix(system: System, partition: list, nmoments: int = 100, npoints: int = 200, nmoments_dos: int = 300, r: int = 10):
+    """ Routine to compute the one-particle density matrix, restricted to one spatial partition of the system. First it estimates the Fermi
+    energy from the DOS computed with the KPM, and then uses it to compute the reduced density matrix """
 
     if system.matrix_type != "sparse":
         print("Warning: KPM computations are intended to be run with sparse matrices (faster and less memory usage)")
     
     h = system.hamiltonian_k([[0., 0., 0.]])
-    h_norm = np.linalg.norm(h)
-    h /= h_norm
-    h = sp.bsr_matrix(h)
+    if system.matrix_type == "dense":
+        h = sp.bsr_matrix(h)
 
+    h_norm = sp.linalg.norm(h)
+    h /= h_norm
+    
     # First compute fermi energy from dos
-    dos, energy = dos_kpm(system, npoints=300, nmoments=int(nmoments), r=r)
+    dos, energy = dos_kpm(system, npoints=npoints, nmoments=nmoments_dos, r=r)
     efermi = fermi_energy(dos, energy, system)/h_norm
 
     orbitals = []
@@ -226,7 +247,6 @@ def restricted_density_matrix(system: System, partition: list, nmoments: int = 1
     orbital_values = np.ones(len(orbitals))
     orbital_matrix = sp.csr_matrix((orbital_values, (orbitals, orbital_cols)), shape=(system.basisdim, len(orbitals)))
 
-    fermi_en = 0
     moments = compute_projector_momentum(nmoments, efermi)
     jackson = jackson_kernel(nmoments)
     moments = moments * jackson
@@ -242,4 +262,5 @@ def restricted_density_matrix(system: System, partition: list, nmoments: int = 1
 
     density_matrix = orbital_matrix.transpose().dot(density_matrix).toarray()
 
+    print(f"Fermi energy: {efermi}")
     return density_matrix

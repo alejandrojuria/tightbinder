@@ -7,12 +7,12 @@
 # - Listing: Instead of generating pseudorandom numbers to select the target atoms,
 # alternatively we can specify which atoms
 
-from multiprocessing.sharedctypes import Value
 import numpy as np
 from tightbinder.models import SlaterKoster
 from tightbinder.system import System
 import sys
 import random
+from typing import List
 
 
 # ----------------------------- Random routines -----------------------------
@@ -159,7 +159,7 @@ def alloy(system: System, *concentrations: float) -> System:
 
 
 # ----------------------------- Listing routines -----------------------------
-def remove_atoms(system: System, indices: list[int]) -> System:
+def remove_atoms(system: System, indices: List[int]) -> System:
     """ 
     Routine to remove atoms from the system motif (i.e. create vacancies) according to
     a list of indices provided
@@ -176,7 +176,7 @@ def remove_atoms(system: System, indices: list[int]) -> System:
     return system
 
 
-def set_impurities(system: System, indices: list[int], energy: float = 0.1) -> System:
+def set_impurities(system: System, indices: List[int], energy: float = 0.1) -> System:
     """ 
     Routine to set impurities on the system on the atoms specified by the list provided
     :param system: System class or derived subclass. Must have Hamiltonian initialized
@@ -197,7 +197,7 @@ def set_impurities(system: System, indices: list[int], energy: float = 0.1) -> S
     return system
 
 
-def change_species(system: SlaterKoster, indices: list[int]) -> System:
+def change_species(system: SlaterKoster, indices: List[int]) -> System:
     """ 
     Routine to change the species of the atoms of the motif according to 
     the array indices, which contains the new species for each atom of the motif.

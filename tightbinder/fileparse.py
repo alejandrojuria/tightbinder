@@ -5,7 +5,7 @@
 from io import TextIOWrapper
 import re
 from tightbinder.utils import pretty_print_dictionary
-
+from typing import List
 
 def parse_raw_arguments(file: TextIOWrapper) -> dict:
     """ Routine to parse the arguments raw (without any treatment) from the input file, following
@@ -37,7 +37,7 @@ def parse_raw_arguments(file: TextIOWrapper) -> dict:
     return arguments
 
 
-def check_arguments(arguments: dict, required_arguments: list[str]) -> None:
+def check_arguments(arguments: dict, required_arguments: List[str]) -> None:
     """ Routine to check whether all required fields for model are present in the input file.
     :param arguments: Dictionary whose keys are the arguments to compare.
     :param required_arguments: List with expected arguments.
