@@ -25,6 +25,7 @@ EPS = 0.001
 class Crystal:
     """
     Implementation of Crystal class. Defaults to square lattice if no input is given.
+
     :param bravais_lattice: List with the bravais vectors 
     :param motif: List with positions and chemical species of atoms of the motif
     """
@@ -90,6 +91,7 @@ class Crystal:
     def add_atom(self, position: Union[list, np.ndarray], species: int = 0) -> None:
         """
         Method to add one atom from a numbered species into a specific position.
+
         :param position: Array with atom coordinaes. Must be three-dimensional.
         :param species: Index of corresponding chemical species. Defaults to 0. 
         """
@@ -109,6 +111,7 @@ class Crystal:
         """ 
         Method to add a list of atoms of specified species at some positions.
         Built on top of method add_atom.
+        
         :param atoms: List of length n, containing the positions of each atom.
         :param species: List with the indices of the chemical species. If None, all default to zero. 
         """
@@ -122,6 +125,7 @@ class Crystal:
         """ 
         Method to remove the atom at the specified index from the motif. Note
         that this method does not remove existing bonds corresponding to the removed atom.
+
         :param index: Index of atom to be removed. 
         """
 
@@ -134,6 +138,7 @@ class Crystal:
         """ 
         Method to remove the atoms specified in a list with all their indices. 
         Built upon the method remove_atom.
+        
         :param indices: List with the indices of the atoms to be removed. 
         """
 
@@ -155,8 +160,9 @@ class Crystal:
     def compute_unit_cell_area(self) -> float:
         """ 
         Method to compute the area of the unit cell. 
-        :return: Value of unit cell area.
         TODO: Adapt for 1D and 3D 
+
+        :return: Value of unit cell area.
         """
         
         area = 0.0
@@ -253,6 +259,7 @@ class Crystal:
         """ 
         Routine to compute a mesh of the first Brillouin zone using the
         Monkhorst-Pack algorithm.
+
         :param mesh: List with the number of kpoints along each axis.
         :return: Array with all kpoints, nk x 3 
         """
@@ -340,9 +347,10 @@ class Crystal:
     def __reorder_high_symmetry_points(self, labels: list) -> None:
         """ 
         Routine to reorder the high symmetry points according to a given vector of labels
-         for later representation.
-         DEPRECATED with the dictionary update 
-         """
+        for later representation.
+        DEPRECATED with the dictionary update 
+        """
+        
         points = []
         for label in labels:
             appended = False
@@ -368,6 +376,7 @@ class Crystal:
         """ 
         Routine to generate a path in reciprocal space along the high symmetry points (HSPs) indicated.
         The HSPs must be within those corresponding to the associated symmetry group, otherwise the method will throw an error.
+
         :param nk: Number of kpoints in the path. They are evenly distributed between HSPs.
         :param points: List of labels of desired HSPs.
         :return: List of kpoints following the path specified with the labels. 
@@ -398,6 +407,7 @@ class Crystal:
         Note that this method returns exclusively the outermost atoms, independently
         of the boundary conditions. To take into account boundary conditions, one should
         call identify_boundary() from System.
+
         :param alpha: This parameters tunes the shape of the boundary. For alpha=0,
         the boundary is a convex hull; as alpha increases the boundary becomes more
         concave. Default value is 0.4
@@ -428,10 +438,12 @@ class Crystal:
         This method uses directly the ConvexHull method from Scipy to identify the outmost points
         of the motif. Compute the ConvexHull three times, each time removing the points detected in the
         previous iteration.
-        :param loop: Number of times the ConvexHull is applied, to increase number of points in the edge.
-        :return: Indices of atoms belonging to edges of motif.
+
         NB: If given 3d points, they must not be coplanar for the algorithm
         to work. If they are, then the points must be given as 2d 
+
+        :param loop: Number of times the ConvexHull is applied, to increase number of points in the edge.
+        :return: Indices of atoms belonging to edges of motif.
         """
 
         atoms_coordinates = np.copy(self.motif[:, :2])
@@ -458,7 +470,8 @@ class Crystal:
         """ 
         Method to compute the geometric center of the crystal from the positions of the atoms
         of the motif. Calculated as the average of all atomic positions.
-        :returns: Numpy array with the cartesian coordinates of the center 
+
+        :return: Numpy array with the cartesian coordinates of the center 
         """
 
         center = np.sum(self.motif[:, :3], axis=0)/self.natoms
@@ -468,6 +481,7 @@ class Crystal:
     def plot_crystal(self, cell_number: int = 1, crystal_name: str = '') -> None:
         """ 
         Method to visualize the crystalline structure (Bravais lattice + motif).
+
         :param cell_number: Number of cells appended in each direction with respect to the origin. Defaults to 1.
         :param crystal_name: Name of the crystal. Defaults to the empty string. 
         """
@@ -510,7 +524,9 @@ class Crystal:
         plt.show()
 
     def visualize(self) -> None:
-        """ Method to render a 3d visualization of the crystal using the self.vpython library. """
+        """ 
+        Method to render a 3d visualization of the crystal using the self.vpython library. 
+        """
 
         CrystalView(self).visualize()
         print("\nPress Ctrl+c to exit visualization or close the window.")
@@ -537,8 +553,9 @@ class CrystalView:
         self.atom_radius = None
 
         try:
-            self.edge_atoms = crystal.identify_boundary()
+            self.edge_atoms = crystal.identify_boundary(corner_atoms=True)
             self.neighbours = crystal.bonds
+            print(self.edge_atoms)
         except IndexError or AttributeError as e:
             print('visualize(): System must be initialized first')
             raise
@@ -741,6 +758,12 @@ class CrystalView:
         Private method to highlight the edges of the atom of the solid. 
         """
 
-        for atom_index in self.edge_atoms:
-            self.atoms[atom_index].color = self.vp.color.green
+        if button.text == "highlight edge atoms":
+            for atom_index in self.edge_atoms:
+                self.atoms[atom_index].color = self.vp.color.green
+                button.text = "dehighlight edge atoms"
+        else:
+            for atom_index in self.edge_atoms:
+                self.atoms[atom_index].color = self.vp.color.yellow
+                button.text = "highlight edge atoms"
 

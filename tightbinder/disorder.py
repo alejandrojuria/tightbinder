@@ -21,6 +21,7 @@ def introduce_vacancies(system: System, probability: float = 0.5) -> System:
     Routine to introduce vacancies in a system, i.e. to remove atoms. It is a
     statistical method, meaning that each atom in the motif has a probability of being removed
     or not. Thus each call to this method would generate a different structure.
+
     :param system: Instance of System class or subclass derived from it
     NB: Strictly speaking, this can be used on Crystal class as well
     :param probability: Parameter to specify probability of removing an atom;
@@ -44,7 +45,8 @@ def introduce_impurities(system: System, energy: float = 2, probability: float =
     NB: This routine will override ALL on-site energies for the selected atoms,
     in a multi-orbital scenario.
     NB2: Current implementation requires already having initialized the Hamiltonian
-    to modify the corresponding matrix elements
+    to modify the corresponding matrix elements.
+
     :param system: Instance of System class or subclass derived from it
     :param probability: Parameter to specify probability of selecting an atom as
     an impurity. Defaults to 0.5.
@@ -75,7 +77,8 @@ def amorphize(system: System, spread: float = 0.1, distribution: str = "uniform"
     By default it will into account the size of the supercell, so that any atom that moves outside
     of it goes to the other side.
     NB: This routine DOES NOT modify the hopping parameters according to the displacements,
-    this has to be done in the class defining the system
+    this has to be done in the class defining the system.
+
     :param system: Instance of System class or any derived subclass
     :param spread: Maximum distance the atoms can be displaced. Given in units of
     first neighbours (spread=1 means totally random positions). Defaults to 0.1
@@ -134,7 +137,8 @@ def alloy(system: System, *concentrations: float) -> System:
     Routine to alloy a material with two or more chemical species. In practice this means that each atom
     is reasigned to a random chemical species, while keeping its position.
     For two chemical species, is is only necessary to specify the concentration x of the first one, Ax B1-x.
-    For n species, one has to specify n-1, so that Ax1 Bx2 Cx3 ... Mxn-1 
+    For n species, one has to specify n-1, so that Ax1 Bx2 Cx3 ... Mxn-1.
+
     :param system: System to modify.
     :param concentrations: Array of length n - 1, where n is the number of species. Each
     number must be between 0 and 1, and such that the sum is <= 1.
@@ -162,7 +166,8 @@ def alloy(system: System, *concentrations: float) -> System:
 def remove_atoms(system: System, indices: List[int]) -> System:
     """ 
     Routine to remove atoms from the system motif (i.e. create vacancies) according to
-    a list of indices provided
+    a list of indices provided.
+
     :param indices: List with indices of those atoms we want to remove, following the same
     ordering as those atoms in the motif
     :param system: Crystal class or subclass derived from it (typically System).
@@ -178,7 +183,8 @@ def remove_atoms(system: System, indices: List[int]) -> System:
 
 def set_impurities(system: System, indices: List[int], energy: float = 0.1) -> System:
     """ 
-    Routine to set impurities on the system on the atoms specified by the list provided
+    Routine to set impurities on the system on the atoms specified by the list provided.
+
     :param system: System class or derived subclass. Must have Hamiltonian initialized
     :param indices: List with indices of those atoms we want to transform into impurities. The indices
     are referred to the order in the motif
@@ -201,6 +207,7 @@ def change_species(system: SlaterKoster, indices: List[int]) -> System:
     """ 
     Routine to change the species of the atoms of the motif according to 
     the array indices, which contains the new species for each atom of the motif.
+    
     :param system: SlaterKoster object
     :param indices: List of indices denoting the chemical species of each atom. Must have length equal
     to system.natoms. 
