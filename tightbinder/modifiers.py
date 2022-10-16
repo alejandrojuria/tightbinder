@@ -65,9 +65,9 @@ def saturate_bonds(system: SlaterKoster, onsite: float = 0, vss: float = 0, vsp:
         system.add_bond(system.natoms - 1, atom_index, cell)
     
     if system.configuration["Spin"] == True:
-        system.configuration["Filling"].append(0.5)
-    else:
         system.configuration["Filling"].append(1)
+    else:
+        system.configuration["Filling"].append(0.5)
     system.configuration["Species"] += 1
     system.configuration["Orbitals"].append(['s'])
     system.configuration["Onsite energy"].append([onsite])
