@@ -351,54 +351,66 @@ class System(Crystal):
 
         self._unit_cell_list = unit_cell_list
 
-    def identify_boundary(self, alpha: float = 0.4, ndim: int = 2, verbose: bool = False) -> np.ndarray:
+    def identify_boundary(self, alpha: float = 0.4, ndim: int = 2, verbose: bool = False, corner_atoms: bool = False) -> np.ndarray:
         """ 
         Method to obtain the indices of the outermost atoms of the motif, taking into account
-        boundary conditions.
+        boundary conditions. NB: Currently works only in 2D
+
         :param alpha: This parameters tunes the shape of the boundary. For alpha=0,
         the boundary is a convex hull; as alpha increases the boundary becomes more
         concave. Default value is 0.4
         :param ndim: Dimension of the expected boundary. Defaults to 2.
         :param verbose: Boolean parameter to print indices of boundary atoms. Defaults to False.
+        :param cornes_atoms: Boolean to toggle detection of atoms that might be shared by the 
+        periodic boundary and the open boundary.
         :return: Indices of atoms in the boundary.
         :raises AssertionError: Crystal dimension different from two raises error. Also 
         raises if bonds are not computed.
-        NB: Currently works only in 2D
         """
 
-        import copy
+        # Requires having computed the bonds previously
+        if not self.bonds:
+            raise AssertionError("Bonds must be computed first")
+        bonds = self.bonds
 
-        original_edges = self.identify_motif_edges(alpha, ndim)
-        bigger_system = copy.deepcopy(self).supercell(n1=2)
-        edges = bigger_system.identify_motif_edges(alpha, ndim)
+        edges = self.identify_motif_edges(alpha, ndim)
+        if not edges:
+            import copy
+            # If there are no edges, is because the system is effectively unidimensional, 
+            # meaning that the Delaunay triangulation fails. Then consider to supercell to
+            # be able to triangulate.
+
+            bigger_system = copy.deepcopy(self).supercell(n1=2)
+            bigger_system.initialize_hamiltonian()
+            bonds = bigger_system.bonds
+
+            edges = bigger_system.identify_motif_edges(alpha, ndim)
+
         boundary_atoms = [edge[i] for edge in edges for i in range(2)]
         boundary_atoms = np.unique(boundary_atoms)
 
         # Remove boundary atoms from the periodic boundary
-        # Requires having computed the bonds previously
-        if not self.bonds:
-            raise AssertionError("Bonds must be computed first")
         # First compute atoms in the periodic boundary
         periodic_boundary_atoms = []
-        for bond in self.bonds:
+        for bond in bonds:
             cell = bond[2]
             if np.linalg.norm(cell) != 0:
                 periodic_boundary_atoms.append(bond[0])
                 periodic_boundary_atoms.append(bond[1])
         periodic_boundary_atoms = np.unique(periodic_boundary_atoms)      
-
+        
         boundary_atoms = np.setdiff1d(boundary_atoms, periodic_boundary_atoms)
-        print(boundary_atoms)
 
         # Detect atoms in the corner between periodic and finite boundary
-        corner_atoms = []
-        for atom in boundary_atoms:
-            for bond in self.bonds:
-                if bond[0] == atom and bond[1] in periodic_boundary_atoms:
-                    corner_atoms.append(bond[1])
-        
-        corner_atoms = np.unique(corner_atoms)
-        boundary_atoms = np.concatenate([boundary_atoms, corner_atoms])
+        if corner_atoms:
+            corner_atoms = []
+            for atom in boundary_atoms:
+                for bond in bonds:
+                    if bond[0] == atom and bond[1] in periodic_boundary_atoms:
+                        corner_atoms.append(bond[1])
+
+            corner_atoms = np.unique(corner_atoms)
+            boundary_atoms = np.concatenate([boundary_atoms, corner_atoms])
 
         atoms = []
         for atom in boundary_atoms:
@@ -412,7 +424,7 @@ class System(Crystal):
         if len(atoms) == 0:
             print("Warning: No boundary atoms found")
 
-        return atoms
+        return np.array(atoms, dtype=int)
 
 
     # ####################################################################################
