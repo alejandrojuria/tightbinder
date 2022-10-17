@@ -7,11 +7,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.sparse as sp
 from typing import Tuple, List
+from matplotlib.axes import Axes
 
 def _retarded_green_function(w: float, e: float, delta: float) -> complex:
     """ 
     Routine to compute the retarded Green function, to be used to obtain
     the DOS.
+
     :param w: Value of frequency.
     :param e: Value of energy.
     :param delta: Value of broadening.
@@ -22,12 +24,13 @@ def _retarded_green_function(w: float, e: float, delta: float) -> complex:
     return green
 
 
-def dos(result: Spectrum, energy: float = None, delta: float = 0.1, npoints: int = 200) -> Tuple(List[float], List[float]):
+def dos(result: Spectrum, energy: float = None, delta: float = 0.1, npoints: int = 200) -> Tuple[List[float], List[float]]:
     """ 
     Routine to compute the density of states from a Result object.
+
     :param result: Result object.
     :param energy: Value of energy where DoS is computed. If None, then the DoS is computed
-    for the whole energy window of the spectrum.
+        for the whole energy window of the spectrum.
     :param delta: Delta broadening, defaults to 0.01. 
     :param npoints: Number of energy points to use if sampling whole DoS.
     :return: Returns duple with values of dos, and energies where was computed.
@@ -51,10 +54,19 @@ def dos(result: Spectrum, energy: float = None, delta: float = 0.1, npoints: int
     return dos, energies
 
 
-def dos_kpm(system: System, energy: float = None, npoints: int = 200, nmoments: int = 30, r: int = 10) -> float:
+def dos_kpm(system: System, energy: float = None, npoints: int = 200, nmoments: int = 30, r: int = 10) -> Tuple[List[float], List[float]]:
     """ 
     Routine to compute the density of states using the Kernel Polynomial Method.
-    Intended to be used with supercells and k=0. 
+    Intended to be used with supercells and k=0.
+
+    :param system: System whose density of states we want to compute.
+    :param energy: Value of energy where we want to obtain the DoS. If None, DoS is computed for all
+        energy window of spectrum.
+    :param npoints: Number of energy points to consider if computing full DoS. Defaults to 200.
+    :param nmoments: Number of moments to use in the KPM expansion. Defaults to 30.
+    :param r: Number of samples to use in the stochastic evaluation of the KPM traces.
+        Defaults to 10.
+    :return:
     """
 
     if system.matrix_type != "sparse":
@@ -90,7 +102,13 @@ def dos_kpm(system: System, energy: float = None, npoints: int = 200, nmoments: 
 
 
 def jackson_kernel(nmoments: int) -> List[float]:
-    """ Routine to calculate the Jackson kernel to improve the KPM calculations """
+    """ 
+    Routine to calculate the Jackson kernel to improve the KPM calculations. 
+    
+    :param nmoments: Number of moments of KPM expansions.
+    :return: Jackson kernel for n=0, ..., nmoments - 1
+    """
+
     g = [((nmoments - n + 1)*np.cos(np.pi*n/(nmoments + 1)) +
           np.sin(np.pi*n/(nmoments + 1))/np.tan(np.pi*n/(nmoments + 1)))/(nmoments + 1) for n in range(1, nmoments)]
     g = [1] + g  # n = 0 gives NaN instead of 1
@@ -99,7 +117,14 @@ def jackson_kernel(nmoments: int) -> List[float]:
 
 
 def chebyshev_polynomial_values(n: int, e: float) -> np.ndarray:
-    """ Chebyshev polynomial of order n on value e. """
+    """ 
+    Chebyshev polynomial of order n on value e. 
+    
+    :param n: Maximum order of Chebyshev polynomial.
+    :param e: Value where the polynomials is evaluated (-1 < e < 1).
+    :return: List with all polynomials from order 0 to n - 1 evaluated on e.
+    """
+    
     polynomials = [1, e]
     if n >= 2:
         for i in range(2, n):
@@ -107,10 +132,18 @@ def chebyshev_polynomial_values(n: int, e: float) -> np.ndarray:
     return np.array(polynomials)
 
 
-def compute_dos_momentum(n: int, h, r: int) -> np.ndarray:
-    """ Routine to compute the n-th momentum associated to a Chebyshev polynomial expansion
+def compute_dos_momentum(n: int, h: np.ndarray, r: int) -> np.ndarray:
+    """ 
+    Routine to compute up to the n-th momentum associated to a Chebyshev polynomial expansion
     of the density of states. Instead of computing the whole trace of h, we perform the stochastic
-    evaluation of the trace over a small set of random vectors. """
+    evaluation of the trace over a small set of random vectors. 
+    
+    :param n: Total number of momentum computed for DoS calculation.
+    :param h: Hamiltonian, usually on k=0 (intended for supercell calculations).
+    :param r: Number of samples on stochastic ealuation of trace.
+    :return: Array with all momentum.
+    """
+
     d = h.shape[0]
 
     # Generate sample of random vectors and normalize them
@@ -134,8 +167,16 @@ def compute_dos_momentum(n: int, h, r: int) -> np.ndarray:
     return np.array(momentum)
 
 
-def plot_dos(result: Spectrum, npoints=100, delta=0.3, ax=None) -> None:
-    """ Routine to plot the density of states using the retarded Green function """
+def plot_dos(result: Spectrum, npoints: int = 100, delta: float = 0.3, ax: Axes = None) -> None:
+    """ 
+    Routine to plot the density of states using the retarded Green function. 
+    
+    :param result: Spectrum object containing the eigenenergies.
+    :param npoints: Number of points used to sample the DoS. Defaults to 100.
+    :param delta: Broadening of the states. Defaults to 0.3.
+    :param ax: Axes object to plot the DoS in it. Defaults to None.
+    """
+
     if not ax:
         fig = plt.figure()
         ax = fig.add_subplot(111)
@@ -149,8 +190,17 @@ def plot_dos(result: Spectrum, npoints=100, delta=0.3, ax=None) -> None:
     return density, energies
 
 
-def plot_dos_kpm(system: System, npoints=200, nmoments: int = 100, r: int = 10, ax=None):
-    """ Routine to plot the density of states using the retarded Green function """
+def plot_dos_kpm(system: System, npoints: int = 200, nmoments: int = 100, r: int = 10, ax: Axes = None) -> None:
+    """
+    Routine to plot the density of states using the KPM. 
+    
+    :param system: System whose DoS we want to obtain and plot.
+    :param npoints: Number of points used to sample the DoS. Defaults to 200.
+    :param nmoments: Number of moments in KPM expansion. Defaults to 100.
+    :param r: Number of samples for stochastic evaluation of trace in KPM. Defaults to 100.
+    :param ax: Optional Axes object to draw the plot in.
+    """
+
     if not ax:
         fig = plt.figure()
         ax = fig.add_subplot(111)
@@ -165,8 +215,16 @@ def plot_dos_kpm(system: System, npoints=200, nmoments: int = 100, r: int = 10, 
     return dos, energies
 
 def fermi_energy(dos: list, energy: list, system: System) -> float:
-    """ Routine to compute the Fermi energy from the density of states
-    integrating up to the number of electrons in the system """
+    """ 
+    Routine to compute the Fermi energy from the density of states
+    integrating up to the number of electrons in the system. It is based on 
+    trapezoidal integration of the DoS.
+    
+    :param dos: List with density of states values.
+    :param energy: List with energies where the DoS are evaluated.
+    :param system: System object (used to provide filling and basisdim).
+    :return: Fermi energy.
+    """
 
     # First normallize to basisdim (maximum number of states)
     area = np.trapz(dos, energy)
@@ -180,8 +238,14 @@ def fermi_energy(dos: list, energy: list, system: System) -> float:
     return energy[i - 1]
 
 
-def compute_projector_momentum(nmoments: int, energy: int):
-    """ Routine to compute the momentum from the KPM expansion of the ground state projector """
+def compute_projector_momentum(nmoments: int, energy: int) -> np.ndarray:
+    """ 
+    Routine to compute the momentum from the KPM expansion of the ground state projector. 
+    
+    :param nmoments: Number of momentum we want to compute.
+    :param energy: Energy up to which states are considered.
+    :return: List of moments.
+    """
 
     first_moment = [1 - np.arccos(energy)/np.pi]
     moments = [-2*np.sin(m*np.arccos(energy))/(m*np.pi) for m in np.arange(1, nmoments)]
@@ -189,8 +253,17 @@ def compute_projector_momentum(nmoments: int, energy: int):
 
     return np.array(moments)
 
-def ground_state_projector(nmoments: int, h: np.ndarray, energy: int):
-    """ Routine to compute the ground state projector using the KPM """
+def ground_state_projector(nmoments: int, h: np.ndarray, energy: int) -> np.ndarray:
+    """ 
+    Routine to compute the ground state projector using the KPM. Note that this calculation
+    is done using sparse arrays, since it results in faster computation.
+    
+    :param nmoments: Number of moments in the expansion.
+    :param h: Bloch Hamiltonian, usually at k=0 for supercells.
+    :param energy: Energy up to which the states are considered. To compute the ground state
+        projector, this should be the Fermi energy.
+    :return: Projector.
+    """
 
     h_norm = np.linalg.norm(h)
     h /= h_norm
@@ -214,9 +287,20 @@ def ground_state_projector(nmoments: int, h: np.ndarray, energy: int):
     return projector.toarray()
 
 
-def restricted_density_matrix(system: System, partition: list, nmoments: int = 100, npoints: int = 200, nmoments_dos: int = 300, r: int = 10):
-    """ Routine to compute the one-particle density matrix, restricted to one spatial partition of the system. First it estimates the Fermi
-    energy from the DOS computed with the KPM, and then uses it to compute the reduced density matrix """
+def restricted_density_matrix(system: System, partition: list, nmoments: int = 100, npoints: int = 200, 
+                              nmoments_dos: int = 300, r: int = 10) -> np.ndarray:
+    """ 
+    Routine to compute the one-particle density matrix, restricted to one spatial partition of the system. First it estimates the Fermi
+    energy from the DOS computed with the KPM, and then uses it to compute the reduced density matrix. 
+    
+    :param system: System whose reduced density matrix we want to compute.
+    :param partition: List of indices of atoms where the reduced density matrix is computed.
+    :param nmoments: Number of moments in the KPM expansion. Defaults to 100.
+    :param npoints: Number of used to sample the density of states. Defaults to 200.
+    :param nmoments_dos: Number of moments in the KPM expansion of the DoS. Defaults to 300.
+    :param r: Number of samples in the stochastic evaluation of the trace. Defaults to 10.
+    :return: Reduced density matrix.
+    """
 
     if system.matrix_type != "sparse":
         print("Warning: KPM computations are intended to be run with sparse matrices (faster and less memory usage)")

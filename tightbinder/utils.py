@@ -7,6 +7,7 @@ def generate_basis_combinations(ndim: int) -> np.ndarray:
     """ 
     Routine to generate the coefficients corresponding to linear combinations of
     some basis vectors. Possible coefficients for each vector are -1, 0 and 1.
+
     :param ndim: Dimension of the basis.
     :return: Matrix where each row are the coefficients for a given
     combination of the basis vectors, i.e. [c1, c2, ...] such that
@@ -24,6 +25,7 @@ def generate_basis_combinations(ndim: int) -> np.ndarray:
 def condense_vector(vector: Union[list, np.ndarray], step: int) -> np.ndarray:
     """ 
     Routine to reduce the dimensionality of a given vector by summing each consecutive n (step) numbers.
+
     :param vector: Array to be reduced
     :param step: Number of components to sum
     :returns: Condensed array
@@ -45,9 +47,10 @@ def condense_vector(vector: Union[list, np.ndarray], step: int) -> np.ndarray:
 def scale_array(array: Union[list, np.ndarray], factor: int = 10) -> np.ndarray:
     """ 
     Routine to scale a vector by a factor max_value/max(vector), where max_value is the new maximum value.
-    :param array
-    :param factor (double). Defaults to 10
-    :return scaled_vector 
+
+    :param array: Array to scale.
+    :param factor: Factor to multiply the array. Defaults to 10
+    :return: Scaled array.
     """
 
     n = len(array)
@@ -59,10 +62,11 @@ def scale_array(array: Union[list, np.ndarray], factor: int = 10) -> np.ndarray:
 def pretty_print_dictionary(d: dict, indent: int = 0) -> None:
     """
     Routine to pretty print the contents of a dictionary.
-    :param d: Dictionary to pretty print
-    :param indent: Number of tabs to indent the contents of the dictionary.
     Note that this is mainly used to indent recursively all dict. contents, so by
     default it should be left at zero.
+
+    :param d: Dictionary to pretty print
+    :param indent: Number of tabs to indent the contents of the dictionary.
     """
 
     for key, value in d.items():
@@ -76,7 +80,9 @@ def pretty_print_dictionary(d: dict, indent: int = 0) -> None:
 def overrides(interface_class: type) -> Callable:
     """
     Decorator to print whether a method is being overwritten or not.
+
     :param interface_class: Base class where the method to be overwritten is present.
+    :return: Decorator.
     """
     def overrider(method):
         assert(method.__name__ in dir(interface_class))
@@ -88,12 +94,13 @@ def alpha_shape_2d(points: np.ndarray, alpha: float, only_outer: bool = True):
     """
     Compute the alpha shape (concave hull) of a set of 2D points.
     From: https://stackoverflow.com/questions/50549128/boundary-enclosing-a-given-set-of-points
+
     :param points: np.array of shape (n, 2) points.
     :param alpha: alpha value.
     :param only_outer: boolean value to specify if we keep only the outer border
-    or also inner edges.
+        or also inner edges.
     :return: set of (i,j) pairs representing edges of the alpha-shape. (i,j) are
-    the indices in the points array.
+        the indices in the points array.
     """
     assert points.shape[0] > 3, "Need at least four points"
 

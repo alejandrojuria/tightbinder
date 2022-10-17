@@ -7,21 +7,31 @@
 # from it
 # System has the basic functionality for the other models to derive from it.
 
-from typing import Union, List
+from typing import Tuple, Union, List
 from .crystal import Crystal
 import numpy as np
 import scipy.sparse as sp
 import scipy.sparse.linalg
 import sys
 from itertools import product
+from __future__ import annotations
 
 
 class System(Crystal):
-    """ System class provides all basic functionality to create any type of model. This class
-     serves as a base class for the actual models to inherit from. By itself it does not solve
-     any system as it lacks specific implementation of the Hamiltonian, which has to be provided
-     in the actual model implementation. """
-    def __init__(self, system_name=None, bravais_lattice=None, motif=None, crystal=None):
+    """ 
+    System class provides all basic functionality to create any type of model. This class
+    serves as a base class for the actual models to inherit from. By itself it does not solve
+    any system as it lacks specific implementation of the Hamiltonian, which has to be provided
+    in the actual model implementation.
+
+    :param system_name: Name of the system. Defaults to None.
+    :param bravais_lattice: List with bravais lattice basis. Defaults to None.
+    :param motif: List of atoms with their positions and their species. Defaults to None.
+    :param crystal: Crystal object. Defaults to None.
+    """
+    
+    def __init__(self, system_name: str = None, bravais_lattice: Union[list, np.ndarray] = None, 
+                 motif: Union[list, np.ndarray] = None, crystal: Crystal = None):
         if crystal is None:
             super().__init__(bravais_lattice, motif)
         else:
@@ -108,12 +118,13 @@ class System(Crystal):
         Method to add a hopping between two atoms of the motif.
         NB: The hopping has a specified direction, from initial to final. The HSince the final
         Hamiltonian is computed taking into account hermiticity, it is not necessary to specify the hopping
-        in the other direction. (TODO: Change this, no longer working like this.)
+        in the other direction. (TODO: Change this, no longer working like this).
+
         :param initial: Index of initial atom of the bond.
         :param final: Index of final atom of the bond.
         :param cell: Array with cell containing the final atom. Defaults to [0., 0., 0.].
         :param neigh: String to denote if the bond corresponds to first neighbour, second, etc. 
-        Defaults to '1'.
+            Defaults to '1'.
         """
 
         hopping_info = [initial, final, cell, neigh]
@@ -122,12 +133,13 @@ class System(Crystal):
     def add_bonds(self, initial: List[int], final: List[int], cells: Union[list, np.ndarray] = None, neigh: List[str] = None) -> None:
         """ 
         Same method as add_hopping but we input a list of hoppings at once.
+
         :param initial: List of indices of initial atom of the bond.
         :param final: List of indices of final atom of the bond.
         :param cell:  List of cell vectors containing the final atom. Defaults to None, which
-        corresponds to the origin cell.
+            corresponds to the origin cell.
         :param neigh: List of strings to denote if the bonds corresponds to first neighbour, second, etc respectively.
-        Defaults to None, which corresponds to all being '1'.
+            Defaults to None, which corresponds to all being '1'.
         """
 
         if len(initial) != len(final):
@@ -142,10 +154,14 @@ class System(Crystal):
         for bond in zip(initial, final, cells, neigh):
             self.add_bond(bond[0], bond[1], bond[2], bond[3])
 
-    def compute_neighbour_distances(self, nni):
-        """ Method to compute neighbour distance up to neighbours nni.
-        Params:
-        nni: 1 <= nni """
+    def compute_neighbour_distances(self, nni: int) -> List[float]:
+        """ 
+        Method to compute neighbour distance up to neighbours nni.
+
+        :param nni: Maximum neighbour distance to consider. nni=5 mean that it
+            will find first, second up to fifth neighbours distances.
+        :return: List of neighbour distances.
+        """
 
         if self.boundary == "OBC":
             near_cells = np.array([[0.0, 0.0, 0.0]])
@@ -164,10 +180,11 @@ class System(Crystal):
 
         return neigh_distance
 
-
     def find_first_neighbours(self) -> list:
-        """ Method to find the first neighbours of the atoms of the motif.
-        Returns list of the corresponding bonds """
+        """ 
+        Method to find the first neighbours of the atoms of the motif.
+        :return: List of the corresponding bonds. 
+        """
 
         if self.boundary == "OBC":
             near_cells = np.array([[0.0, 0.0, 0.0]])
@@ -188,17 +205,18 @@ class System(Crystal):
         
         return bonds
 
-    def find_neighbours(self, mode="minimal", nn = 1, r=None):
-        """ Given a list of atoms (motif), it returns a list in which each
-        index corresponds to a list of atoms that are first neighbours to that index
-        on the initial atom list.
+    def find_neighbours(self, mode: str = "minimal", nn: int = 1, r: float = None) -> None:
+        """ 
+        From a list of atoms (motif), it sets the list of bonds within the solid.
         I.e.: Atom list -> List of neighbours/atom.
         By default it will look for the minimal distance between atoms to determine first neighbours.
         For amorphous systems the option radius is available to determine neighbours within a given radius R.
         Boundary conditions can also be set, either PBC (default) or OBC.
+
         :param mode: Search mode, can be either 'minimal' or 'radius'. Defaults to 'minimal'.
         :param nn: Next neighbour, used to specify up to which neighbour there are hoppings if mode='minimal'
-        :param r: Value for radius sphere to detect neighbours if mode='radius' """
+        :param r: Value for radius sphere to detect neighbours if mode='radius' 
+        """
 
         if self.bonds is not None:
             self.bonds = []
@@ -254,9 +272,14 @@ class System(Crystal):
 
         print("Done")
 
-    def find_disconnected_atoms(self):
-        """ Method to find which atoms do not have neighbours, i.e. they are disconnected from
-         te he lattice """
+    def find_disconnected_atoms(self) -> List[int]:
+        """ 
+        Method to find which atoms do not have neighbours, i.e. they are disconnected from
+        the lattice.
+
+        :return: List of indices of disconnected atoms.
+        """
+        
         all_bonds = self.__reconstruct_all_bonds()
         initial_atoms = [initial_atom for initial_atom, _, _ in all_bonds]
         disconnected_atoms = [atom for atom in range(self.natoms) if atom not in initial_atoms]
@@ -264,30 +287,50 @@ class System(Crystal):
         return disconnected_atoms
 
     def remove_disconnected_atoms(self):
-        """ Method to remove disconnected atoms from the motif """
+        """ 
+        Method to remove disconnected atoms from the motif. Based on the method remove_atoms.
+        """
+        
         disconnected_atoms = self.find_disconnected_atoms()
         self.remove_atoms(disconnected_atoms)
 
-    def __reconstruct_all_bonds(self):
-        """ Method to obtain all neighbours for all atoms since the find_neighbours method
-         only computes one-way hoppings (i.e. i->j and not j->i) """
+    def __reconstruct_all_bonds(self) -> list:
+        """ 
+        Method to obtain all neighbours for all atoms since the find_neighbours method
+        only computes one-way hoppings (i.e. i->j and not j->i).
+        NB: Not necessary in principle since we now compute all explicitly.
+        
+        :return: List with all bonds.
+        """
+        
         all_bonds = self.bonds[:]
         for bond in self.bonds:
             initial, final, cell, nn = bond
             all_bonds.append([final, initial, cell, nn])
 
-        return np.array(all_bonds)
+        return all_bonds
 
     @staticmethod
-    def atom_coordination_number(index, bonds):
-        """ Method to find the coordination number for a specific atom in the crystal """
+    def atom_coordination_number(index: int, bonds: list) -> int:
+        """ 
+        Method to find the coordination number for a specific atom in the crystal. 
+        
+        :param index: Index of atom whose coordination number we want to compute.
+        :param bonds: List of indices within the solid.
+        :return: Number of neighbours.
+        """
+        
         neighbours = np.where(bonds[:, 0] == index)[0]
-
         return len(neighbours)
 
-    def coordination_number(self):
-        """ Method to find the coordination number of the solid. Returns coordination number of solid,
-        and a list with the different individual coordinations numbers found within the solid. """
+    def coordination_number(self) -> Tuple[float, List[int]]:
+        """ 
+        Method to find the coordination number of the solid. Returns coordination number of solid,
+        and a list with the different individual coordinations numbers found within the solid. 
+        
+        :return: Coordination number, and list of all individual coordination numbers found.
+        """
+        
         # bonds = self.__reconstruct_all_bonds()
         bonds = np.array(self.bonds, dtype=object)
         coordination = 0
@@ -302,7 +345,17 @@ class System(Crystal):
         coordination /= self.natoms
         return coordination, coordination_list
 
-    def find_lowest_coordination_atoms(self, include_first_neighbours=False, ):
+    def find_lowest_coordination_atoms(self, include_first_neighbours: bool = False) -> List[int]:
+        """
+        Routine to determine the atoms of the solid with the lowest coordination atoms.
+        TODO: Define parameter to specify storing atoms with coordinations lower than
+            one specified.
+        
+        :param include_first_neighbours: Includes in the list of atoms, also the first
+            neighbours of those found originally. Defaults to False.
+        :return: List of indices of atoms.
+        """
+
         # bonds = self.__reconstruct_all_bonds()
         bonds = np.array(self.bonds, dtype=object)
         if bonds.size == 0:
@@ -324,7 +377,15 @@ class System(Crystal):
                         atoms.append(neighbour)
         return atoms
 
-    def compute_first_neighbour_distance(self, near_cells=None):
+    def compute_first_neighbour_distance(self, near_cells: Union[list, np.ndarray] = None) -> float:
+        """
+        Routine to compute the first neighbour distance.
+        DEPRECATED since there is compute_neighbour_distances which works up to n neighbour distances.
+        
+        :param near_cells: List of unit cells to loop over. Defaults to None.
+        :return: First neighbour distance.
+        """
+
         if near_cells is None:
             near_cells = generate_near_cells(self.bravais_lattice)
 
@@ -339,8 +400,10 @@ class System(Crystal):
 
         return neigh_distance
 
-    def _determine_connected_unit_cells(self):
-        """ Method to calculate which unit cells connect with the origin from the neighbour list """
+    def _determine_connected_unit_cells(self) -> None:
+        """ 
+        Method to calculate which unit cells connect with the origin from the neighbour list. 
+        """
 
         unit_cell_list = [[0.0, 0.0, 0.0]]
         if self.boundary == "PBC":
@@ -431,13 +494,16 @@ class System(Crystal):
     # ############################### System modifications ###############################
     # ####################################################################################
 
-    def supercell(self, update=True, **ncells):
-        """ Routine to generate a supercell for a system using the number of cells
-         along each Bravais vectors specified in ncells.
-         Input:
-         update: Boolean parameter to update all of Crystal class atributes.
-         Defaults to True, only set to false when used inside other routines (reduce)
-         int nx, ny and/or nz """
+    def supercell(self, update: bool = True, **ncells: dict) -> System:
+        """ 
+        Routine to generate a supercell for a system using the number of cells
+        along each Bravais vectors specified in ncells.
+
+        :param update: Boolean parameter to update all of Crystal class atributes.
+            Defaults to True, only set to false when used inside other routines (reduce)
+        :param dict: Specify number of cells in some direction: n1, n2 and/or n3.
+        :return: Modified System object. 
+        """
 
         if len(ncells) == 0:
             print("Error: Reduce method must be called with at least one parameter (nx, ny or nz), exiting...")
@@ -465,12 +531,17 @@ class System(Crystal):
 
         return self
 
-    def reduce(self, **ncells):
-        """ Routine to reduce the dimensionality of the System object along the specified
-         directions, by repeating unit cells along those directions until a given size
-         (number of unit cells) is reached. Thus we make the original system finite along those
-         directions.
-         Input: int n1, n2 or n3 """
+    def reduce(self, **ncells: dict) -> System:
+        """ 
+        Routine to reduce the dimensionality of the System object along the specified
+        directions, by repeating unit cells along those directions until a given size
+        (number of unit cells) is reached. Thus we make the original system finite along those
+        directions.
+
+        :param ncells: Number of cells of direction(s) along which we want to reduce the
+            dimensionality of the system, n1, n2 and/or n3.
+        :return: Modified System object.
+        """
 
         key_to_index = {"n1": 0, "n2": 1, "n3": 2}
         self.supercell(update=False, **ncells)
@@ -484,10 +555,17 @@ class System(Crystal):
 
         return self
 
-    def ribbon(self, width, orientation="horizontal"):
-        """ Routine to generate a ribbon for a 2D crystal. It is designed to create rectangular ribbons,
+    def ribbon(self, width: int, orientation: str = "horizontal") -> System:
+        """ 
+        Routine to generate a ribbon for a 2D crystal. It is designed to create rectangular ribbons,
         based on a rectangular lattice. Therefore there must exist a combination of basis vectors such that
-        we can obtain a rectangular supercell. Otherwise the method returns an error. """
+        we can obtain a rectangular supercell. Otherwise the method returns an error. 
+
+        :param width: Width of the ribbon (number of cells).
+        :param orientation: 'horizontal' or 'vertical'. Defaults to 'horizontal'.
+        :return: Modified System object.
+        """
+        
         if self.ndim != 2:
             print(f"Ribbons can not be generated for {self.ndim}D structures")
             sys.exit(1)
@@ -543,8 +621,11 @@ class System(Crystal):
 
             return self
 
-    def _restrict_lattice2rectangle(self, vectors):
-        """ TO BE IMPLEMENTED YET (is it really necessary?) """
+    def _restrict_lattice2rectangle(self) -> None:
+        """
+        TO BE IMPLEMENTED YET (is it really necessary?).
+        """
+        
         atoms = []
         mesh_points = []
         for i in range(self.ndim):
@@ -561,17 +642,31 @@ class System(Crystal):
     # ####################################################################################
 
     def initialize_hamiltonian(self):
-        """ Generic implementation of initialization of the Hamiltonian. To be overwritten
-            by specific implementations of System """
+        """ 
+        Generic implementation of initialization of the Hamiltonian. To be overwritten
+        by specific implementations of System. 
+        """
+        
         print("initialize_hamiltonian has to be implemented by child class")
 
-    def hamiltonian_k(self, k):
-        """ Generic implementation of hamiltonian_k H(k). To be overwritten
-            by specific implementations of System """
+    def hamiltonian_k(self, k: Union[list, np.ndarray]) -> np.ndarray:
+        """ 
+        Generic implementation of hamiltonian_k H(k). To be overwritten
+        by specific implementations of System. 
+        """
+        
         print("Has to be implemented by child class")
 
     def solve(self, kpoints: list = None, neigval: int = None):
-        """ Diagonalize the Hamiltonian to obtain the band structure and the eigenstates """
+        """ 
+        Diagonalize the Hamiltonian to obtain the band structure and the eigenstates. 
+        
+        :param kpoints: List of kpoints where we want to diagonalize the Bloch Hamiltonian.
+            Defaults to None, which corresponds to [[0., 0., 0.]] for both PBC and OBC.
+        :param neigval: Number of eigenvalues to compute if using sparse matrices.
+            Defaults to None, which in turn is set to the filling.
+        :return: Spectrum object.
+        """
 
         # Import result here to avoid circular import
         from . import result
@@ -600,7 +695,10 @@ class System(Crystal):
 
 
 class FrozenClass:
-    """ Class to enforce immutable attributes """
+    """ 
+    Class to enforce immutable attributes. Used for predefined models.
+    """
+    
     _is_frozen = False
 
     def __setattr__(self, key, value):
@@ -612,22 +710,16 @@ class FrozenClass:
         self._is_frozen = True
 
 
-def search_neighbour(reference_atom, i, atom, cell, radius):
-    """ Auxiliary routine to parallelize search for all hoppings (neighbours) within a given
-     system"""
-    eps = 1E-14
-    distance = np.linalg.norm(atom[:3] + cell - reference_atom[:3])
-    if distance <= radius:
-        print(i, cell)
-        if not np.array_equal(reference_atom, atom) and not np.array_equal(cell, [0, 0, 0]):
-            return [i, cell]
-        else:
-            return
-
-
-def generate_all_combinations(ndim, n=1):
-    """ Auxiliary routine to generate an array of combinations of possible neighbouring
-     unit cells. """
+def generate_all_combinations(ndim: int, n: int = 1) -> np.ndarray:
+    """ 
+    Auxiliary routine to generate an array of combinations of possible neighbouring
+    unit cells. 
+    
+    :param ndim: Number of axis to make the combinations.
+    :param int: Values on each axis go from [-n, n]. Defaults to 1.
+    :return: Array with vectors of length ndim and combinations.
+    """
+    
     mesh_points = []
     for i in range(ndim):
         mesh_points.append(list(range(-n, n+1)))
@@ -636,10 +728,16 @@ def generate_all_combinations(ndim, n=1):
     return mesh_points
 
 
-def generate_half_combinations(ndim):
-    """ Auxiliary routine to generate an array of combinations of possible neighbouring
-     unit cells. NB: It only generates half of them, since we are going to use hermiticity to
-     generate the Hamiltonian """
+def generate_half_combinations(ndim: int) -> np.ndarray:
+    """ 
+    Auxiliary routine to generate an array of combinations of possible neighbouring
+    unit cells. NB: It only generates half of them, since we are going to use hermiticity to
+    generate the Hamiltonian. 
+    
+    :param ndim: Number of axis to make the combinations.
+    :return: Half the combinations.
+    """
+    
     all_combinations = generate_all_combinations(ndim)
 
     # Eliminate vectors that are the inverse of others
@@ -648,13 +746,20 @@ def generate_half_combinations(ndim):
         if list(-point) not in points:
             points.append(list(point))
 
-    return points
+    return np.array(points)
 
 
-def generate_near_cells(bravais_lattice, n=1, half=False):
-    """ Auxiliary routine to generate the Bravais vectors corresponding to unit cells
-     neighbouring the origin one. NB: It only generates half of them, since we are going to use hermiticity to
-     generate the Hamiltonian """
+def generate_near_cells(bravais_lattice: Union[list, np.ndarray], n: int = 1, half: bool = False) -> np.ndarray:
+    """ 
+    Auxiliary routine to generate the Bravais vectors corresponding to unit cells
+    neighbouring the origin one. NB: It only generates half of them, since we are going to use hermiticity to
+    generate the Hamiltonian. 
+    
+    :param bravais_lattice: Basis vectors of the Bravais lattice.
+    :param n: Values on each axis go from [-n, n]. Defaults to 1.
+    :param half: Generate only half the combinations. Defaults to False.
+    :return: Array with combinations of Bravais basis vectors.
+    """
     
     if bravais_lattice is None:
         return np.array([[0., 0., 0.]])
