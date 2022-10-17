@@ -3,52 +3,15 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to tightbinder's documentation!
+Introduction
 =======================================
 .. toctree::
    :maxdepth: 2
    :caption: Contents
 
-tightbinder main
-=======================================
-.. automodule:: tightbinder.main
-   :members:
-
-tightbinder system
-=======================================
-.. automodule:: tightbinder.system
-   :members:
-
-tightbinder crystal
-=======================================
-.. automodule:: tightbinder.crystal
-   :members:
-
-tightbinder result
-=======================================
-.. automodule:: tightbinder.result
-   :members:
-
-tightbinder fileparse
-=======================================
-.. automodule:: tightbinder.fileparse
-   :members:
-
-tightbinder models
-=======================================
-.. automodule:: tightbinder.models
-   :members:
-
-tightbinder disorder
-=======================================
-.. automodule:: tightbinder.disorder
-   :members:
-
-tightbinder topology
-=======================================
-.. automodule:: tightbinder.topology
-   :members:
-
+intro
+examples
+tightbinder
 
 Indices and tables
 ==================
