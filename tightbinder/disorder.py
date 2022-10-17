@@ -23,9 +23,9 @@ def introduce_vacancies(system: System, probability: float = 0.5) -> System:
     or not. Thus each call to this method would generate a different structure.
 
     :param system: Instance of System class or subclass derived from it
-    NB: Strictly speaking, this can be used on Crystal class as well
+        NB: Strictly speaking, this can be used on Crystal class as well
     :param probability: Parameter to specify probability of removing an atom;
-    defaults to 0.5
+        defaults to 0.5
     :return: Modified system
     """
 
@@ -49,7 +49,7 @@ def introduce_impurities(system: System, energy: float = 2, probability: float =
 
     :param system: Instance of System class or subclass derived from it
     :param probability: Parameter to specify probability of selecting an atom as
-    an impurity. Defaults to 0.5.
+        an impurity. Defaults to 0.5.
     :param energy: Value of on-site energy of impurities. Defaults to 2.
     :return: Modified system.
     """
@@ -81,14 +81,14 @@ def amorphize(system: System, spread: float = 0.1, distribution: str = "uniform"
 
     :param system: Instance of System class or any derived subclass
     :param spread: Maximum distance the atoms can be displaced. Given in units of
-    first neighbours (spread=1 means totally random positions). Defaults to 0.1
+        first neighbours (spread=1 means totally random positions). Defaults to 0.1
     :param distribution: Either "uniform" or "gaussian". By default distribution is
-    always uniform, U(0, spread). If we choose gaussian, then the spread acts as the
-    variance of the distribution in the radial direction N(0, spread),
-    the angles are still given by uniform dist.
-    Also "gaussian_cartesian", which adds gaussian noise to each cartesian component directly
+        always uniform, U(0, spread). If we choose gaussian, then the spread acts as the
+        variance of the distribution in the radial direction N(0, spread),
+        the angles are still given by uniform dist.
+        Also "gaussian_cartesian", which adds gaussian noise to each cartesian component directly
     :param planar: Optional parameter to enforce atom displacement happening only in the
-    plane defining a 2D system. 
+        plane defining a 2D system. 
     :return: Modified system.
     """
 
@@ -141,7 +141,7 @@ def alloy(system: System, *concentrations: float) -> System:
 
     :param system: System to modify.
     :param concentrations: Array of length n - 1, where n is the number of species. Each
-    number must be between 0 and 1, and such that the sum is <= 1.
+        number must be between 0 and 1, and such that the sum is <= 1.
     :return: Modified system.
     """
 
@@ -169,7 +169,7 @@ def remove_atoms(system: System, indices: List[int]) -> System:
     a list of indices provided.
 
     :param indices: List with indices of those atoms we want to remove, following the same
-    ordering as those atoms in the motif
+        ordering as those atoms in the motif
     :param system: Crystal class or subclass derived from it (typically System).
     :return: Modified system.
     """
@@ -187,7 +187,7 @@ def set_impurities(system: System, indices: List[int], energy: float = 0.1) -> S
 
     :param system: System class or derived subclass. Must have Hamiltonian initialized
     :param indices: List with indices of those atoms we want to transform into impurities. The indices
-    are referred to the order in the motif
+        are referred to the order in the motif
     :param energy: On-site energy for the impurities. Defaults to 0.1.
     :return: Modified system.
     """
@@ -210,7 +210,7 @@ def change_species(system: SlaterKoster, indices: List[int]) -> System:
     
     :param system: SlaterKoster object
     :param indices: List of indices denoting the chemical species of each atom. Must have length equal
-    to system.natoms. 
+        to system.natoms. 
     :return: Modified system.
     """
 
