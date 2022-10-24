@@ -29,6 +29,8 @@ author = 'Alejandro Jose Uria Alvarez'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = ['sphinx.ext.autodoc',
+              'sphinx.ext.autosummary',
+              'sphinx.ext.mathjax',
               'sphinx_autodoc_typehints',
               'sphinx_rtd_theme']
 

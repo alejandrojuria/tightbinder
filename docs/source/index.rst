@@ -3,15 +3,31 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Introduction
-=======================================
+tightbinder is a Python library 
+
+.. math::
+   \Psi
+
 .. toctree::
    :maxdepth: 2
-   :caption: Contents
 
-intro
-examples
-tightbinder
+   intro
+   
+.. toctree::
+   :maxdepth: 2
+   :caption: User guide
+   
+   install/index
+   files/index
+   tutorial/index
+   examples/index
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Documentation
+
+   materials/index
+   api/index
 
 Indices and tables
 ==================

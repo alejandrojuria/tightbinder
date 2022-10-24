@@ -350,7 +350,7 @@ class System(Crystal):
         """
         Routine to determine the atoms of the solid with the lowest coordination atoms.
         TODO: Define parameter to specify storing atoms with coordinations lower than
-            one specified.
+        one specified.
         
         :param include_first_neighbours: Includes in the list of atoms, also the first
             neighbours of those found originally. Defaults to False.
@@ -421,15 +421,15 @@ class System(Crystal):
         boundary conditions. NB: Currently works only in 2D
 
         :param alpha: This parameters tunes the shape of the boundary. For alpha=0,
-        the boundary is a convex hull; as alpha increases the boundary becomes more
-        concave. Default value is 0.4
+            the boundary is a convex hull; as alpha increases the boundary becomes more
+            concave. Default value is 0.4
         :param ndim: Dimension of the expected boundary. Defaults to 2.
         :param verbose: Boolean parameter to print indices of boundary atoms. Defaults to False.
         :param cornes_atoms: Boolean to toggle detection of atoms that might be shared by the 
-        periodic boundary and the open boundary.
+            periodic boundary and the open boundary.
         :return: Indices of atoms in the boundary.
         :raises AssertionError: Crystal dimension different from two raises error. Also 
-        raises if bonds are not computed.
+            raises if bonds are not computed.
         """
 
         # Requires having computed the bonds previously

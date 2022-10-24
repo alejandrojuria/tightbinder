@@ -407,16 +407,16 @@ class Crystal:
         Note that this method returns exclusively the outermost atoms, independently
         of the boundary conditions. To take into account boundary conditions, one should
         call identify_boundary() from System.
+        NB: Currently works only in 2D
 
         :param alpha: This parameters tunes the shape of the boundary. For alpha=0,
-        the boundary is a convex hull; as alpha increases the boundary becomes more
-        concave. Default value is 0.4
+            the boundary is a convex hull; as alpha increases the boundary becomes more
+            concave. Default value is 0.4
         :param ndim: Dimension of the boundary. If the system lies on a plane, the boundary
-        is two-dimensional, so ndim = 2 (default value).
+            is two-dimensional, so ndim = 2 (default value).
         :return: Indices of atoms in the boundary.
         :raises AssertionError: Crystal dimension different from two raises error.
         :raises ValueError: Crystal motif must have at least three atoms. Raised by Delaunay class.
-        NB: Currently works only in 2D
         """
 
         if ndim == 2:

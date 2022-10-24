@@ -90,7 +90,7 @@ class SlaterKoster(System):
                 species = int(atom[3])
                 nelectrons += self.configuration['Filling'][species]
 
-            return nelectrons
+            return int(nelectrons)
 
 
     # --------------- Methods ---------------
@@ -466,7 +466,7 @@ class SlaterKoster(System):
         TODO: Has to be adapted to new file format. 
 
         :param filename: File with the configuration to load. Note that this
-        file follows the format of export_model, not the one usually with fileparse.
+            file follows the format of export_model, not the one usually with fileparse.
         :return: Instance of SlaterKoster.
         """
 
@@ -632,7 +632,7 @@ class AmorphousSlaterKoster(SlaterKoster):
         
         reference_bond_length = self.reference_lengths[species_pair]
         r = np.linalg.norm(position_diff)
-        hopping = super()._hopping_amplitude(position_diff, *orbitals)
+        hopping = super()._hopping_amplitude(position_diff, orbitals)
         if self.decay_mode == "exponential":
             hopping *= np.exp(-self.decay_amplitude*(r - reference_bond_length))
         else:
