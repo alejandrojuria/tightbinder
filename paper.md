@@ -7,12 +7,11 @@ tags:
   - tight-binding
   - Slater-Koster
 authors:
-  - name: Alejandro Jos\'e Ur\'ia
+  - name: Alejandro José Uría
     orcid: 0000-0001-6668-7333
-    equal-contrib: true
     affiliation: 1 # (Multiple affiliations must be quoted)
 affiliations:
- - name: Departamento de F\'isica de la Materia Condensada, Universidad Aut\'onoma de Madrid
+ - name: Departamento de Física de la Materia Condensada, Universidad Autónoma de Madrid
    index: 1
 date: 24 October 2022
 bibliography: paper.bib
@@ -22,32 +21,77 @@ bibliography: paper.bib
 # Summary
 
 The determination of the band structure of a solid is the starting point for any 
-calculation in condensed matter physics. There exist several techniques to address
+calculation in condensed matter physics. This amounts to determining the hopping amplitudes 
+$t_{ij}$ of the electronic Hamiltonian:
+
+$$H=\sum_{ij}t_{ij}c^{\dagger}_ic_j$$
+
+where the indices $i,j$ sum over lattice positions and orbitals, and $c^{\dagger}_i$ ($c_i$) are creation (annihialtion)
+operators of electrons at position $i$. There exist several techniques to address
 this problem, varying in degrees of sophistication and scope. The most established 
-method is density-functional theory, which provides an accurate description of the
+method is density-functional theory (DFT), which provides an accurate description of the
 electronic structure, usually at the cost of slower computations. Tight-binding
-models are as equally popular since they are a quick and inexpensive way to model
+models are as equally popular since they constitute a quick and inexpensive way to model
 systems, although by contruction, they are restricted to simpler, effective 
-description of the bands.
+description of the bands. Slater-Koster tight-binding models provide a middle ground
+since they allow to give a more accurate description of the material based on empirical
+considerations, while still being simple to compute.
 
+Soemtimes, it makes sense to use the most accurate methods available to predict
+properties of the material. 
+However, using DFT might become too expensive computationally 
+if the amount of iteration needed to perform the numerical experients is too high. 
+This is precisely the role of tight-binding models: supposed that the
+model captures the key features of the material, it can be used instead to describe the solid,
+as long as the desired properties depend on those relevant features. In general, this approach
+allows for a qualitative exploration of the materials, while one should look for first principles
+calculations when seeking quantitive results. 
 
+`tightbinder` focuses on providing the necessary routines and classes to build, modify
+and compute properties of empirical tight-binding models. The main features of the
+library are:
 
+- Determination of Slater-Koster tight-binding models with matrix elements involving up to $d$ orbitals, 
+with intraatomic spin-orbit coupling. One can specify hoppings up to the nth-nearest neighbours, and use atoms from
+different chemical species with different numbers of electrons.
+- Configuration file based description of the model of the solid: Using a standarized
+format for configuration files, one can specify all the relevant parameters of the model,
+from the lattice vectors to the Slater-Koster hopping amplitudes. 
+- There are two main classes defined, one to describe crystalline Slater-Koster models,
+and another one for amorphous solids.
+There are also predefined models, and the possibility of defining custom models which inherit from a base `System` class.
+- Methods and routines to modify systems: once they are built, there are methods to modify
+the size or the boundaries of the solid, as well as routines to introduce different
+forms of disorder and external fields.
+- Topology identification: Computation of the $\mathbb{Z}_2$ invariant of time-reversal topological insulators 
+and of the entanglement spectrum on a specified cut of the system.
+- Computation of observables from the eigenstates of the system, e.g. bands, expected value of the spin,
+density of states (also available using the kernel polynomial method), localization. 
+Available plotting routines for the different quantities.
+- Fitting of the Slater-Koster parameters (or any user-defined model parameter) to reproduce
+some given energy bands, usually from DFT calculations. 
 
-
-
-The forces on stars, galaxies, and dark matter under external gravitational
-fields lead to the dynamical evolution of structures in the universe. The orbits
-of these bodies are therefore key to understanding the formation, history, and
-future state of galaxies. The field of "galactic dynamics," which aims to model
-the gravitating components of galaxies to study their structure and evolution,
-is now well-established, commonly taught, and frequently used in astronomy.
-Aside from toy problems and demonstrations, the majority of problems require
-efficient numerical tools, many of which require the same base code (e.g., for
-performing numerical orbit integration).
 
 # Statement of need
 
-`Gala` is an Astropy-affiliated Python package for galactic dynamics. Python
+`tightbinder` is a Python package for Slater-Koster, semi-empirical tight-binding
+calculations of the electronic structure of solids. The determination of the band
+structure requires obtaining the spectrum the Hamiltonian of the system,
+which is in practice equivalent to computing and diagonalizing its matrix representation.
+The library mainly involves the manipulation of matrices to build the Hamiltonian,
+meaning that it is built upon the common Python libraries for scientific computing,
+`NumPy`, `SciPy` and `matplotlib` for visualization of the results.
+
+There
+
+# Usage
+
+
+
+
+
+
+is an Astropy-affiliated Python package for galactic dynamics. Python
 enables wrapping low-level languages (e.g., C) for speed without losing
 flexibility or ease-of-use in the user-interface. The API for `Gala` was
 designed to provide a class-based and user-friendly interface to fast (C or
