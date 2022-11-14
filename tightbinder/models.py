@@ -455,7 +455,7 @@ class SlaterKoster(System):
                 np.savetxt(file, h)
                 file.write("&\n")
             if self.configuration["Filling"]:
-                file.write("# filling\n" + str(self.filling/self.natoms) + "\n")
+                file.write("# filling\n" + str(self.filling) + "\n")
             file.write("#")
 
 
@@ -596,6 +596,7 @@ class AmorphousSlaterKoster(SlaterKoster):
         """
 
         # First compute neighbours in crystalline solid
+        print("Computing reference lengths...")
         self.find_neighbours(mode=self._mode, r = self._r)
         length_dict = {}
         motif = np.array(self.motif)
