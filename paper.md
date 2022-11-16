@@ -1,5 +1,5 @@
 ---
-title: 'tightbinder: A Python package for semi-empirical electronic structure calculations of crystalline and disordered solids'
+title: 'tightbinder: A Python package for semi-empirical tight-binding models of crystalline and disordered solids'
 tags:
   - Python
   - condensed matter physics
@@ -20,33 +20,55 @@ bibliography: paper.bib
 
 # Summary
 
-The determination of the band structure of a solid is the starting point for any 
-calculation in condensed matter physics. This amounts to determining the hopping amplitudes 
-$t_{ij}$ of the electronic Hamiltonian:
+`tightbinder` is a Python package for Slater-Koster, semi-empirical tight-binding
+calculations of the electronic structure of solids. Tight-binding models are ubiquitous 
+in condensed matter physics, since they provide an inexpensive description of materials.
+Although it can be used for metals and insulators, the package appears in the context
+of the identificacion of topological phases of matter. Since the discovery of topological insulators,
+there has been a huge effort understanding and characterizing topological materials, resulting
+in the full classification of any cristalline system. However, not so much is known in the context
+of disordered solids. This is precisely the purpose of this library: to allow numerical studies of 
+crystalline and disordered materials, to identify possible topological systems. Although it was
+designed with a particular objective, it can still be employed as a standard tight-binding framework, due
+to the modular approach taken in its construction.
 
-$$H=\sum_{ij}t_{ij}c^{\dagger}_ic_j$$
 
+# Statement of need
+
+The determination of the band structure of a solid is the starting point for any calculation in condensed matter physics. 
+This amounts to determining the hopping amplitudes $t^{\alpha\beta}_{ij}$ of the electronic Hamiltonian:
+$$H=\sum_{ij,\alpha\beta}t^{\alpha\beta}_{ij}c^{\dagger}_{i\alpha}c_{j\beta}$$
 where the indices $i,j$ sum over lattice positions and orbitals, and $c^{\dagger}_i$ ($c_i$) are creation (annihialtion)
-operators of electrons at position $i$. There exist several techniques to address
-this problem, varying in degrees of sophistication and scope. The most established 
-method is density-functional theory (DFT), which provides an accurate description of the
-electronic structure, usually at the cost of slower computations. Tight-binding
-models are as equally popular since they constitute a quick and inexpensive way to model
-systems, although by contruction, they are restricted to simpler, effective 
-description of the bands. Slater-Koster tight-binding models provide a middle ground
-since they allow to give a more accurate description of the material based on empirical
-considerations, while still being simple to compute.
+operators of electrons at position $i$. There exist several techniques to address this problem, 
+varying in degrees of sophistication and scope. The most established method is density-functional theory (DFT) [@DFT_review], 
+which provides an accurate description of the electronic structure, usually at the cost of slower computations. Tight-binding
+models are as equally popular since they constitute a quick and inexpensive way to model systems, although by contruction, 
+they are restricted to simpler, effective description of the bands. Slater-Koster tight-binding models [@SlaterKoster] provide a middle ground
+since they allow to give a more accurate description of the material based on empirical considerations, while still being simple to compute.
 
-Soemtimes, it makes sense to use the most accurate methods available to predict
-properties of the material. 
-However, using DFT might become too expensive computationally 
-if the amount of iteration needed to perform the numerical experients is too high. 
-This is precisely the role of tight-binding models: supposed that the
-model captures the key features of the material, it can be used instead to describe the solid,
-as long as the desired properties depend on those relevant features. In general, this approach
-allows for a qualitative exploration of the materials, while one should look for first principles
-calculations when seeking quantitive results. 
+Soemtimes, it makes sense to use the most accurate methods available to predict properties of the material. 
+However, using DFT might become too expensive computationally if the amount of iteration needed to perform the numerical experients is too high. 
+This is precisely the role of tight-binding models: supposed that the model captures the key features of the material, it can be used instead to describe the solid,
+as long as the desired properties depend on those relevant features. In general, this approach allows for a qualitative 
+exploration of the materials, while one should look for first principles calculations when seeking quantitive results. 
 
+Currently, there are several tight-binding packages available, such as PyBinding, Pyqula, PythTB, Kwant and PySKTB
+as well as $\mathbb{Z}_2Pack$ for computation of topological invariants. Of those libraries, only PySKTB was
+designed to build Slater-Koster models, while the rest require specifying directly the hopping amplitudes. On top of
+that, they are usually oriented towards crystalline structures, lacking tools for the description of disorder. `tightbinder`
+provides all the standard functionality expected from a tight-binding code, focusing specifically on Slater-Koster models,
+which are used additionaly to describe realistic amorphous materials. 
+It also provides tools for the topological characterization of solids, similar to those of $\mathbb{Z}_2Pack$ but
+integrated within the API. These features give the library its own identity within the landscape of tight-binding frameworks, not
+necessarily competing but providing alternative tools and a different perspective.
+
+
+# Features
+
+The determination of the band structure requires obtaining the spectrum of the Hamiltonian of the system,
+which in practice is equivalent to computing and diagonalizing its matrix representation.
+Therefore, the library is mainly built using linear algebra operations from the common Python libraries for scientific computing, i.e.
+`NumPy`, `SciPy` and `matplotlib` for visualization of the results.
 `tightbinder` focuses on providing the necessary routines and classes to build, modify
 and compute properties of empirical tight-binding models. The main features of the
 library are:
@@ -57,7 +79,7 @@ different chemical species with different numbers of electrons.
 - Configuration file based description of the model of the solid: Using a standarized
 format for configuration files, one can specify all the relevant parameters of the model,
 from the lattice vectors to the Slater-Koster hopping amplitudes. 
-- There are two main classes defined, one to describe crystalline Slater-Koster models,
+- Two main classes defined, one to describe crystalline Slater-Koster models,
 and another one for amorphous solids.
 There are also predefined models, and the possibility of defining custom models which inherit from a base `System` class.
 - Methods and routines to modify systems: once they are built, there are methods to modify
@@ -67,22 +89,14 @@ forms of disorder and external fields.
 and of the entanglement spectrum on a specified cut of the system.
 - Computation of observables from the eigenstates of the system, e.g. bands, expected value of the spin,
 density of states (also available using the kernel polynomial method), localization. 
-Available plotting routines for the different quantities.
+There are plotting routines available for the different quantities.
 - Fitting of the Slater-Koster parameters (or any user-defined model parameter) to reproduce
 some given energy bands, usually from DFT calculations. 
 
+The library is still under development. Future plans include electronic transport calculations in two dimensions,
+additional routines to extract information from the models such as the pair distribution function $g(r)$, and rewriting
+core parts of the library in C++ to improve performance.
 
-# Statement of need
-
-`tightbinder` is a Python package for Slater-Koster, semi-empirical tight-binding
-calculations of the electronic structure of solids. The determination of the band
-structure requires obtaining the spectrum the Hamiltonian of the system,
-which is in practice equivalent to computing and diagonalizing its matrix representation.
-The library mainly involves the manipulation of matrices to build the Hamiltonian,
-meaning that it is built upon the common Python libraries for scientific computing,
-`NumPy`, `SciPy` and `matplotlib` for visualization of the results.
-
-There
 
 # Usage
 
@@ -153,7 +167,6 @@ Figure sizes can be customized by adding an optional second parameter:
 
 # Acknowledgements
 
-We acknowledge contributions from Brigitta Sipocz, Syrtis Major, and Semyeong
-Oh, and support from Kathryn Johnston during the genesis of this project.
+We acknowledge support 
 
 # References
