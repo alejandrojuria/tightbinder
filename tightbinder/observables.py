@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import scipy.sparse as sp
 from typing import Tuple, List
 from matplotlib.axes import Axes
+import scipy.sparse as sp
 
 def _retarded_green_function(w: float, e: float, delta: float) -> complex:
     """ 
@@ -214,6 +215,7 @@ def plot_dos_kpm(system: System, npoints: int = 200, nmoments: int = 100, r: int
 
     return dos, energies
 
+
 def fermi_energy(dos: list, energy: list, system: System) -> float:
     """ 
     Routine to compute the Fermi energy from the density of states
@@ -348,3 +350,168 @@ def restricted_density_matrix(system: System, partition: list, nmoments: int = 1
 
     print(f"Fermi energy: {efermi}")
     return density_matrix
+
+
+def transmission(system: System, left_boundary: list, right_boundary: list, minE: float, maxE: float, npoints: int = 100, t: float = 1):
+    """
+    Function to compute the transmission function T(E) of a system. One has to specify the boundaries
+    where the leads are connected. Only two terminal setups are allowed. The leads are simulated
+    assuming s orbitals, and a square lattice. The system is also assumed to have the shape of a rectangle to setup
+    the connection to the leads.
+
+    :param system: System to compute transmission
+    :param left_boundary: List of indices of atoms of the system where the left lead is connected
+    :param right_boundary: Indices where the right lead connects.
+    :param minE: Minimum value of energy window where the transmission is computed.
+    :param maxE: Maximum value of energy window.
+    :param npoints: Sampling of energy window. Defaults to 100.
+    :param t: Value of leads hopping.
+    :return: List of transmission values and energy window.
+    """
+
+    device_hamiltonian, block_lead_L, block_lead_R = __attach_leads(system, left_boundary, right_boundary, t)
+    energies = np.linspace(minE, maxE, npoints)
+    currents = []
+    delta = 1E-7
+    for energy in energies:
+        lead_selfenergy_L = __lead_selfenergy(energy, block_lead_L, t, delta)
+        lead_selfenergy_R = __lead_selfenergy(energy, block_lead_R, t, delta)
+        device_green = __device_green_function(energy, device_hamiltonian, block_lead_L, block_lead_R, t, delta)
+        G = (lead_selfenergy_L*device_green*lead_selfenergy_R*device_green).trace()
+        currents.append(G)
+
+    return (G, energies)
+
+
+def __attach_leads(system: System, left_boundary: list, right_boundary: list, t: float):
+    """ 
+    Private method to extend the Hamiltonian to include a part of the leads. It assumes that the system has
+    rectangle shape. The leads will have the dimension of the number of atoms in the corresponding boundary.
+
+    :param system: System to attach leads to.
+    :param left_boundary: List of indices of atoms where we attach the left lead.
+    :param right_boundary: List of atoms to attach right lead.
+    :param t: Hopping amplitude of lead.
+    :return: ([Hd],Hl,Hr) [Hd] = Fock matrices of Hamiltonian of device with leads attached.
+        Vl = Left lead matrices. Vr = Right lead matrices.
+    """
+
+    if not left_boundary or not right_boundary:
+        raise ValueError("Boundaries list must not be empty.")
+
+    left_coupling = __lead_system_coupling(system, left_boundary, t)
+    right_coupling = __lead_system_coupling(system, right_boundary, t)
+    leftnatoms = len(left_boundary)
+    rightnatoms = len(right_boundary)
+
+    left_lead_block_h = sp.csr_matrix((leftnatoms, leftnatoms), dtype=np.complex_)
+    left_lead_block_h.setdiag(t, 1)
+    left_lead_block_h.setdiag(t, -1)
+    right_lead_block_h = sp.csr_matrix((rightnatoms, rightnatoms), dtype=np.complex_)  
+    right_lead_block_h.setdiag(t, 1)
+    right_lead_block_h.setdiag(t, -1)
+
+    device_dim = system.basisdim + leftnatoms + rightnatoms
+    device_hamiltonian = [sp.csr_matrix((device_dim, device_dim), dtype=np.complex_) for _ in range(len(system.hamiltonian))]
+    for i, matrix in system.hamiltonian:
+        device_hamiltonian[i][leftnatoms:leftnatoms + system.basisdim, 
+                              leftnatoms:leftnatoms + system.basisdim] = matrix
+    
+    device_hamiltonian[0][:leftnatoms, :leftnatoms] = left_lead_block_h
+    device_hamiltonian[0][:leftnatoms, leftnatoms:leftnatoms + system.basisdim] = left_coupling
+    device_hamiltonian[0][leftnatoms:leftnatoms + system.basisdim, :leftnatoms] = left_coupling.transpose()
+
+    device_hamiltonian[0][leftnatoms + system.basisdim:, leftnatoms + system.basisdim:] = right_lead_block_h
+    device_hamiltonian[0][leftnatoms + system.basisdim:, leftnatoms:leftnatoms + system.basisdim] = right_coupling
+    device_hamiltonian[0][leftnatoms:leftnatoms + system.basisdim, leftnatoms + system.basisdim:] = right_coupling.transpose()
+
+    return (device_hamiltonian, left_lead_block_h, right_lead_block_h)
+
+
+def __lead_system_coupling(system: System, boundary: list, t: float):
+    """
+    Private routine to define the coupling matrix between the system and one lead.
+
+    :param system: System to attach leads to.
+    :param boundary: List of indices of atoms where we attach the lead.
+    :param t: Hopping amplitude of lead.
+    :return: Coupling matrix between beginning of lead and system
+    """
+
+    boundary_positions = system.motif[boundary, :]
+    boundary_positions[:, 3] = boundary
+    boundary = boundary[boundary[:, 1].argsort()]
+
+    coupling_matrix = sp.csr_matrix((len(boundary), system.basisdim), dtype=np.complex_)
+
+    index_to_matrix_array = [0]
+    for _ in range(system.natoms - 1):
+        species = int(system.motif[index, 3])
+        index_to_matrix_array.append(index_to_matrix_array[-1] + system.configuration['Filling'][species])
+
+    for i, row in enumerate(boundary_positions):
+        index = row[3]
+        matrix_index = index_to_matrix_array[index]
+        species = system.motif[index, 3]
+        norbitals = system.configuration['Filling'][species] * system.configuration["Spin"]*2
+        coupling_matrix[i, matrix_index:matrix_index + norbitals] = t
+
+    return coupling_matrix
+
+
+def __lead_selfenergy(energy: float, lead_unit_cell_block: sp.csr_matrix, t: float, delta: float = 1E-7, threshold: float = 1E-4):
+    """
+    Routine to compute the selfenergy of one leaf at a given energy. 
+
+    :param energy: Energy where we evaluate the selfenergy.
+    :param lead_unit_cell_block: Hamiltonian block corresponding to the unit cell of the lead.
+    :param t: Value of hopping of lead.
+    :param delta: Imaginary part of lead. Usually infinitesimal, its sign defined retarded or advanced lead. Defaults to 1E-7.
+    :param threshold: Threshold to stop self-consistency of selfenergy. Defaults to 1E-4.
+    :return: Selfenergy matrix evaluated at energy+i*delta
+    """
+
+    selfenergy = sp.csr_matrix(lead_unit_cell_block.shape, dtype=np.complex_)
+
+    notConverged = True
+    while notConverged:
+        old_selfenergy = selfenergy
+        selfenergy = t**2*sp.linalg.inv((energy + 1j*delta)*sp.eye(lead_unit_cell_block.shape[0], format="csr") - lead_unit_cell_block - selfenergy)
+        maxNorm = sp.max(selfenergy - old_selfenergy)
+        if maxNorm < threshold:
+            notConverged = False
+    
+    return selfenergy
+
+
+def __device_green_function(energy: float, device_hamiltonian: list, lead_unit_cell_block_L: sp.csr_matrix, lead_unit_cell_block_R: sp.csr_matrix, t: float, delta: float = 1E-7):
+    """
+    Routine to compute the Green's function of the device at energy + i*delta.
+
+    :param energy: Energy where we evaluate the Green's function.
+    :param device_hamiltonian: List with the Fock matrices of the device.
+    :param lead_unit_cell_block_L: Block matrix to compute selfenergy of left lead.
+    :param lead_unit_cell_block_R: Block matrix to compute selfenergy of right lead.
+    :param t: Value of hopping of leads.
+    :param delta: Broadening. Defaults to 1E-7.
+    :return: Green's function of the device evaluated at energy + i*delta.
+    """
+
+    device_dim = device_hamiltonian[0].shape[0]
+    
+    lead_selfenergy_L = __lead_selfenergy(energy, lead_unit_cell_block_L, t, delta=delta)
+    extended_lead_selfenergy_L = sp.csr_matrix((device_dim, device_dim), dtype=np.complex_)
+    extended_lead_selfenergy_L[:lead_selfenergy_L.shape[0], :lead_selfenergy_L.shape[0]]
+
+    lead_selfenergy_R = __lead_selfenergy(energy, lead_unit_cell_block_R, t, delta=delta)
+    extended_lead_selfenergy_R= sp.csr_matrix((device_dim, device_dim), dtype=np.complex_)
+    extended_lead_selfenergy_R[(device_dim - lead_selfenergy_R.shape[0]):, (device_dim - lead_selfenergy_R.shape[0]):]
+
+    device_h = sp.csr_matrix((device_dim, device_dim), dtype=np.complex_)
+    for h in device_hamiltonian:
+        device_h += h
+
+    green_device = sp.linalg.inv((energy + 1j*delta)*sp.eye(device_dim, format="csr") - device_h - extended_lead_selfenergy_L - extended_lead_selfenergy_R)
+
+    return green_device
+
