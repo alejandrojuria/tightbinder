@@ -352,7 +352,7 @@ def restricted_density_matrix(system: System, partition: list, nmoments: int = 1
     return density_matrix
 
 
-def transmission(system: System, left_boundary: list, right_boundary: list, minE: float, maxE: float, npoints: int = 100, t: float = 1):
+def transmission(system: System, left_boundary: list, right_boundary: list, minE: float, maxE: float, npoints: int = 100, t: float = 1, delta: float = 1E-4):
     """
     Function to compute the transmission function T(E) of a system. One has to specify the boundaries
     where the leads are connected. Only two terminal setups are allowed. The leads are simulated
@@ -366,21 +366,40 @@ def transmission(system: System, left_boundary: list, right_boundary: list, minE
     :param maxE: Maximum value of energy window.
     :param npoints: Sampling of energy window. Defaults to 100.
     :param t: Value of leads hopping.
+    :param delta: Value of broadening used in Green's functions.
     :return: List of transmission values and energy window.
     """
 
     device_hamiltonian, block_lead_L, block_lead_R = __attach_leads(system, left_boundary, right_boundary, t)
+    device_dim = device_hamiltonian[0].shape[0]
     energies = np.linspace(minE, maxE, npoints)
     currents = []
-    delta = 1E-7
+    extended_lead_selfenergy_L = sp.lil_matrix((device_dim, device_dim), dtype=np.complex_)
+    extended_lead_selfenergy_R = sp.lil_matrix((device_dim, device_dim), dtype=np.complex_)
+
     for energy in energies:
-        lead_selfenergy_L = __lead_selfenergy(energy, block_lead_L, t, delta)
-        lead_selfenergy_R = __lead_selfenergy(energy, block_lead_R, t, delta)
-        device_green = __device_green_function(energy, device_hamiltonian, block_lead_L, block_lead_R, t, delta)
-        G = (lead_selfenergy_L*device_green*lead_selfenergy_R*device_green).trace()
+        lead_selfenergy_L_m = __lead_selfenergy(energy, block_lead_L, t, -delta)     
+        lead_selfenergy_L_p = __lead_selfenergy(energy, block_lead_L, t, delta)  
+        coupling_L = 1j*(lead_selfenergy_L_p - lead_selfenergy_L_m)   
+        
+        extended_lead_selfenergy_L[:lead_selfenergy_L_m.shape[0], :lead_selfenergy_L_m.shape[0]] = coupling_L
+
+        print(extended_lead_selfenergy_L)
+
+        lead_selfenergy_R_m = __lead_selfenergy(energy, block_lead_R, t, -delta)
+        lead_selfenergy_R_p = __lead_selfenergy(energy, block_lead_R, t, delta)
+        coupling_R = 1j*(lead_selfenergy_R_p - lead_selfenergy_R_m)
+        extended_lead_selfenergy_R[(device_dim - lead_selfenergy_R_m.shape[0]):, (device_dim - lead_selfenergy_R_m.shape[0]):] = coupling_R
+
+        print(extended_lead_selfenergy_R, "\n")
+
+        device_green_m = __device_green_function(energy, device_hamiltonian, block_lead_L, block_lead_R, t, -delta)
+        device_green_p = __device_green_function(energy, device_hamiltonian, block_lead_L, block_lead_R, t, delta)
+        
+        G = (extended_lead_selfenergy_L*device_green_m*extended_lead_selfenergy_R*device_green_p).trace()
         currents.append(G)
 
-    return (G, energies)
+    return (currents, energies)
 
 
 def __attach_leads(system: System, left_boundary: list, right_boundary: list, t: float):
@@ -399,21 +418,28 @@ def __attach_leads(system: System, left_boundary: list, right_boundary: list, t:
     if not left_boundary or not right_boundary:
         raise ValueError("Boundaries list must not be empty.")
 
+
     left_coupling = __lead_system_coupling(system, left_boundary, t)
     right_coupling = __lead_system_coupling(system, right_boundary, t)
     leftnatoms = len(left_boundary)
     rightnatoms = len(right_boundary)
 
     left_lead_block_h = sp.csr_matrix((leftnatoms, leftnatoms), dtype=np.complex_)
-    left_lead_block_h.setdiag(t, 1)
-    left_lead_block_h.setdiag(t, -1)
-    right_lead_block_h = sp.csr_matrix((rightnatoms, rightnatoms), dtype=np.complex_)  
-    right_lead_block_h.setdiag(t, 1)
-    right_lead_block_h.setdiag(t, -1)
+    try:
+        left_lead_block_h.setdiag(t, 1)
+        left_lead_block_h.setdiag(t, -1)
+    except ValueError as e:
+        pass
+    right_lead_block_h = sp.csr_matrix((rightnatoms, rightnatoms), dtype=np.complex_)
+    try:
+        right_lead_block_h.setdiag(t, 1)
+        right_lead_block_h.setdiag(t, -1)
+    except ValueError as e:
+        pass
 
     device_dim = system.basisdim + leftnatoms + rightnatoms
-    device_hamiltonian = [sp.csr_matrix((device_dim, device_dim), dtype=np.complex_) for _ in range(len(system.hamiltonian))]
-    for i, matrix in system.hamiltonian:
+    device_hamiltonian = [sp.lil_matrix((device_dim, device_dim), dtype=np.complex_) for _ in range(len(system.hamiltonian))]
+    for i, matrix in enumerate(system.hamiltonian):
         device_hamiltonian[i][leftnatoms:leftnatoms + system.basisdim, 
                               leftnatoms:leftnatoms + system.basisdim] = matrix
     
@@ -424,6 +450,9 @@ def __attach_leads(system: System, left_boundary: list, right_boundary: list, t:
     device_hamiltonian[0][leftnatoms + system.basisdim:, leftnatoms + system.basisdim:] = right_lead_block_h
     device_hamiltonian[0][leftnatoms + system.basisdim:, leftnatoms:leftnatoms + system.basisdim] = right_coupling
     device_hamiltonian[0][leftnatoms:leftnatoms + system.basisdim, leftnatoms + system.basisdim:] = right_coupling.transpose()
+
+    for i in range(len(device_hamiltonian)):
+        device_hamiltonian[i] = device_hamiltonian[i].tocsr()
 
     return (device_hamiltonian, left_lead_block_h, right_lead_block_h)
 
@@ -440,26 +469,28 @@ def __lead_system_coupling(system: System, boundary: list, t: float):
 
     boundary_positions = system.motif[boundary, :]
     boundary_positions[:, 3] = boundary
-    boundary = boundary[boundary[:, 1].argsort()]
+    boundary_positions = boundary_positions[boundary_positions[:, 1].argsort()]
 
-    coupling_matrix = sp.csr_matrix((len(boundary), system.basisdim), dtype=np.complex_)
+    coupling_matrix = sp.lil_matrix((len(boundary), system.basisdim), dtype=np.complex_)
 
     index_to_matrix_array = [0]
-    for _ in range(system.natoms - 1):
+    for index in range(system.natoms - 1):
         species = int(system.motif[index, 3])
-        index_to_matrix_array.append(index_to_matrix_array[-1] + system.configuration['Filling'][species])
+        index_to_matrix_array.append(index_to_matrix_array[-1] + int(system.configuration['Filling'][species]))
 
     for i, row in enumerate(boundary_positions):
-        index = row[3]
+        index = int(row[3])
         matrix_index = index_to_matrix_array[index]
-        species = system.motif[index, 3]
-        norbitals = system.configuration['Filling'][species] * system.configuration["Spin"]*2
+        species = int(system.motif[index, 3])
+        norbitals = int(system.configuration['Filling'][species] * (1 + system.configuration["Spin"]))
         coupling_matrix[i, matrix_index:matrix_index + norbitals] = t
+
+    coupling_matrix = coupling_matrix.tolil()
 
     return coupling_matrix
 
 
-def __lead_selfenergy(energy: float, lead_unit_cell_block: sp.csr_matrix, t: float, delta: float = 1E-7, threshold: float = 1E-4):
+def __lead_selfenergy(energy: float, lead_unit_cell_block: sp.csr_matrix, t: float, delta: float = 1E-7, threshold: float = 1E-3, mixing: float = 0.6):
     """
     Routine to compute the selfenergy of one leaf at a given energy. 
 
@@ -468,16 +499,17 @@ def __lead_selfenergy(energy: float, lead_unit_cell_block: sp.csr_matrix, t: flo
     :param t: Value of hopping of lead.
     :param delta: Imaginary part of lead. Usually infinitesimal, its sign defined retarded or advanced lead. Defaults to 1E-7.
     :param threshold: Threshold to stop self-consistency of selfenergy. Defaults to 1E-4.
+    :param mixing: Mixing parameter to achieve convergence faster.
     :return: Selfenergy matrix evaluated at energy+i*delta
     """
 
-    selfenergy = sp.csr_matrix(lead_unit_cell_block.shape, dtype=np.complex_)
+    selfenergy = np.zeros(lead_unit_cell_block.shape, dtype=np.complex_)
 
     notConverged = True
     while notConverged:
         old_selfenergy = selfenergy
-        selfenergy = t**2*sp.linalg.inv((energy + 1j*delta)*sp.eye(lead_unit_cell_block.shape[0], format="csr") - lead_unit_cell_block - selfenergy)
-        maxNorm = sp.max(selfenergy - old_selfenergy)
+        selfenergy = old_selfenergy * (1 - mixing) + mixing * t**2*np.linalg.inv((energy + 1j*delta)*np.eye(lead_unit_cell_block.shape[0]) - lead_unit_cell_block - selfenergy)
+        maxNorm = abs((selfenergy - old_selfenergy).max())
         if maxNorm < threshold:
             notConverged = False
     
@@ -500,18 +532,69 @@ def __device_green_function(energy: float, device_hamiltonian: list, lead_unit_c
     device_dim = device_hamiltonian[0].shape[0]
     
     lead_selfenergy_L = __lead_selfenergy(energy, lead_unit_cell_block_L, t, delta=delta)
-    extended_lead_selfenergy_L = sp.csr_matrix((device_dim, device_dim), dtype=np.complex_)
-    extended_lead_selfenergy_L[:lead_selfenergy_L.shape[0], :lead_selfenergy_L.shape[0]]
+    extended_lead_selfenergy_L = sp.lil_matrix((device_dim, device_dim), dtype=np.complex_)
+    extended_lead_selfenergy_L[:lead_selfenergy_L.shape[0], :lead_selfenergy_L.shape[0]] = lead_selfenergy_L
 
     lead_selfenergy_R = __lead_selfenergy(energy, lead_unit_cell_block_R, t, delta=delta)
-    extended_lead_selfenergy_R= sp.csr_matrix((device_dim, device_dim), dtype=np.complex_)
-    extended_lead_selfenergy_R[(device_dim - lead_selfenergy_R.shape[0]):, (device_dim - lead_selfenergy_R.shape[0]):]
+    extended_lead_selfenergy_R= sp.lil_matrix((device_dim, device_dim), dtype=np.complex_)
+    extended_lead_selfenergy_R[(device_dim - lead_selfenergy_R.shape[0]):, (device_dim - lead_selfenergy_R.shape[0]):] = lead_selfenergy_R
 
-    device_h = sp.csr_matrix((device_dim, device_dim), dtype=np.complex_)
+    extended_lead_selfenergy_L = extended_lead_selfenergy_L.tocsc()
+    extended_lead_selfenergy_R = extended_lead_selfenergy_R.tocsc()
+
+    device_h = sp.csc_matrix((device_dim, device_dim), dtype=np.complex_)
     for h in device_hamiltonian:
         device_h += h
 
-    green_device = sp.linalg.inv((energy + 1j*delta)*sp.eye(device_dim, format="csr") - device_h - extended_lead_selfenergy_L - extended_lead_selfenergy_R)
+    green_device = sp.linalg.inv((energy + 1j*delta)*sp.eye(device_dim, format="csc") - device_h - extended_lead_selfenergy_L - extended_lead_selfenergy_R)
 
-    return green_device
+    return green_device.tocsr()
+
+
+def ldos(result: Spectrum, atom_index: int, energy: float, delta: float = 1E-4):
+    """
+    Routine to compute the local density of states at a given energy.
+
+    :param result: Spectrum object with the results from the diagonalization.
+    :param atom_index: Index of the atom where we want to compute the LDOS.
+    :param energy: Value of energy where we evaluate the LDOS.
+    :param delta: Value of energy broadening. Defaults to 1E-4.
+    :return: Value of LDOS.
+    """
+
+    pass
+
+
+def integrated_ldos(result: Spectrum, atom_index: int, minE: float, maxE: float):
+    """
+    Routine to compute the local density of states integrated on a specified energy window.
+
+    :param result: Spectrum object with the result of the diagonalization of the system.
+    :param atom_index: Index of the atom where we evaluate the integrated LDOS.
+    :param minE: Minimum value of energy window.
+    :param maxE: Maximum value of energy window.
+    :return: Integrated LDOS evaluated on atom_index.
+    """
+
+    index_to_matrix_array = [0]
+    for index in range(result.system.natoms - 1):
+        species = int(result.system.motif[index, 3])
+        index_to_matrix_array.append(index_to_matrix_array[-1] + result.system.norbitals[species])
+
+    init_index = int(index_to_matrix_array[atom_index])
+    species_index = int(result.system.motif[atom_index, 3])
+    final_index = init_index + int(result.system.norbitals[species_index])
+
+    ildos = 0
+    for j in range(result.eigen_energy.shape[1]):
+        for i in range(result.eigen_energy.shape[0]):
+            eigval = result.eigen_energy[i, j]
+            if eigval > maxE or eigval < minE:
+                continue
+            eigvec = result.eigen_states[j, :, i]
+            eigvec = eigvec[init_index:final_index]
+            ildos += np.vdot(eigvec, eigvec)
+    
+    return ildos
+
 
