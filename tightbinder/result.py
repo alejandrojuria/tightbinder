@@ -198,7 +198,7 @@ class Spectrum:
 
         # ax.grid(linestyle='--')
 
-    def plot_spectrum(self, title: str = '') -> None:
+    def plot_spectrum(self, title: str = '',  ax: Axes = None) -> None:
         """ 
         Routine to plot all the eigenvalues coming from the Bloch Hamiltonian diagonalization
         in an ordered way.
@@ -206,18 +206,19 @@ class Spectrum:
 
         :param title: Optional title for the plot.
         """
+        if ax is None:
+            fig, ax = plt.subplots(1, 1)
 
         all_eigenvalues = self.eigen_energy.reshape(-1, 1)
         all_eigenvalues = np.sort(all_eigenvalues)
 
-        plt.plot(all_eigenvalues, 'g+')
+        ax.plot(all_eigenvalues, 'g+')
         if title != '':
-            plt.title(f"Spectrum of {title}")
+            ax.set_title(f"Spectrum of {title}")
         else:
-            plt.title("Spectrum")
-        plt.ylabel(r"$\varepsilon (eV)$")
-        plt.xlabel("n")
-        plt.show()
+            ax.set_title("Spectrum")
+        ax.set_ylabel(r"$\varepsilon (eV)$")
+        ax.set_xlabel("n")
 
     def write_bands_to_file(self, file: str):
         """ TODO write_bands_to_file"""
