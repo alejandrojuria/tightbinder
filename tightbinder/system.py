@@ -621,8 +621,24 @@ class System(Crystal):
                 sys.exit(1)
 
             return self
+        
+    def extend_copy(self, vector: List[list, np.ndarray], n: int = 1) -> None:
+        """
+        Method to extend the system by attaching a copy of the motif displaced by some input vector.
 
-    def _restrict_lattice2rectangle(self) -> None:
+        :param vector: Vector by which we displace the copy of the system.
+        :param n: Number of copies to attach. The n-th copy will be displaced by n*vector. Defaults to 1.
+        """
+
+        displaced_motif = np.copy(self.motif)
+        for _ in range(n):
+            displaced_motif[:, :3] += np.array(vector)
+            self.motif = np.concatenate((self.motif, displaced_motif))  
+
+        return self      
+
+
+    def restrict_lattice2rectangle(self) -> None:
         """
         TO BE IMPLEMENTED YET (is it really necessary?).
         """
