@@ -378,25 +378,19 @@ def transmission(system: System, left_boundary: list, right_boundary: list, minE
     extended_lead_selfenergy_R = sp.lil_matrix((device_dim, device_dim), dtype=np.complex_)
 
     for energy in energies:
-        lead_selfenergy_L_m = __lead_selfenergy(energy, block_lead_L, t, -delta)     
-        lead_selfenergy_L_p = __lead_selfenergy(energy, block_lead_L, t, delta)  
-        coupling_L = 1j*(lead_selfenergy_L_p - lead_selfenergy_L_m)   
+        lead_selfenergy_L = __lead_selfenergy(energy, block_lead_L, t, delta)  
         
-        extended_lead_selfenergy_L[:lead_selfenergy_L_m.shape[0], :lead_selfenergy_L_m.shape[0]] = coupling_L
+        coupling_L = 1j*(lead_selfenergy_L - lead_selfenergy_L.transpose().conjugate())   
+        extended_lead_selfenergy_L[:lead_selfenergy_L.shape[0], :lead_selfenergy_L.shape[0]] = coupling_L
 
-        print(extended_lead_selfenergy_L)
+        lead_selfenergy_R = __lead_selfenergy(energy, block_lead_R, t, delta)
+        coupling_R = 1j*(lead_selfenergy_R - lead_selfenergy_R.transpose().conjugate())
+        extended_lead_selfenergy_R[(device_dim - lead_selfenergy_R.shape[0]):, (device_dim - lead_selfenergy_R.shape[0]):] = coupling_R
 
-        lead_selfenergy_R_m = __lead_selfenergy(energy, block_lead_R, t, -delta)
-        lead_selfenergy_R_p = __lead_selfenergy(energy, block_lead_R, t, delta)
-        coupling_R = 1j*(lead_selfenergy_R_p - lead_selfenergy_R_m)
-        extended_lead_selfenergy_R[(device_dim - lead_selfenergy_R_m.shape[0]):, (device_dim - lead_selfenergy_R_m.shape[0]):] = coupling_R
-
-        print(extended_lead_selfenergy_R, "\n")
-
-        device_green_m = __device_green_function(energy, device_hamiltonian, block_lead_L, block_lead_R, t, -delta)
-        device_green_p = __device_green_function(energy, device_hamiltonian, block_lead_L, block_lead_R, t, delta)
+        device_green = __device_green_function(energy, device_hamiltonian, block_lead_L, block_lead_R, t, delta)
         
-        G = (extended_lead_selfenergy_L*device_green_m*extended_lead_selfenergy_R*device_green_p).trace()
+        G = (extended_lead_selfenergy_L @ device_green @ extended_lead_selfenergy_R @ device_green.transpose().conjugate()).trace()
+        print("G: ", G)
         currents.append(G)
 
     return (currents, energies)
@@ -424,18 +418,20 @@ def __attach_leads(system: System, left_boundary: list, right_boundary: list, t:
     leftnatoms = len(left_boundary)
     rightnatoms = len(right_boundary)
 
-    left_lead_block_h = sp.csr_matrix((leftnatoms, leftnatoms), dtype=np.complex_)
+    left_lead_block_h = sp.lil_matrix((leftnatoms, leftnatoms), dtype=np.complex_)
     try:
         left_lead_block_h.setdiag(t, 1)
         left_lead_block_h.setdiag(t, -1)
     except ValueError as e:
         pass
-    right_lead_block_h = sp.csr_matrix((rightnatoms, rightnatoms), dtype=np.complex_)
+    right_lead_block_h = sp.lil_matrix((rightnatoms, rightnatoms), dtype=np.complex_)
     try:
         right_lead_block_h.setdiag(t, 1)
         right_lead_block_h.setdiag(t, -1)
     except ValueError as e:
         pass
+    left_lead_block_h = left_lead_block_h.tocsc()
+    right_lead_block_h = right_lead_block_h.tocsc()
 
     device_dim = system.basisdim + leftnatoms + rightnatoms
     device_hamiltonian = [sp.lil_matrix((device_dim, device_dim), dtype=np.complex_) for _ in range(len(system.hamiltonian))]
@@ -452,7 +448,7 @@ def __attach_leads(system: System, left_boundary: list, right_boundary: list, t:
     device_hamiltonian[0][leftnatoms:leftnatoms + system.basisdim, leftnatoms + system.basisdim:] = right_coupling.transpose()
 
     for i in range(len(device_hamiltonian)):
-        device_hamiltonian[i] = device_hamiltonian[i].tocsr()
+        device_hamiltonian[i] = device_hamiltonian[i].tocsc()
 
     return (device_hamiltonian, left_lead_block_h, right_lead_block_h)
 
@@ -476,21 +472,21 @@ def __lead_system_coupling(system: System, boundary: list, t: float):
     index_to_matrix_array = [0]
     for index in range(system.natoms - 1):
         species = int(system.motif[index, 3])
-        index_to_matrix_array.append(index_to_matrix_array[-1] + int(system.configuration['Filling'][species]))
+        index_to_matrix_array.append(index_to_matrix_array[-1] + int(system.norbitals[species]))
 
     for i, row in enumerate(boundary_positions):
         index = int(row[3])
         matrix_index = index_to_matrix_array[index]
         species = int(system.motif[index, 3])
-        norbitals = int(system.configuration['Filling'][species] * (1 + system.configuration["Spin"]))
+        norbitals = int(system.norbitals[species])
         coupling_matrix[i, matrix_index:matrix_index + norbitals] = t
 
-    coupling_matrix = coupling_matrix.tolil()
+    coupling_matrix = coupling_matrix.tocsc()
 
     return coupling_matrix
 
 
-def __lead_selfenergy(energy: float, lead_unit_cell_block: sp.csr_matrix, t: float, delta: float = 1E-7, threshold: float = 1E-3, mixing: float = 0.6):
+def __lead_selfenergy(energy: float, lead_unit_cell_block: sp.csr_matrix, t: float, delta: float = 1E-7, threshold: float = 1E-4, mixing: float = 0.6):
     """
     Routine to compute the selfenergy of one leaf at a given energy. 
 
@@ -506,11 +502,16 @@ def __lead_selfenergy(energy: float, lead_unit_cell_block: sp.csr_matrix, t: flo
     selfenergy = np.zeros(lead_unit_cell_block.shape, dtype=np.complex_)
 
     notConverged = True
+    old_selfenergy = np.zeros(lead_unit_cell_block.shape, dtype=np.complex_)
+    old2_selfenergy = np.zeros(lead_unit_cell_block.shape, dtype=np.complex_)
     while notConverged:
+        old2_selfenergy = old_selfenergy
         old_selfenergy = selfenergy
-        selfenergy = old_selfenergy * (1 - mixing) + mixing * t**2*np.linalg.inv((energy + 1j*delta)*np.eye(lead_unit_cell_block.shape[0]) - lead_unit_cell_block - selfenergy)
-        maxNorm = abs((selfenergy - old_selfenergy).max())
-        if maxNorm < threshold:
+        new_selfenergy = t**2*np.linalg.inv((energy + 1j*delta)*np.eye(lead_unit_cell_block.shape[0]) - lead_unit_cell_block - selfenergy)
+        selfenergy = old_selfenergy * (1 - mixing) + mixing * new_selfenergy
+        maxNorm = np.abs(selfenergy - old_selfenergy).max()
+        maxNorm2 = np.abs(selfenergy - old2_selfenergy).max()
+        if maxNorm < threshold and maxNorm2 < threshold:
             notConverged = False
     
     return selfenergy
