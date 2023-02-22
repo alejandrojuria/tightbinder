@@ -9,6 +9,7 @@ import scipy.sparse as sp
 from typing import Tuple, List
 from matplotlib.axes import Axes
 import scipy.sparse as sp
+from typing import Union, List, Tuple
 
 def _retarded_green_function(w: float, e: float, delta: float) -> complex:
     """ 
@@ -352,7 +353,28 @@ def restricted_density_matrix(system: System, partition: list, nmoments: int = 1
     return density_matrix
 
 
-def transmission(system: System, left_boundary: list, right_boundary: list, minE: float, maxE: float, npoints: int = 100, t: float = 1, delta: float = 1E-4):
+def transmission(system: System, left_lead: Union[List, np.ndarray], right_leaf: Union[List, np.ndarray],
+                 minE: float, maxE: float, npoints: int = 100, delta: float = 1E-7) -> Tuple[List, List]:
+    """
+    Function to compute the transmission function T(E) of a system. One has to specify the unit
+    cell of each lead in terms of the positions and chemical species. Only two terminal setups are allowed. 
+    The lead-system coupling and the lead-lead coupling are computed using the corresponding Slater-Koster amplitudes.
+
+    :param system: System to compute transmission
+    :param left_lead: Unit cell of left lead. Array or list where each row contains the position
+        and chemical species of each atom of the lead.
+    :param right_lead: Same as left lead.
+    :param minE: Minimum value of energy window where the transmission is computed.
+    :param maxE: Maximum value of energy window.
+    :param npoints: Sampling of energy window. Defaults to 100.
+    :param delta: Value of broadening used in Green's functions. Defaults to 1E-7.
+    :return: List of transmission values and energy window.
+    """
+
+    
+
+
+def transmission(system: System, left_boundary: list, right_boundary: list, minE: float, maxE: float, npoints: int = 100, t: float = 1, delta: float = 1E-7):
     """
     Function to compute the transmission function T(E) of a system. One has to specify the boundaries
     where the leads are connected. Only two terminal setups are allowed. The leads are simulated
