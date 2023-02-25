@@ -78,7 +78,7 @@ class Spectrum:
         plt.show()
 
     def plot_along_path(self, labels: List[str], title: str = '', edge_states: bool = False, rescale: bool = True,
-                        ax: Axes = None, e_values: List[float] = [], fontsize: float = 10) -> None:
+                        ax: Axes = None, e_values: List[float] = [], fontsize: float = 10, linewidth: float = 2) -> None:
         """ 
         Method to plot the bands along a path in reciprocal space, normally along high symmetry points.
 
@@ -90,6 +90,7 @@ class Spectrum:
             state has energy zero. Defaults to True.
         :param ax: Axes object from matplotlib to plot bands there. Useful for figures with subplots.
         :param e_values: List with two values, [e_min, e_max] to show bands only in that energy range.
+        :param linewidth: Linewidth. Defaults to 2.
         :param fontsize: Adjusts size of lines and text.
         """
 
@@ -112,16 +113,16 @@ class Spectrum:
             x_ticks.append(xpos)
         
         for eigen_energy_k in self.eigen_energy:
-            ax.plot(x_points, eigen_energy_k, 'g-', linewidth=3)
+            ax.plot(x_points, eigen_energy_k, 'k-', linewidth=linewidth)
 
         if edge_states and self.system.filling is not None:
             edge_states_indices = [int(self.system.filling) + i for i in range(-2, 2)]
             for state in edge_states_indices:
-                ax.plot(x_points, self.eigen_energy[state], 'r-')
+                ax.plot(x_points, self.eigen_energy[state], 'r-', linewidth=linewidth)
 
         ax.set_xticks(x_ticks)
         ax.set_xticklabels(labels, fontsize=fontsize)
-        ax.set_ylabel(r'$\epsilon$ (eV)', fontsize=fontsize)
+        ax.set_ylabel(r'$\varepsilon$ (eV)', fontsize=fontsize)
         ax.tick_params('y', labelsize=fontsize)
         if title != '':
             ax.set_title(title + " band structure", fontsize=fontsize)
@@ -130,7 +131,7 @@ class Spectrum:
             ax.yaxis.set_ticks(np.arange(np.round(e_values[0]), np.round(e_values[1]) + 1, 1))
             ax.set_ylim(e_values)
 
-        # ax.grid(linestyle='--')
+        ax.grid(linestyle='dashed', axis="x")
 
     def plot_bands_w_atomic_occupation(self, labels, atom_indices, title='', rescale=True, 
                                        ax=None, e_values=[], fontsize=10):
@@ -172,7 +173,8 @@ class Spectrum:
         # Sort by increasing occupation to avoid visual artifacts when plotting
         occupation_matrix = self.calculate_occupation(atom_indices)
 
-        cmap = get_cmap("viridis")
+        colormap = "viridis"
+        cmap = get_cmap(colormap)
         segments = []
         colors = []
         for i, eigen_energy_k in enumerate(self.eigen_energy):
@@ -180,14 +182,21 @@ class Spectrum:
                 segments.append([(x_points[j], eigen_energy_k[j]), (x_points[j + 1], eigen_energy_k[j + 1])])
                 colors.append(cmap(occupation_matrix[i, j]))
 
-        lines = LineCollection(segments[::-1], colors=colors[::-1], linewidth=3)
+        lines = LineCollection(segments[::-1], colors=colors[::-1], linewidth=2)
         ax.add_collection(lines)
         print(f"Max occupation: {np.max(occupation_matrix)}")
-        plt.colorbar(lines, ax=ax)
+
+        cbar = plt.colorbar(lines, ax=ax, extend="both")
+        cbar.set_label("Edge occupation", fontsize=fontsize)
+        lines.set_cmap(colormap)
+        cbar.ax.tick_params(labelsize=fontsize) 
 
         ax.set_xticks(x_ticks)
+        for i, label in enumerate(labels):
+            if label == "G":
+                labels[i] = r"$\Gamma$"
         ax.set_xticklabels(labels, fontsize=fontsize)
-        ax.set_ylabel(r'$\epsilon$ (eV)', fontsize=fontsize)
+        ax.set_ylabel(r'$\varepsilon$ (eV)', fontsize=fontsize)
         ax.tick_params('y', labelsize=fontsize)
         if title != '':
             ax.set_title(title + " band structure", fontsize=fontsize)
@@ -195,6 +204,7 @@ class Spectrum:
         if e_values:
             ax.yaxis.set_ticks(np.arange(np.round(e_values[0]), np.round(e_values[1]) + 1, 1))
             ax.set_ylim(e_values)
+        
 
         # ax.grid(linestyle='--')
 
@@ -358,7 +368,7 @@ class Spectrum:
         for kIndex, k_eigenstates in enumerate(self.eigen_states):
             for i, eigenstate in enumerate(k_eigenstates.T):
                 state = State(eigenstate, self.system)
-                occupations[i, kIndex] = state.compute_specific_occupation(atom_indices)
+                occupations[i, kIndex] = state.compute_occupation(atom_indices)
 
         return occupations
 
@@ -436,6 +446,7 @@ class State:
         amplitude = np.array(self.atomic_amplitude())
         scaled_amplitude = amplitude/np.max(amplitude)
         size_adjustment = len(amplitude)/2 - np.power((1 - scaled_amplitude), 4)
+        scaled_amplitude[scaled_amplitude < 1/len(scaled_amplitude)] = 0
 
         if ax is None:
             fig = plt.figure(figsize=(5, 6))
@@ -448,8 +459,7 @@ class State:
                 xneigh, yneigh = atoms[bond[1], :2]
                 ax.plot([x0, xneigh], [y0, yneigh], "-k", linewidth=1.)
         ax.scatter(atoms[:, 0], atoms[:, 1],
-                   c="royalblue", alpha=0.9, s=scaled_amplitude*5
-                   )
+                   c="royalblue", alpha=1, s=scaled_amplitude*1500)
         ax.set_xlim([np.min(atoms[:, 0]), np.max(atoms[:, 0])])
         ax.set_ylim([np.min(atoms[:, 1]), np.max(atoms[:, 1])])
         ax.set_xticks([0, 29])
