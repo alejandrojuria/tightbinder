@@ -63,6 +63,7 @@ class Crystal:
     def bravais_lattice(self, bravais_lattice: Union[list, np.ndarray]) -> None:
         if bravais_lattice is None:
             self._bravais_lattice = None
+            self._ndim = 0
         else:
             assert type(bravais_lattice) == list or type(bravais_lattice) == np.ndarray
             bravais_lattice = np.array(bravais_lattice)
@@ -620,6 +621,7 @@ class CrystalView:
         """
 
         mesh_points = generate_basis_combinations(self.ndim)
+        
         try:
             # Origin cell
             for initial_atom, final_atom, cell, nn in self.neighbours:
@@ -630,6 +632,7 @@ class CrystalView:
                     continue
                     reverse_bond = self.vp.curve(self.atoms[final_atom].pos, self.atoms[initial_atom].pos - unit_cell)
                     self.bonds.append(reverse_bond)
+
 
             # Super cell
             for point in mesh_points:
