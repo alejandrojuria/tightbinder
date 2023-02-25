@@ -430,29 +430,30 @@ class SlaterKoster(System):
         return hamiltonian_k
 
     # ---------------------------- IO routines ----------------------------
-    def export_model(self, filename: str) -> None:
+    def export_model(self, filename: str, fmt: str = "%12.6f") -> None:
         """ 
         Routine to write the Hamiltonian matrices calculated to a file. 
         
         :param filename: Name of the file where we write the model.
         """
 
+        h_fmt = [fmt+"%+"+fmt[1:]+"j" for _ in range(self.hamiltonian[0].shape[0])]
         with open(filename, "w") as file:
             # Write ndim, natoms, norbitals, ncells and bravais lattice basis vectors
             file.write("# dimension\n" + str(self.ndim) + "\n")
             file.write("# norbitals\n")
             np.savetxt(file, [self.norbitals], fmt="%i")
             file.write("# bravaislattice\n")
-            np.savetxt(file, self.bravais_lattice)
+            np.savetxt(file, self.bravais_lattice, fmt=fmt)
             file.write("# motif\n")
             for atom in self.motif:
-                np.savetxt(file, [atom])
+                np.savetxt(file, [atom], fmt=fmt)
             file.write("# bravaisvectors\n")
             for vector in self._unit_cell_list:
-                np.savetxt(file, [vector])
+                np.savetxt(file, [vector], fmt=fmt)
             file.write("# hamiltonian\n")
             for h in self.hamiltonian:
-                np.savetxt(file, h)
+                np.savetxt(file, h, fmt=h_fmt)
                 file.write("&\n")
             if self.configuration["Filling"]:
                 file.write("# filling\n" + str(self.filling) + "\n")
@@ -470,9 +471,42 @@ class SlaterKoster(System):
         :return: Instance of SlaterKoster.
         """
 
-        it = 0
-        with open(filename, "r") as file:
-            line = file.readline().split()
+        model = cls()
+        file = open(filename, "r")
+        file_contents = {}
+        content = []
+        for line in file.readlines():
+            line = line.split()
+            if line[0] == "#":
+                arg = line[1]
+                if not content:
+                    continue
+                file_contents[arg] = content
+                content = []
+            else:
+                content.append(line)
+        
+        for key in file_contents.keys():
+            if key == "dimension":
+                model.dimension = int(file_contents[key][0])
+            elif key == "norbitals":
+                model.norbitals = [int(value) for value in file_contents[key][0]]
+            elif key == "bravaislattice":
+                bravais_lattice = []
+                for vector in file_contents[key]:
+                    bravais_lattice.append([float(value) for value in vector])
+
+
+            # dimension
+            line = file.readline()
+            dimension = int(file.readline())
+
+            # norbitals
+            line = [int(value) for value in file.readline().split()]
+
+            # bravaislattice
+            
+
             ndim, natoms, norbitals, ncells = [int(num) for num in line]
             basisdim = norbitals * natoms
             bravais_lattice = []
@@ -503,7 +537,7 @@ class SlaterKoster(System):
                     hamiltonian.append(hamiltonian_matrix)
                     hamiltonian_matrix = np.zeros([basisdim, basisdim], dtype=np.complex_)
                 else:
-                    hamiltonian_matrix[it, :] = [complex(num) for num in line]
+                    hamiltonian_matrix[it, :] = [complex(line[2*i], line[2*i + 1]) for i in range(len(line))]
                     it += 1
 
         if ncells != len(unit_cell_list):
