@@ -1,15 +1,14 @@
 # Module containing routines for computation of observables
 
-import sys
 from tightbinder.result import Spectrum
 from tightbinder.system import System
 import numpy as np
+import scipy.sparse as sp
 import matplotlib.pyplot as plt
-import scipy.sparse as sp
-from typing import Tuple, List
 from matplotlib.axes import Axes
-import scipy.sparse as sp
 from typing import Union, List, Tuple
+from copy import deepcopy
+
 
 def _retarded_green_function(w: float, e: float, delta: float) -> complex:
     """ 
@@ -353,8 +352,9 @@ def restricted_density_matrix(system: System, partition: list, nmoments: int = 1
     return density_matrix
 
 
-def transmission(system: System, left_lead: Union[List, np.ndarray], right_leaf: Union[List, np.ndarray],
-                 minE: float, maxE: float, npoints: int = 100, delta: float = 1E-7) -> Tuple[List, List]:
+def transmission(system: System, left_lead: Union[List, np.ndarray], right_lead: Union[List, np.ndarray],
+                 period: Union[List, float], minE: float, maxE: float, npoints: int = 100, 
+                 delta: float = 1E-7, mode: str = "default") -> Tuple[List, List]:
     """
     Function to compute the transmission function T(E) of a system. One has to specify the unit
     cell of each lead in terms of the positions and chemical species. Only two terminal setups are allowed. 
@@ -364,173 +364,179 @@ def transmission(system: System, left_lead: Union[List, np.ndarray], right_leaf:
     :param left_lead: Unit cell of left lead. Array or list where each row contains the position
         and chemical species of each atom of the lead.
     :param right_lead: Same as left lead.
+    :param period: Distance between consecutive lead unit cells. If given one value, it is used
+        for both right and left leads. If given a list with two values, the first one specifies left
+        period, and second one the right period.
     :param minE: Minimum value of energy window where the transmission is computed.
     :param maxE: Maximum value of energy window.
     :param npoints: Sampling of energy window. Defaults to 100.
     :param delta: Value of broadening used in Green's functions. Defaults to 1E-7.
+    :param mode: Either "default" or "direct". Default mode uses the SK configuration to establish the
+        system-leads bonds, the intra-lead and the lead-lead bonds. Intended to be used with crystalline
+        or quasicrystalline situations (neighbour based search).
+        Direct mode instead connects the leads to the system straight: each atom of the lead has only
+        one bond (the first found) to the system. The intra-lead and lead-lead bonds are determined 
+        using the SK configuration. Intended to be used with amorphous systems (radius based search).
     :return: List of transmission values and energy window.
     """
 
+    if not left_lead.size or not right_lead.size:
+        raise ValueError("Must provide a non-empty list for leads")
+
+    if type(period) != list:
+        period = [period, period]
+    else:
+        if len(period) != 2:
+            raise ValueError("period can hold only two values, [left_period, right_period]")
     
+    if mode not in ["default", "direct"]:
+        raise ValueError("Invalid mode. Must be either 'default' or 'direct'.")
 
 
-def transmission(system: System, left_boundary: list, right_boundary: list, minE: float, maxE: float, npoints: int = 100, t: float = 1, delta: float = 1E-7):
-    """
-    Function to compute the transmission function T(E) of a system. One has to specify the boundaries
-    where the leads are connected. Only two terminal setups are allowed. The leads are simulated
-    assuming s orbitals, and a square lattice. The system is also assumed to have the shape of a rectangle to setup
-    the connection to the leads.
-
-    :param system: System to compute transmission
-    :param left_boundary: List of indices of atoms of the system where the left lead is connected
-    :param right_boundary: Indices where the right lead connects.
-    :param minE: Minimum value of energy window where the transmission is computed.
-    :param maxE: Maximum value of energy window.
-    :param npoints: Sampling of energy window. Defaults to 100.
-    :param t: Value of leads hopping.
-    :param delta: Value of broadening used in Green's functions.
-    :return: List of transmission values and energy window.
-    """
-
-    device_hamiltonian, block_lead_L, block_lead_R = __attach_leads(system, left_boundary, right_boundary, t)
-    device_dim = device_hamiltonian[0].shape[0]
+    device, left_lead, right_lead = __attach_leads(system, left_lead, right_lead, period, mode)
+    
+    device_dim = device.shape[0]
     energies = np.linspace(minE, maxE, npoints)
     currents = []
     extended_lead_selfenergy_L = sp.lil_matrix((device_dim, device_dim), dtype=np.complex_)
     extended_lead_selfenergy_R = sp.lil_matrix((device_dim, device_dim), dtype=np.complex_)
 
+    # TODO PENDING TO ADJUST.
+
     for energy in energies:
-        lead_selfenergy_L = __lead_selfenergy(energy, block_lead_L, t, delta)  
-        
+        lead_selfenergy_L = __lead_selfenergy(energy, left_lead[0], left_lead[1], delta)  
         coupling_L = 1j*(lead_selfenergy_L - lead_selfenergy_L.transpose().conjugate())   
         extended_lead_selfenergy_L[:lead_selfenergy_L.shape[0], :lead_selfenergy_L.shape[0]] = coupling_L
 
-        lead_selfenergy_R = __lead_selfenergy(energy, block_lead_R, t, delta)
+        lead_selfenergy_R = __lead_selfenergy(energy, right_lead[0], right_lead[1].transpose().conjugate(), delta)
         coupling_R = 1j*(lead_selfenergy_R - lead_selfenergy_R.transpose().conjugate())
         extended_lead_selfenergy_R[(device_dim - lead_selfenergy_R.shape[0]):, (device_dim - lead_selfenergy_R.shape[0]):] = coupling_R
 
-        device_green = __device_green_function(energy, device_hamiltonian, block_lead_L, block_lead_R, t, delta)
-        
+        device_green = __device_green_function(energy, device, left_lead, right_lead, delta)
+
         G = (extended_lead_selfenergy_L @ device_green @ extended_lead_selfenergy_R @ device_green.transpose().conjugate()).trace()
-        print("G: ", G)
         currents.append(G)
 
     return (currents, energies)
+        
+
+def __find_direct_bonds(first_group: Union[List, np.ndarray], second_group: Union[List, np.ndarray]) -> List:
+    """
+    Private method to determine the bonds from a first group of atoms to a second. 
+    For each atom of the first group, it determines only the first bond to an atom of the
+    second group. To be used by the direct mode of the transmission routine.
+
+    :param first_group: List of atomic positions.
+    :param second_group: List of atomic positions.
+    :return: List of direct bonds from first group to second group of atoms.
+    """
+
+    first_group = np.array(first_group)
+    second_group = np.array(second_group)
+    bonds = []
+    for i, atom in enumerate(first_group):
+        final_atoms = np.copy(second_group) - atom
+        distances = np.linalg.norm(final_atoms, axis=1)
+        index = np.argmin(distances)
+        bonds.append([i, index])
+        
+    return np.array(bonds)
 
 
-def __attach_leads(system: System, left_boundary: list, right_boundary: list, t: float):
-    """ 
+def __attach_leads(system: System, left_lead: Union[List, np.ndarray], right_lead: Union[List, np.ndarray],
+                   period: Union[List, float], mode: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
     Private method to extend the Hamiltonian to include a part of the leads. It assumes that the system has
-    rectangle shape. The leads will have the dimension of the number of atoms in the corresponding boundary.
+    rectangle shape. 
 
     :param system: System to attach leads to.
-    :param left_boundary: List of indices of atoms where we attach the left lead.
-    :param right_boundary: List of atoms to attach right lead.
-    :param t: Hopping amplitude of lead.
-    :return: ([Hd],Hl,Hr) [Hd] = Fock matrices of Hamiltonian of device with leads attached.
-        Vl = Left lead matrices. Vr = Right lead matrices.
+    :param left_leaf: List of positions and chemical species of atoms of the left lead.
+    :param right_boundary: List of positions and chemical species of atoms of the right lead.
+    :param period: Distance between consecutive lead unit cells. If given one value, it is used
+        for both right and left leads. If given a list with two values, the first one specifies left
+        period, and second one the right period.
+    :param mode: Lead-system connection mode. Either "default" or "direct".
+    :return: (Hd,[Hl, Vl],[Hr, Vr]) Hd = Hamiltonian of device with leads attached.
+        [Hl, Vl] = Left lead hamiltonian and coupling. [Hr, Vr] = Right lead hamiltonian and coupling.
     """
 
-    if not left_boundary or not right_boundary:
-        raise ValueError("Boundaries list must not be empty.")
+
+    device_motif = np.concatenate((left_lead, system.motif, right_lead))
+    model_device = deepcopy(system)
+    model_device.matrix_type = "sparse"
+    model_device.motif = device_motif
+    if mode == "default":
+        model_device.initialize_hamiltonian()
+    else:
+        system.initialize_hamiltonian()
+        left_bonds = __find_direct_bonds(left_lead, system.motif)
+        left_bonds[:, 1] += len(left_lead)
+        left_bonds = np.concatenate((left_bonds, left_bonds.take([1, 0], 1)))
+
+        right_bonds = __find_direct_bonds(right_lead, system.motif)
+        right_bonds[:, 0] += len(left_lead) + len(system.motif)
+        right_bonds = np.concatenate((right_lead, right_lead.take([1, 0], 1)))
+
+        model_device.bonds = system.bonds + left_bonds + right_bonds
+        model_device.initialize_hamiltonian(find_bonds=False)
+
+    device_hamiltonian = np.sum(model_device.hamiltonian, axis=0)
+
+    left_lead_H  = __lead_hamiltonian(system, left_lead, -period[0])
+    right_lead_H = __lead_hamiltonian(system, right_lead, period[1])
+
+    return (device_hamiltonian, left_lead_H, right_lead_H)
 
 
-    left_coupling = __lead_system_coupling(system, left_boundary, t)
-    right_coupling = __lead_system_coupling(system, right_boundary, t)
-    leftnatoms = len(left_boundary)
-    rightnatoms = len(right_boundary)
-
-    left_lead_block_h = sp.lil_matrix((leftnatoms, leftnatoms), dtype=np.complex_)
-    try:
-        left_lead_block_h.setdiag(t, 1)
-        left_lead_block_h.setdiag(t, -1)
-    except ValueError as e:
-        pass
-    right_lead_block_h = sp.lil_matrix((rightnatoms, rightnatoms), dtype=np.complex_)
-    try:
-        right_lead_block_h.setdiag(t, 1)
-        right_lead_block_h.setdiag(t, -1)
-    except ValueError as e:
-        pass
-    left_lead_block_h = left_lead_block_h.tocsc()
-    right_lead_block_h = right_lead_block_h.tocsc()
-
-    device_dim = system.basisdim + leftnatoms + rightnatoms
-    device_hamiltonian = [sp.lil_matrix((device_dim, device_dim), dtype=np.complex_) for _ in range(len(system.hamiltonian))]
-    for i, matrix in enumerate(system.hamiltonian):
-        device_hamiltonian[i][leftnatoms:leftnatoms + system.basisdim, 
-                              leftnatoms:leftnatoms + system.basisdim] = matrix
-    
-    device_hamiltonian[0][:leftnatoms, :leftnatoms] = left_lead_block_h
-    device_hamiltonian[0][:leftnatoms, leftnatoms:leftnatoms + system.basisdim] = left_coupling
-    device_hamiltonian[0][leftnatoms:leftnatoms + system.basisdim, :leftnatoms] = left_coupling.transpose()
-
-    device_hamiltonian[0][leftnatoms + system.basisdim:, leftnatoms + system.basisdim:] = right_lead_block_h
-    device_hamiltonian[0][leftnatoms + system.basisdim:, leftnatoms:leftnatoms + system.basisdim] = right_coupling
-    device_hamiltonian[0][leftnatoms:leftnatoms + system.basisdim, leftnatoms + system.basisdim:] = right_coupling.transpose()
-
-    for i in range(len(device_hamiltonian)):
-        device_hamiltonian[i] = device_hamiltonian[i].tocsc()
-
-    return (device_hamiltonian, left_lead_block_h, right_lead_block_h)
-
-
-def __lead_system_coupling(system: System, boundary: list, t: float):
+def __lead_hamiltonian(system: System, lead: np.ndarray, period: float) -> Tuple[sp.csc_matrix, sp.csc_matrix]:
     """
-    Private routine to define the coupling matrix between the system and one lead.
+    Routine to attach together two lead unit cells to extract the cell Hamiltonian,
+    and the coupling between cells.
 
-    :param system: System to attach leads to.
-    :param boundary: List of indices of atoms where we attach the lead.
-    :param t: Hopping amplitude of lead.
-    :return: Coupling matrix between beginning of lead and system
+    :param system: System after which we model the leads (SK configuration)
+    :param lead: Array with atomic positions and species of the lead.
+    :param period: Norm of Bravais vector of the lead.
+    :return: [H, V] Hamiltonian of unit cell and coupling between unit cells.
     """
 
-    boundary_positions = system.motif[boundary, :]
-    boundary_positions[:, 3] = boundary
-    boundary_positions = boundary_positions[boundary_positions[:, 1].argsort()]
+    displaced_lead = np.copy(lead)
+    displaced_lead[:, :3] += np.array([period, 0, 0])
+    left_lead_motif = np.concatenate((displaced_lead, lead))
+    model_lead = deepcopy(system)
+    model_lead.motif = left_lead_motif
+    model_lead.initialize_hamiltonian()
+    lead_total_hamiltonian =  np.sum(model_lead.hamiltonian, axis=0)
+    lead_coupling = lead_total_hamiltonian[:len(lead), len(lead):]
+    lead_hamiltonian = lead_total_hamiltonian[:len(lead), :len(lead)]
 
-    coupling_matrix = sp.lil_matrix((len(boundary), system.basisdim), dtype=np.complex_)
-
-    index_to_matrix_array = [0]
-    for index in range(system.natoms - 1):
-        species = int(system.motif[index, 3])
-        index_to_matrix_array.append(index_to_matrix_array[-1] + int(system.norbitals[species]))
-
-    for i, row in enumerate(boundary_positions):
-        index = int(row[3])
-        matrix_index = index_to_matrix_array[index]
-        species = int(system.motif[index, 3])
-        norbitals = int(system.norbitals[species])
-        coupling_matrix[i, matrix_index:matrix_index + norbitals] = t
-
-    coupling_matrix = coupling_matrix.tocsc()
-
-    return coupling_matrix
+    return (lead_hamiltonian, lead_coupling)
 
 
-def __lead_selfenergy(energy: float, lead_unit_cell_block: sp.csr_matrix, t: float, delta: float = 1E-7, threshold: float = 1E-4, mixing: float = 0.6):
+def __lead_selfenergy(energy: float, lead_hamiltonian: sp.csr_matrix, lead_coupling: sp.csr_matrix, delta: float = 1E-7, threshold: float = 1E-4, mixing: float = 0.6):
     """
     Routine to compute the selfenergy of one leaf at a given energy. 
 
     :param energy: Energy where we evaluate the selfenergy.
-    :param lead_unit_cell_block: Hamiltonian block corresponding to the unit cell of the lead.
-    :param t: Value of hopping of lead.
+    :param lead_hamiltonian: Hamiltonian block corresponding to the unit cell of the lead.
+    :param lead_coupling: Coupling between lead unit cells.
     :param delta: Imaginary part of lead. Usually infinitesimal, its sign defined retarded or advanced lead. Defaults to 1E-7.
     :param threshold: Threshold to stop self-consistency of selfenergy. Defaults to 1E-4.
     :param mixing: Mixing parameter to achieve convergence faster.
     :return: Selfenergy matrix evaluated at energy+i*delta
     """
 
-    selfenergy = np.zeros(lead_unit_cell_block.shape, dtype=np.complex_)
+    selfenergy = np.zeros(lead_hamiltonian.shape, dtype=np.complex_)
 
     notConverged = True
-    old_selfenergy = np.zeros(lead_unit_cell_block.shape, dtype=np.complex_)
-    old2_selfenergy = np.zeros(lead_unit_cell_block.shape, dtype=np.complex_)
+    old_selfenergy = np.zeros(lead_hamiltonian.shape, dtype=np.complex_)
+    old2_selfenergy = np.zeros(lead_hamiltonian.shape, dtype=np.complex_)
     while notConverged:
         old2_selfenergy = old_selfenergy
         old_selfenergy = selfenergy
-        new_selfenergy = t**2*np.linalg.inv((energy + 1j*delta)*np.eye(lead_unit_cell_block.shape[0]) - lead_unit_cell_block - selfenergy)
-        selfenergy = old_selfenergy * (1 - mixing) + mixing * new_selfenergy
+        new_selfenergy = (lead_coupling @ 
+                          np.linalg.inv((energy + 1j*delta)*np.eye(lead_hamiltonian.shape[0]) - lead_hamiltonian - selfenergy) @ 
+                          lead_coupling.transpose().conjugate())
+        selfenergy = old_selfenergy * (1 - mixing) + mixing * new_selfenergy 
         maxNorm = np.abs(selfenergy - old_selfenergy).max()
         maxNorm2 = np.abs(selfenergy - old2_selfenergy).max()
         if maxNorm < threshold and maxNorm2 < threshold:
@@ -539,39 +545,59 @@ def __lead_selfenergy(energy: float, lead_unit_cell_block: sp.csr_matrix, t: flo
     return selfenergy
 
 
-def __device_green_function(energy: float, device_hamiltonian: list, lead_unit_cell_block_L: sp.csr_matrix, lead_unit_cell_block_R: sp.csr_matrix, t: float, delta: float = 1E-7):
+def __device_green_function(energy: float, device: list, left_lead: sp.csr_matrix, right_lead: sp.csr_matrix, delta: float = 1E-7):
     """
     Routine to compute the Green's function of the device at energy + i*delta.
 
     :param energy: Energy where we evaluate the Green's function.
-    :param device_hamiltonian: List with the Fock matrices of the device.
-    :param lead_unit_cell_block_L: Block matrix to compute selfenergy of left lead.
-    :param lead_unit_cell_block_R: Block matrix to compute selfenergy of right lead.
-    :param t: Value of hopping of leads.
+    :param device: List with the Fock matrices of the device.
+    :param left_lead: Hamiltonian of left lead unit cell and coupling between cells.
+    :param right_lead: Hamiltonian of right lead unit cell and coupling between cells.
     :param delta: Broadening. Defaults to 1E-7.
     :return: Green's function of the device evaluated at energy + i*delta.
     """
 
-    device_dim = device_hamiltonian[0].shape[0]
+    device_dim = device.shape[0]
     
-    lead_selfenergy_L = __lead_selfenergy(energy, lead_unit_cell_block_L, t, delta=delta)
+    lead_selfenergy_L = __lead_selfenergy(energy, left_lead[0], left_lead[1], delta=delta)
     extended_lead_selfenergy_L = sp.lil_matrix((device_dim, device_dim), dtype=np.complex_)
     extended_lead_selfenergy_L[:lead_selfenergy_L.shape[0], :lead_selfenergy_L.shape[0]] = lead_selfenergy_L
 
-    lead_selfenergy_R = __lead_selfenergy(energy, lead_unit_cell_block_R, t, delta=delta)
+    lead_selfenergy_R = __lead_selfenergy(energy, right_lead[0], right_lead[1], delta=delta)
     extended_lead_selfenergy_R= sp.lil_matrix((device_dim, device_dim), dtype=np.complex_)
     extended_lead_selfenergy_R[(device_dim - lead_selfenergy_R.shape[0]):, (device_dim - lead_selfenergy_R.shape[0]):] = lead_selfenergy_R
 
     extended_lead_selfenergy_L = extended_lead_selfenergy_L.tocsc()
     extended_lead_selfenergy_R = extended_lead_selfenergy_R.tocsc()
 
-    device_h = sp.csc_matrix((device_dim, device_dim), dtype=np.complex_)
-    for h in device_hamiltonian:
-        device_h += h
-
-    green_device = sp.linalg.inv((energy + 1j*delta)*sp.eye(device_dim, format="csc") - device_h - extended_lead_selfenergy_L - extended_lead_selfenergy_R)
+    green_device = sp.linalg.inv((energy + 1j*delta)*sp.eye(device_dim, format="csc") - device - extended_lead_selfenergy_L - extended_lead_selfenergy_R)
 
     return green_device.tocsr()
+
+
+def visualize_device(system: System, left_lead: Union[List, np.ndarray], right_lead: Union[List, np.ndarray],
+                     period: Union[List, float]):
+    """
+    Routine to visualize the device. Intended to be used only with two dimensional (planar) systems.
+
+    :param system: Main part of the device.
+    :param left_lead: Atomic positions of left lead.
+    :param right_lead: Atomic positions of right lead.
+    :param period: Separation between the unit cells of each lead.
+    """
+        
+    if not left_lead or not right_lead:
+        raise ValueError("Must provide a non-empty list for leads")
+
+    if type(period) != list:
+        period = [period, period]
+    else:
+        if len(period) != 2:
+            raise ValueError("period can hold only two values, [left_period, right_period]")
+    
+    
+    
+    
 
 
 def ldos(result: Spectrum, atom_index: int, energy: float, delta: float = 1E-4):
