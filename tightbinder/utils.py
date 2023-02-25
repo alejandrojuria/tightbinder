@@ -15,6 +15,8 @@ def generate_basis_combinations(ndim: int) -> np.ndarray:
     """
 
     mesh_points = []
+    if ndim == 0:
+        return mesh_points
     for i in range(ndim):
         mesh_points.append(list(range(-1, 2)))
     mesh_points = np.array(np.meshgrid(*mesh_points)).T.reshape(-1, ndim)

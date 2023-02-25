@@ -61,7 +61,6 @@ def main():
 
     labels = configuration['High symmetry points']
     kpoints = model.high_symmetry_path(configuration['Mesh'][0], labels)
-    print(kpoints)
 
     results = model.solve(kpoints)
     results.plot_along_path(labels, title=f'{model.system_name}')
