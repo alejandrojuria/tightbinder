@@ -524,6 +524,27 @@ class Crystal:
         plt.axis('off')
         plt.show()
 
+    def plot_2d_crystal(self, ax = None) -> None:
+        """ 
+        Method to visualize the crystalline structure (Bravais lattice + motif) in two dimensions.
+
+        :param ax: Axis to plot the projection of the crystal. If None, creates one.
+        """
+
+        if ax is None:
+            fig, ax = plt.subplots(1, 1)
+
+        [min_axis, max_axis] = [np.min(self.motif), np.max(self.motif)]
+
+        for atom in self.motif:
+            ax.scatter(atom[0], atom[1], color='y', s=50)
+
+        ax.set_xlabel('x (A)')
+        ax.set_ylabel('y (A)')
+        ax.set_xlim(min_axis, max_axis)
+        ax.set_ylim(min_axis, max_axis)
+        ax.axis('equal')
+
     def visualize(self) -> None:
         """ 
         Method to render a 3d visualization of the crystal using the self.vpython library. 
