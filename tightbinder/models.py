@@ -676,7 +676,7 @@ class AmorphousSlaterKoster(SlaterKoster):
         return hopping
 
     @overrides(SlaterKoster)
-    def initialize_hamiltonian(self, find_bonds: bool = True, override_bond_lengths: bool = True) -> None:
+    def initialize_hamiltonian(self, find_bonds: bool = True, override_bond_lengths: bool = False) -> None:
         """
         Method to initialize the 
 
