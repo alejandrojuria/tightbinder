@@ -469,20 +469,22 @@ class TransportDevice:
 
         :param first_group: List of atomic positions.
         :param second_group: List of atomic positions.
-        :param r: 
+        :param r: Cutoff for bond search.
         :return: List of direct bonds from first group to second group of atoms.
         """
 
         first_group = np.array(first_group)
         second_group = np.array(second_group)
         bonds = []
+        it = 0
         for i, atom in enumerate(first_group):
             final_atoms = np.copy(second_group) - atom
             distances = np.linalg.norm(final_atoms, axis=1)
-            index = np.argmin(distances)
-            if distances[index] < r:
-                bonds.append([i, index, [0., 0., 0.], "1"])        
-            
+            indices = np.argsort(distances)
+            for index in indices:
+                if distances[index] < r:
+                    bonds.append([i, index, [0., 0., 0.], "1"])
+        
         return bonds
 
 
@@ -502,6 +504,7 @@ class TransportDevice:
             [Hl, Vl] = Left lead hamiltonian and coupling. [Hr, Vr] = Right lead hamiltonian and coupling.
         """
 
+        max_nn = max(int(value) for value in self.system.configuration["SK amplitudes"].keys())
         device_motif = np.concatenate((self.left_lead, self.system.motif, self.right_lead))
         model_device = deepcopy(self.system)
         model_device.matrix_type = "sparse"
@@ -509,38 +512,35 @@ class TransportDevice:
         if self.mode == "default":
             model_device.initialize_hamiltonian()
         else:
-            self.system.initialize_hamiltonian()
-
-            # Bonds within left lead unit cell
+             # Bonds within left lead unit cell
             left_lead = deepcopy(self.system)
             left_lead.motif = self.left_lead
+            left_lead.find_neighbours(mode="minimal", nn=max_nn)
             fnn = left_lead.compute_first_neighbour_distance()
-            left_lead.initialize_hamiltonian()
-            left_bonds = left_lead.bonds 
 
             # First obtain bonds between left lead and system
             disp = len(self.left_lead)
-            inter_bonds = self.__find_direct_bonds(self.left_lead, self.system.motif, fnn)
-            inter_bonds = [[i, j + disp, cell, nn] for [i, j, cell, nn] in inter_bonds]
-            reversed_bonds = [[j, i, cell, nn] for [i, j, cell, nn] in inter_bonds]
-            left_bonds = left_bonds + inter_bonds + reversed_bonds
+            left_bonds = self.__find_direct_bonds(self.left_lead, self.system.motif, fnn * 1.3)
+            left_bonds = [[i, j + disp, cell, nn] for [i, j, cell, nn] in left_bonds]
+            reversed_bonds = [[j, i, cell, nn] for [i, j, cell, nn] in left_bonds]
+            left_bonds = left_bonds + reversed_bonds + left_lead.bonds
 
             # Bonds within right lead
             right_lead = deepcopy(self.system)
             right_lead.motif = self.right_lead
+            right_lead.find_neighbours(mode="minimal", nn=max_nn)
             fnn = right_lead.compute_first_neighbour_distance()
-            right_lead.initialize_hamiltonian()
-            right_bonds = [[i + disp, j + disp, cell, nn] for [i, j, cell, nn] in right_lead.bonds]
 
             # Obtain bonds between right lead and system
             disp = len(self.left_lead) + len(self.system.motif)
-            inter_bonds = self.__find_direct_bonds(self.right_lead, self.system.motif, fnn)
-            inter_bonds = [[i + disp, j, cell, nn] for [i, j, cell, nn] in inter_bonds]
-            reversed_bonds = [[j, i, cell, nn] for [i, j, cell, nn] in inter_bonds]
-            right_bonds = right_bonds + inter_bonds + reversed_bonds
+            right_bonds = self.__find_direct_bonds(self.right_lead, self.system.motif, fnn * 1.3)
+            right_bonds = [[i + disp, j + len(self.left_lead), cell, nn] for [i, j, cell, nn] in right_bonds]
+            reversed_bonds = [[j, i, cell, nn] for [i, j, cell, nn] in right_bonds]
+            right_bonds = right_bonds + reversed_bonds + [[i + disp, j + disp, cell, nn] for [i, j, cell, nn] in right_lead.bonds]
 
-            device_bonds = [[i + len(self.left_lead), j + len(self.left_lead), cell, nn] for [i, j, cell, nn] in self.system.bonds]
-            model_device.bonds = device_bonds + left_bonds + right_bonds
+            self.system.initialize_hamiltonian()
+            system_bonds = [[i + len(self.left_lead), j + len(self.left_lead), cell, nn] for [i, j, cell, nn] in self.system.bonds]
+            model_device.bonds = system_bonds + left_bonds + right_bonds
             model_device.initialize_hamiltonian(find_bonds=False)
 
         device_hamiltonian = sp.csc_matrix(model_device.hamiltonian[0].shape, dtype=np.complex_)
@@ -574,7 +574,9 @@ class TransportDevice:
         model_lead = deepcopy(self.system)
         model_lead.motif = left_lead_motif
         model_lead.matrix_type = "sparse"
-        model_lead.initialize_hamiltonian()
+        max_nn = max(int(value) for value in self.system.configuration["SK amplitudes"].keys())
+        model_lead.find_neighbours(mode="minimal", nn=max_nn)
+        model_lead.initialize_hamiltonian(find_bonds=False)
         lead_total_hamiltonian = sp.csc_matrix(model_lead.hamiltonian[0].shape, dtype=np.complex_)
         for h in model_lead.hamiltonian:
             lead_total_hamiltonian += h
@@ -798,15 +800,15 @@ class TransportDevice:
             ry = [total_motif[bond[0], 1], total_motif[bond[1], 1]]
             ax.plot(rx, ry, "k-", zorder=-1)
         
-        # for bond in self.bonds[1]:
-        #     rx = [left_lead[bond[0], 0], left_lead[bond[1], 0]]
-        #     ry = [left_lead[bond[0], 1], left_lead[bond[1], 1]]
-        #     ax.plot(rx, ry, "k-", zorder=-1)
+        for bond in self.bonds[1]:
+            rx = [left_lead[bond[0], 0], left_lead[bond[1], 0]]
+            ry = [left_lead[bond[0], 1], left_lead[bond[1], 1]]
+            ax.plot(rx, ry, "k-", zorder=-1)
         
-        # for bond in self.bonds[2]:
-        #     rx = [right_lead[bond[0], 0], right_lead[bond[1], 0]]
-        #     ry = [right_lead[bond[0], 1], right_lead[bond[1], 1]]
-        #     ax.plot(rx, ry, "k-", zorder=-1)
+        for bond in self.bonds[2]:
+            rx = [right_lead[bond[0], 0], right_lead[bond[1], 0]]
+            ry = [right_lead[bond[0], 1], right_lead[bond[1], 1]]
+            ax.plot(rx, ry, "k-", zorder=-1)
 
         ax.axis('equal')
 
