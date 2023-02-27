@@ -2,6 +2,8 @@
 
 from tightbinder.result import Spectrum
 from tightbinder.system import System
+from tightbinder.models import SlaterKoster
+
 import numpy as np
 import scipy.sparse as sp
 import matplotlib.pyplot as plt
@@ -401,7 +403,7 @@ class TransportDevice:
 
 
     def transmission(self, minE: float, maxE: float, npoints: int = 100, 
-                    delta: float = 1E-7,) -> Tuple[List, List]:
+                    delta: float = 1E-7, method: str = "LS") -> Tuple[List, List]:
         """
         Function to compute the transmission function T(E) of a system. One has to specify the unit
         cell of each lead in terms of the positions and chemical species. Only two terminal setups are allowed. 
@@ -411,6 +413,8 @@ class TransportDevice:
         :param maxE: Maximum value of energy window.
         :param npoints: Sampling of energy window. Defaults to 100.
         :param delta: Value of broadening used in Green's functions. Defaults to 1E-7.
+        :param method: Method to convergence the self-energies of the leads. Options are 'LS' (Lopez Sancho method)
+            and 'LM' (Linear Mixing). Defaults to 'LS'.
         :return: List of transmission values and energy window.
         """
 
@@ -422,11 +426,11 @@ class TransportDevice:
         extended_lead_selfenergy_R = sp.lil_matrix((device_dim, device_dim), dtype=np.complex_)
 
         for energy in energies:
-            lead_selfenergy_L = self.__lead_selfenergy(energy, self.left_lead_h[0], self.left_lead_h[1].transpose().conjugate(), delta)  
+            lead_selfenergy_L = self.__lead_selfenergy(energy, self.left_lead_h[0], self.left_lead_h[1].transpose().conjugate(), delta, method=method)  
             coupling_L = 1j*(lead_selfenergy_L - lead_selfenergy_L.transpose().conjugate())   
             extended_lead_selfenergy_L[:lead_selfenergy_L.shape[0], :lead_selfenergy_L.shape[0]] = coupling_L
 
-            lead_selfenergy_R = self.__lead_selfenergy(energy, self.right_lead_h[0], self.right_lead_h[1], delta)
+            lead_selfenergy_R = self.__lead_selfenergy(energy, self.right_lead_h[0], self.right_lead_h[1], delta, method=method)
             coupling_R = 1j*(lead_selfenergy_R - lead_selfenergy_R.transpose().conjugate())
             extended_lead_selfenergy_R[(device_dim - lead_selfenergy_R.shape[0]):, (device_dim - lead_selfenergy_R.shape[0]):] = coupling_R
 
@@ -440,22 +444,24 @@ class TransportDevice:
         return (currents, energies)
 
 
-    def conductance(self, delta: float = 1E-7) -> float:
+    def conductance(self, delta: float = 1E-7, method: str = "LS") -> float:
         """
         Routine to compute the conductance at zero temperature in equilibrium.
 
         :param delta: Value of broadening used in Green's functions. Defaults to 1E-7.
+        :param method: Method to convergence the self-energies of the leads. Options are 'LS' (Lopez Sancho method)
+            and 'LM' (Linear Mixing). Defaults to 'LS'.
         :return: Value of conductance.
         """
 
         spectrum = self.system.solve()
         fermi_energy = spectrum.calculate_fermi_energy(self.system.filling)
-        G = self.transmission(fermi_energy, fermi_energy, 1, delta)
+        G = self.transmission(fermi_energy, fermi_energy, 1, delta, method)
 
         return G
             
 
-    def __find_direct_bonds(self, first_group: Union[List, np.ndarray], second_group: Union[List, np.ndarray]) -> List:
+    def __find_direct_bonds(self, first_group: Union[List, np.ndarray], second_group: Union[List, np.ndarray], r: float) -> List:
         """
         Private method to determine the bonds from a first group of atoms to a second. 
         For each atom of the first group, it determines only the first bond to an atom of the
@@ -463,6 +469,7 @@ class TransportDevice:
 
         :param first_group: List of atomic positions.
         :param second_group: List of atomic positions.
+        :param r: 
         :return: List of direct bonds from first group to second group of atoms.
         """
 
@@ -473,9 +480,10 @@ class TransportDevice:
             final_atoms = np.copy(second_group) - atom
             distances = np.linalg.norm(final_atoms, axis=1)
             index = np.argmin(distances)
-            bonds.append([i, index])
+            if distances[index] < r:
+                bonds.append([i, index, [0., 0., 0.], "1"])        
             
-        return np.array(bonds)
+        return bonds
 
 
     def __attach_leads(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -502,15 +510,37 @@ class TransportDevice:
             model_device.initialize_hamiltonian()
         else:
             self.system.initialize_hamiltonian()
-            left_bonds = self.__find_direct_bonds(self.left_lead, self.system.motif)
-            left_bonds[:, 1] += len(self.left_lead)
-            left_bonds = np.concatenate((left_bonds, left_bonds.take([1, 0], 1)))
 
-            right_bonds = self.__find_direct_bonds(self.ight_lead, self.system.motif)
-            right_bonds[:, 0] += len(self.left_lead) + len(self.system.motif)
-            right_bonds = np.concatenate((self.right_lead, self.right_lead.take([1, 0], 1)))
+            # Bonds within left lead unit cell
+            left_lead = deepcopy(self.system)
+            left_lead.motif = self.left_lead
+            fnn = left_lead.compute_first_neighbour_distance()
+            left_lead.initialize_hamiltonian()
+            left_bonds = left_lead.bonds 
 
-            model_device.bonds = self.system.bonds + left_bonds + right_bonds
+            # First obtain bonds between left lead and system
+            disp = len(self.left_lead)
+            inter_bonds = self.__find_direct_bonds(self.left_lead, self.system.motif, fnn)
+            inter_bonds = [[i, j + disp, cell, nn] for [i, j, cell, nn] in inter_bonds]
+            reversed_bonds = [[j, i, cell, nn] for [i, j, cell, nn] in inter_bonds]
+            left_bonds = left_bonds + inter_bonds + reversed_bonds
+
+            # Bonds within right lead
+            right_lead = deepcopy(self.system)
+            right_lead.motif = self.right_lead
+            fnn = right_lead.compute_first_neighbour_distance()
+            right_lead.initialize_hamiltonian()
+            right_bonds = [[i + disp, j + disp, cell, nn] for [i, j, cell, nn] in right_lead.bonds]
+
+            # Obtain bonds between right lead and system
+            disp = len(self.left_lead) + len(self.system.motif)
+            inter_bonds = self.__find_direct_bonds(self.right_lead, self.system.motif, fnn)
+            inter_bonds = [[i + disp, j, cell, nn] for [i, j, cell, nn] in inter_bonds]
+            reversed_bonds = [[j, i, cell, nn] for [i, j, cell, nn] in inter_bonds]
+            right_bonds = right_bonds + inter_bonds + reversed_bonds
+
+            device_bonds = [[i + len(self.left_lead), j + len(self.left_lead), cell, nn] for [i, j, cell, nn] in self.system.bonds]
+            model_device.bonds = device_bonds + left_bonds + right_bonds
             model_device.initialize_hamiltonian(find_bonds=False)
 
         device_hamiltonian = sp.csc_matrix(model_device.hamiltonian[0].shape, dtype=np.complex_)
@@ -558,7 +588,8 @@ class TransportDevice:
         return (lead_hamiltonian, lead_coupling)
 
 
-    def __lead_selfenergy(self, energy: float, lead_hamiltonian: sp.csr_matrix, lead_coupling: sp.csr_matrix, delta: float = 1E-7, threshold: float = 1E-5, mixing: float = 0.5):
+    def __lead_selfenergy(self, energy: float, lead_hamiltonian: sp.csr_matrix, lead_coupling: sp.csr_matrix, delta: float = 1E-7, 
+                          threshold: float = 1E-5, mixing: float = 0.5, method: str = "LS"):
         """
         Routine to compute the selfenergy of one leaf at a given energy. 
 
@@ -568,65 +599,56 @@ class TransportDevice:
         :param delta: Imaginary part of lead. Usually infinitesimal, its sign defined retarded or advanced lead. Defaults to 1E-7.
         :param threshold: Threshold to stop self-consistency of selfenergy. Defaults to 1E-4.
         :param mixing: Mixing parameter to achieve convergence faster.
+        :param method: Method to convergence the self-energies of the leads. Options are 'LS' (Lopez Sancho method)
+            and 'LM' (Linear Mixing). Defaults to 'LS'.
         :return: Selfenergy matrix evaluated at energy+i*delta
         """
 
         notConverged = True
         identity = np.eye(lead_hamiltonian.shape[0])
-        s = lead_hamiltonian.todense()
-        e = lead_hamiltonian.todense()
-        alpha = lead_coupling.todense()
-        beta = alpha.transpose().conjugate()
-        
-        while notConverged:
-            g = np.linalg.inv((energy + 1j*delta)*identity - e)
-            factor = alpha @ g @ beta
-            s += factor
-            e += factor + beta @ g @ alpha
-            alpha = alpha @ g @ alpha
-            beta = beta @ g @ beta
-            norm = np.linalg.norm(alpha)
-            if norm < threshold:
-                notConverged = False
 
-        g = np.linalg.inv((energy + 1j*delta)*identity - s)
-        selfenergy = lead_coupling @ g @ lead_coupling.transpose().conjugate()
+        if method == "LS":
+            s = lead_hamiltonian.todense()
+            e = lead_hamiltonian.todense()
+            alpha = lead_coupling.todense()
+            beta = alpha.transpose().conjugate()
+            
+            while notConverged:
+                g = np.linalg.inv((energy + 1j*delta)*identity - e)
+                factor = alpha @ g @ beta
+                s += factor
+                e += factor + beta @ g @ alpha
+                alpha = alpha @ g @ alpha
+                beta = beta @ g @ beta
+                norm = np.linalg.norm(alpha)
+                if norm < threshold:
+                    notConverged = False
+
+            g = np.linalg.inv((energy + 1j*delta)*identity - s)
+            selfenergy = lead_coupling @ g @ lead_coupling.transpose().conjugate()
+
+        elif method == "LM":
+            selfenergy = sp.csc_matrix(lead_hamiltonian.shape, dtype=np.complex_)
+
+            old_selfenergy = sp.csc_matrix(lead_hamiltonian.shape, dtype=np.complex_)
+            old2_selfenergy = sp.csc_matrix(lead_hamiltonian.shape, dtype=np.complex_)
+            identity = sp.eye(lead_hamiltonian.shape[0], format="csc")
+            while notConverged:
+                old2_selfenergy = old_selfenergy
+                old_selfenergy = selfenergy
+                new_selfenergy = (lead_coupling @ 
+                                sp.linalg.inv((energy + 1j*delta)*identity - lead_hamiltonian - selfenergy) @ 
+                                lead_coupling.transpose().conjugate())
+                selfenergy = old_selfenergy * (1 - mixing) + mixing * new_selfenergy 
+                maxNorm = sp.linalg.norm(selfenergy - old_selfenergy)
+                maxNorm2 = sp.linalg.norm(selfenergy - old2_selfenergy)
+                if maxNorm < threshold and maxNorm2 < threshold:
+                    notConverged = False
         
+        else:
+            raise ValueError("method must be either 'LS' or 'LM'.")
+
         return sp.csc_matrix(selfenergy)
-
-
-    # def __lead_selfenergy(energy: float, lead_hamiltonian: sp.csr_matrix, lead_coupling: sp.csr_matrix, delta: float = 1E-7, threshold: float = 1E-5, mixing: float = 0.5):
-    #     """
-    #     Routine to compute the selfenergy of one leaf at a given energy. 
-
-    #     :param energy: Energy where we evaluate the selfenergy.
-    #     :param lead_hamiltonian: Hamiltonian block corresponding to the unit cell of the lead.
-    #     :param lead_coupling: Coupling between lead unit cells.
-    #     :param delta: Imaginary part of lead. Usually infinitesimal, its sign defined retarded or advanced lead. Defaults to 1E-7.
-    #     :param threshold: Threshold to stop self-consistency of selfenergy. Defaults to 1E-4.
-    #     :param mixing: Mixing parameter to achieve convergence faster.
-    #     :return: Selfenergy matrix evaluated at energy+i*delta
-    #     """
-
-    #     selfenergy = sp.csc_matrix(lead_hamiltonian.shape, dtype=np.complex_)
-
-    #     notConverged = True
-    #     old_selfenergy = sp.csc_matrix(lead_hamiltonian.shape, dtype=np.complex_)
-    #     old2_selfenergy = sp.csc_matrix(lead_hamiltonian.shape, dtype=np.complex_)
-    #     identity = sp.eye(lead_hamiltonian.shape[0], format="csc")
-    #     while notConverged:
-    #         old2_selfenergy = old_selfenergy
-    #         old_selfenergy = selfenergy
-    #         new_selfenergy = (lead_coupling @ 
-    #                           sp.linalg.inv((energy + 1j*delta)*identity - lead_hamiltonian - selfenergy) @ 
-    #                           lead_coupling.transpose().conjugate())
-    #         selfenergy = old_selfenergy * (1 - mixing) + mixing * new_selfenergy 
-    #         maxNorm = sp.linalg.norm(selfenergy - old_selfenergy)
-    #         maxNorm2 = sp.linalg.norm(selfenergy - old2_selfenergy)
-    #         if maxNorm < threshold and maxNorm2 < threshold:
-    #             notConverged = False
-        
-    #     return selfenergy
 
 
     # def __lead_selfenergy(energy: float, lead_hamiltonian: sp.csr_matrix, lead_coupling: sp.csr_matrix, delta: float = 1E-7, threshold: float = 1E-3, mixing: float = 0.5):
@@ -776,15 +798,15 @@ class TransportDevice:
             ry = [total_motif[bond[0], 1], total_motif[bond[1], 1]]
             ax.plot(rx, ry, "k-", zorder=-1)
         
-        for bond in self.bonds[1]:
-            rx = [left_lead[bond[0], 0], left_lead[bond[1], 0]]
-            ry = [left_lead[bond[0], 1], left_lead[bond[1], 1]]
-            ax.plot(rx, ry, "k-", zorder=-1)
+        # for bond in self.bonds[1]:
+        #     rx = [left_lead[bond[0], 0], left_lead[bond[1], 0]]
+        #     ry = [left_lead[bond[0], 1], left_lead[bond[1], 1]]
+        #     ax.plot(rx, ry, "k-", zorder=-1)
         
-        for bond in self.bonds[2]:
-            rx = [right_lead[bond[0], 0], right_lead[bond[1], 0]]
-            ry = [right_lead[bond[0], 1], right_lead[bond[1], 1]]
-            ax.plot(rx, ry, "k-", zorder=-1)
+        # for bond in self.bonds[2]:
+        #     rx = [right_lead[bond[0], 0], right_lead[bond[1], 0]]
+        #     ry = [right_lead[bond[0], 1], right_lead[bond[1], 1]]
+        #     ax.plot(rx, ry, "k-", zorder=-1)
 
         ax.axis('equal')
 
