@@ -556,7 +556,7 @@ class System(Crystal):
 
         return self
 
-    def ribbon(self, width: int, orientation: str = "horizontal") -> System:
+    def ribbon(self, width: int, orientation: str = "horizontal", periodic: bool = False) -> System:
         """ 
         Routine to generate a ribbon for a 2D crystal. It is designed to create rectangular ribbons,
         based on a rectangular lattice. Therefore there must exist a combination of basis vectors such that
@@ -564,15 +564,19 @@ class System(Crystal):
 
         :param width: Width of the ribbon (number of cells).
         :param orientation: 'horizontal' or 'vertical'. Defaults to 'horizontal'.
+        :param periodic: Boolean to keep the ribbon periodic along the direction it is built. Defauts to False.
         :return: Modified System object.
         """
+        
+        if orientation not in ["horizontal", "vertical"]:
+            raise ValueError("Wrong orientation provided, must be either vertical or horizontal, exiting...")
         
         if self.ndim != 2:
             print(f"Ribbons can not be generated for {self.ndim}D structures")
             sys.exit(1)
         else:
             mesh_points = []
-            for i in range(self.ndim):
+            for _ in range(self.ndim):
                 mesh_points.append(list(range(-1, 2)))
 
             combinations = np.array(np.meshgrid(*mesh_points)).T.reshape(-1, self.ndim)
@@ -612,13 +616,17 @@ class System(Crystal):
             self.motif = motif
 
             # Reduce system dimensionality
-            if orientation == "horizontal":
-                self.reduce(n1=width)
-            elif orientation == "vertical":
-                self.reduce(n2=width)
+            if not periodic:
+                if orientation == "horizontal":
+                    self.reduce(n1=width)
+                else:
+                    self.reduce(n2=width)
             else:
-                print("Error: Wrong orientation provided, must be either vertical or horizontal, exiting...")
-                sys.exit(1)
+                if orientation == "horizontal":
+                    self.supercell(n1=width)
+                else:
+                    self.supercell(n2=width)
+
 
             return self
         
