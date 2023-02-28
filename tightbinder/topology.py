@@ -353,7 +353,7 @@ def calculate_z2_invariant(wcc_flow: np.ndarray) -> int:
 
 
 def plot_wannier_centre_flow(wcc_flow: np.ndarray, show_midpoints: bool = True, ax: Axes = None, title: str = None,
-                             fontsize: int = 10) -> None:
+                             fontsize: int = 10, symmetric: bool = False) -> None:
     """ 
     Routine to plot the WCC evolution. 
     
@@ -362,6 +362,7 @@ def plot_wannier_centre_flow(wcc_flow: np.ndarray, show_midpoints: bool = True, 
     :param ax: Matplotlib Axes object to plot the WCC evolution on. Defaults to None.
     :param title: Name of the plot. Defaults to empty string.
     :param fontsize: Value to change the fontsize in the plot. Defaults to 10.
+    :param symmetric: Boolean to plot the WCC over the whole BZ instead of half of it.
     """
 
     if ax is None:
@@ -369,10 +370,14 @@ def plot_wannier_centre_flow(wcc_flow: np.ndarray, show_midpoints: bool = True, 
         ax = fig.add_subplot(111)
 
     for wcc in wcc_flow.T:
+        if symmetric:
+            wcc = np.concatenate((wcc[::-1][:-1], wcc), axis=0)
         ax.plot(wcc, 'ob', fillstyle='none')
 
     if show_midpoints:
         midpoints, _ = calculate_wcc_gap_midpoints(wcc_flow)
+        if symmetric:
+            midpoints = np.concatenate((midpoints[::-1][:-1], midpoints))
         ax.plot(midpoints, 'Dr')
 
     if title is not None:
@@ -380,8 +385,13 @@ def plot_wannier_centre_flow(wcc_flow: np.ndarray, show_midpoints: bool = True, 
     ax.set_xlabel(r'$k_y$', fontsize=fontsize)
     ax.set_ylabel(r'$\hat{x}_n$', fontsize=fontsize)
     # ax.set_xticks([0, wcc_flow.shape[0]/2 - 1/2, wcc_flow.shape[0] - 1])
-    ax.set_xticks([0, wcc_flow.shape[0] - 1])
-    ax.set_xticklabels([r"0", r'$\pi$'], fontsize=fontsize)
+    if symmetric:
+        ax.set_xticks([0, wcc_flow.shape[0] - 1, 2*wcc_flow.shape[0] - 2])
+        ax.set_xticklabels([r'$-\pi$', r"0", r'$\pi$'], fontsize=fontsize)
+        
+    else:
+        ax.set_xticks([0, wcc_flow.shape[0] - 1])
+        ax.set_xticklabels([r"0", r'$\pi$'], fontsize=fontsize)
     ax.tick_params(axis="both", labelsize=fontsize)
     ax.set_xlim([0, wcc_flow.shape[0] - 1])
     ax.set_ylim(bottom=-1, top=1)
