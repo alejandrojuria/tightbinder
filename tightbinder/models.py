@@ -667,9 +667,11 @@ class AmorphousSlaterKoster(SlaterKoster):
         
         reference_bond_length = self.reference_lengths[species_pair]
         r = np.linalg.norm(position_diff)
+        displacement = round(r - reference_bond_length, 4)
+        
         hopping = super()._hopping_amplitude(position_diff, orbitals)
         if self.decay_mode == "exponential":
-            hopping *= np.exp(-self.decay_amplitude*(r - reference_bond_length))
+            hopping *= np.exp(-self.decay_amplitude*displacement)
         else:
             # hopping *= 1./(1 + self.decay_amplitude*(r - reference_bond_length))
             hopping *= (r/reference_bond_length)**(-self.decay_amplitude)
