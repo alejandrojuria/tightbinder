@@ -475,15 +475,17 @@ class TransportDevice:
 
         first_group = np.array(first_group)
         second_group = np.array(second_group)
+        cells = [self.system.bravais_lattice[0], np.array([0., 0., 0.]), -self.system.bravais_lattice[0]]
         bonds = []
         it = 0
         for i, atom in enumerate(first_group):
-            final_atoms = np.copy(second_group) - atom
-            distances = np.linalg.norm(final_atoms, axis=1)
-            indices = np.argsort(distances)
-            for index in indices:
-                if distances[index] < r:
-                    bonds.append([i, index, [0., 0., 0.], "1"])
+            for cell in cells:
+                final_atoms = np.copy(second_group)[:, :3] - atom[:3] - cell
+                distances = np.linalg.norm(final_atoms, axis=1)
+                indices = np.argsort(distances)
+                for index in indices:
+                    if distances[index] < r:
+                        bonds.append([i, index, cell, "1"])
         
         return bonds
 
@@ -511,6 +513,7 @@ class TransportDevice:
         model_device.motif = device_motif
         if self.mode == "default":
             model_device.initialize_hamiltonian()
+            print(model_device.hamiltonian)            
         else:
              # Bonds within left lead unit cell
             left_lead = deepcopy(self.system)
@@ -591,7 +594,7 @@ class TransportDevice:
 
 
     def __lead_selfenergy(self, energy: float, lead_hamiltonian: sp.csr_matrix, lead_coupling: sp.csr_matrix, delta: float = 1E-7, 
-                          threshold: float = 1E-5, mixing: float = 0.5, method: str = "LS"):
+                          threshold: float = 1E-10, mixing: float = 0.5, method: str = "LS"):
         """
         Routine to compute the selfenergy of one leaf at a given energy. 
 
@@ -760,7 +763,7 @@ class TransportDevice:
         return green_device
 
 
-    def visualize_device(self, ax: Axes = None, pbc: bool = False) -> None:
+    def visualize_device(self, ax: Axes = None, pbc: bool = False, ) -> None:
         """
         Routine to visualize the device. Intended to be used only with two dimensional (planar) systems.
 
@@ -768,9 +771,14 @@ class TransportDevice:
         :param pbc: Boolean to toggle 3d plot of the device in case the system and the leads have PBC.
         """
 
-
         if ax is None:
-            fig, ax = plt.subplots(1, 1)
+            if pbc and self.system.boundary == "PBC":
+                fig, ax = plt.subplots(1, 1, subplot_kw={"projection": "3d"})
+            elif pbc and self.system.boundary == "OBC":
+                    print("Warning: plot set to periodic but system is finite. Plot will be 2d.")
+            else:
+                fig, ax = plt.subplots(1, 1)
+
 
         # First plot bonds
         displaced_left_motif = np.copy(self.left_lead)
@@ -782,35 +790,92 @@ class TransportDevice:
         left_lead = np.concatenate((displaced_left_motif, self.left_lead))
         right_lead = np.concatenate((self.right_lead, displaced_right_motif))
 
-        # Then plot atoms
-        for atom in self.system.motif:
-            ax.scatter(atom[0], atom[1], c="mediumseagreen", edgecolors="black", linewidths=1)
-        
-        for atom in self.left_lead:
-            ax.scatter(atom[0], atom[1], c="orange", edgecolors="black", linewidths=1)
-            ax.scatter(atom[0] - self.period[0], atom[1], c="moccasin", edgecolors="black", linewidths=1)
+        system_motif = self.system.motif
 
-        for atom in self.right_lead:
-            ax.scatter(atom[0], atom[1], c="orange", edgecolors="black", linewidths=1)
-            ax.scatter(atom[0] + self.period[0], atom[1], c="moccasin", edgecolors="black", linewidths=1)
-
-        total_motif = np.concatenate((self.left_lead, self.system.motif, self.right_lead), axis=0)
-        for bond in self.bonds[0]:
-            rx = [total_motif[bond[0], 0], total_motif[bond[1], 0]]
-            ry = [total_motif[bond[0], 1], total_motif[bond[1], 1]]
-            ax.plot(rx, ry, "k-", zorder=-1)
+        # Map into cilinder. z component is disregarded.
+        if pbc:
+            L = self.system.bravais_lattice[0][1]
+            r = L/(2*np.pi)
+            for n, atom in enumerate(left_lead):
+                y = atom[1]
+                left_lead[n, 1] = r*np.cos(2*np.pi*y/L)
+                left_lead[n, 2] = r*np.sin(2*np.pi*y/L)
+            for n, atom in enumerate(right_lead):
+                y = atom[1]
+                right_lead[n, 1] = r*np.cos(2*np.pi*y/L)
+                right_lead[n, 2] = r*np.sin(2*np.pi*y/L)
         
-        for bond in self.bonds[1]:
-            rx = [left_lead[bond[0], 0], left_lead[bond[1], 0]]
-            ry = [left_lead[bond[0], 1], left_lead[bond[1], 1]]
-            ax.plot(rx, ry, "k-", zorder=-1)
-        
-        for bond in self.bonds[2]:
-            rx = [right_lead[bond[0], 0], right_lead[bond[1], 0]]
-            ry = [right_lead[bond[0], 1], right_lead[bond[1], 1]]
-            ax.plot(rx, ry, "k-", zorder=-1)
+        if not pbc:
+            # Then plot atoms
+            for atom in system_motif:
+                ax.scatter(atom[0], atom[1], c="mediumseagreen", edgecolors="black", linewidths=1)
+            
+            for atom in self.left_lead:
+                ax.scatter(atom[0], atom[1], c="orange", edgecolors="black", linewidths=1)
+                ax.scatter(atom[0] - self.period[0], atom[1], c="moccasin", edgecolors="black", linewidths=1)
 
-        ax.axis('equal')
+            for atom in self.right_lead:
+                ax.scatter(atom[0], atom[1], c="orange", edgecolors="black", linewidths=1)
+                ax.scatter(atom[0] + self.period[0], atom[1], c="moccasin", edgecolors="black", linewidths=1)
+            
+            total_motif = np.concatenate((self.left_lead, self.system.motif, self.right_lead), axis=0)
+            for bond in self.bonds[0]:
+                rx = [total_motif[bond[0], 0], total_motif[bond[1], 0]]
+                ry = [total_motif[bond[0], 1], total_motif[bond[1], 1]]
+                ax.plot(rx, ry, "k-", zorder=-1)
+            
+            for bond in self.bonds[1]:
+                rx = [left_lead[bond[0], 0], left_lead[bond[1], 0]]
+                ry = [left_lead[bond[0], 1], left_lead[bond[1], 1]]
+                ax.plot(rx, ry, "k-", zorder=-1)
+            
+            for bond in self.bonds[2]:
+                rx = [right_lead[bond[0], 0], right_lead[bond[1], 0]]
+                ry = [right_lead[bond[0], 1], right_lead[bond[1], 1]]
+                ax.plot(rx, ry, "k-", zorder=-1)
+
+            ax.axis('equal')
+
+        else:
+            for atom in system_motif:
+                ax.scatter(atom[0], r*np.cos(2*np.pi*atom[1]/L), r*np.sin(2*np.pi*atom[1]/L), c="mediumseagreen", edgecolors="black", linewidths=1)
+            
+            for atom in self.left_lead:
+                ax.scatter(atom[0], r*np.cos(2*np.pi*atom[1]/L), r*np.sin(2*np.pi*atom[1]/L), c="orange", edgecolors="black", linewidths=1)
+                ax.scatter(atom[0] - self.period[0], r*np.cos(2*np.pi*atom[1]/L), r*np.sin(2*np.pi*atom[1]/L), c="moccasin", edgecolors="black", linewidths=1)
+
+            for atom in self.right_lead:
+                ax.scatter(atom[0], r*np.cos(2*np.pi*atom[1]/L), r*np.sin(2*np.pi*atom[1]/L), c="orange", edgecolors="black", linewidths=1)
+                ax.scatter(atom[0] + self.period[0], r*np.cos(2*np.pi*atom[1]/L), r*np.sin(2*np.pi*atom[1]/L), c="moccasin", edgecolors="black", linewidths=1)
+            
+            total_motif = np.concatenate((self.left_lead, self.system.motif, self.right_lead), axis=0)
+            for bond in self.bonds[0]:
+                rx = [total_motif[bond[1], 0], total_motif[bond[0], 0]]
+                ry_org = [total_motif[bond[1], 1], total_motif[bond[0], 1]]
+                ry = [r*np.cos(2*np.pi*value/L) for value in ry_org]
+                rz = [r*np.sin(2*np.pi*value/L) for value in ry_org]
+                ax.plot(rx, ry, rz, "k-", zorder=-1)
+            
+            for bond in self.bonds[1]:
+                rx = [left_lead[bond[1], 0], left_lead[bond[0], 0]]
+                ry = [left_lead[bond[1], 1], left_lead[bond[0], 1]]
+                rz = [left_lead[bond[1], 2], left_lead[bond[0], 2]]
+                ax.plot(rx, ry, rz, "k-", zorder=-1)
+            
+            for bond in self.bonds[2]:
+                rx = [right_lead[bond[1], 0], right_lead[bond[0], 0]]
+                ry = [right_lead[bond[1], 1], right_lead[bond[0], 1]]
+                rz = [right_lead[bond[1], 2], right_lead[bond[0], 2]]
+                ax.plot(rx, ry, rz, "k-")
+
+            ax.view_init(elev=0)
+            try:
+                ax.set_aspect('equal')
+            except NotImplementedError as e:
+                print("Plotting the device in 3d requires matpltolib 3.7.0 or higher.")
+                raise(e)
+            ax.set_axis_off()
+
 
 
 def ldos(result: Spectrum, atom_index: int, energy: float, delta: float = 1E-4):
