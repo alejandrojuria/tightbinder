@@ -454,6 +454,7 @@ class TransportDevice:
         :return: Value of conductance.
         """
 
+        self.system.initialize_hamiltonian()
         spectrum = self.system.solve()
         fermi_energy = spectrum.calculate_fermi_energy(self.system.filling)
         G = self.transmission(fermi_energy, fermi_energy, 1, delta, method)
@@ -475,12 +476,15 @@ class TransportDevice:
 
         first_group = np.array(first_group)
         second_group = np.array(second_group)
-        cells = [self.system.bravais_lattice[0], np.array([0., 0., 0.]), -self.system.bravais_lattice[0]]
+        if self.system.bravais_lattice is not None:
+            cells = [self.system.bravais_lattice[0], np.array([0., 0., 0.]), -self.system.bravais_lattice[0]]
+        else:
+            cells = [np.array([0., 0., 0.])]
         bonds = []
         it = 0
         for i, atom in enumerate(first_group):
             for cell in cells:
-                final_atoms = np.copy(second_group)[:, :3] - atom[:3] - cell
+                final_atoms = np.copy(second_group)[:, :3] + cell - atom[:3] 
                 distances = np.linalg.norm(final_atoms, axis=1)
                 indices = np.argsort(distances)
                 for index in indices:
@@ -506,6 +510,7 @@ class TransportDevice:
             [Hl, Vl] = Left lead hamiltonian and coupling. [Hr, Vr] = Right lead hamiltonian and coupling.
         """
 
+
         max_nn = max(int(value) for value in self.system.configuration["SK amplitudes"].keys())
         device_motif = np.concatenate((self.left_lead, self.system.motif, self.right_lead))
         model_device = deepcopy(self.system)
@@ -513,7 +518,6 @@ class TransportDevice:
         model_device.motif = device_motif
         if self.mode == "default":
             model_device.initialize_hamiltonian()
-            print(model_device.hamiltonian)            
         else:
              # Bonds within left lead unit cell
             left_lead = deepcopy(self.system)
@@ -525,7 +529,7 @@ class TransportDevice:
             disp = len(self.left_lead)
             left_bonds = self.__find_direct_bonds(self.left_lead, self.system.motif, fnn * 1.3)
             left_bonds = [[i, j + disp, cell, nn] for [i, j, cell, nn] in left_bonds]
-            reversed_bonds = [[j, i, cell, nn] for [i, j, cell, nn] in left_bonds]
+            reversed_bonds = [[j, i, -cell, nn] for [i, j, cell, nn] in left_bonds]
             left_bonds = left_bonds + reversed_bonds + left_lead.bonds
 
             # Bonds within right lead
@@ -538,7 +542,7 @@ class TransportDevice:
             disp = len(self.left_lead) + len(self.system.motif)
             right_bonds = self.__find_direct_bonds(self.right_lead, self.system.motif, fnn * 1.3)
             right_bonds = [[i + disp, j + len(self.left_lead), cell, nn] for [i, j, cell, nn] in right_bonds]
-            reversed_bonds = [[j, i, cell, nn] for [i, j, cell, nn] in right_bonds]
+            reversed_bonds = [[j, i, -cell, nn] for [i, j, cell, nn] in right_bonds]
             right_bonds = right_bonds + reversed_bonds + [[i + disp, j + disp, cell, nn] for [i, j, cell, nn] in right_lead.bonds]
 
             self.system.initialize_hamiltonian()
@@ -577,9 +581,13 @@ class TransportDevice:
         model_lead = deepcopy(self.system)
         model_lead.motif = left_lead_motif
         model_lead.matrix_type = "sparse"
-        max_nn = max(int(value) for value in self.system.configuration["SK amplitudes"].keys())
-        model_lead.find_neighbours(mode="minimal", nn=max_nn)
-        model_lead.initialize_hamiltonian(find_bonds=False)
+        if self.mode == "direct":
+            max_nn = max(int(value) for value in self.system.configuration["SK amplitudes"].keys())
+            model_lead.find_neighbours(mode="minimal", nn=max_nn)
+            findBonds = False
+        else:
+            findBonds = True
+        model_lead.initialize_hamiltonian(find_bonds=findBonds)
         lead_total_hamiltonian = sp.csc_matrix(model_lead.hamiltonian[0].shape, dtype=np.complex_)
         for h in model_lead.hamiltonian:
             lead_total_hamiltonian += h
