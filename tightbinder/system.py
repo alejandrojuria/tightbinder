@@ -108,6 +108,14 @@ class System(Crystal):
         if type not in ["dense", "sparse"]:
             raise ValueError("Invalid matrix type. Must be either dense or sparse.")
         self._matrix_type = type
+    
+    @property
+    def unit_cell_list(self):
+        if self._unit_cell_list is None:
+            return []
+        for cell in self._unit_cell_list:
+            return self._unit_cell_list
+
 
 
     # ####################################################################################
@@ -256,6 +264,7 @@ class System(Crystal):
                         neigh_atoms_indices_min = np.where(nn_distance - eps < distance)[0]
 
                         neigh_atoms_indices = np.intersect1d(neigh_atoms_indices_max, neigh_atoms_indices_min)
+                        
                         for i in neigh_atoms_indices:
                             self.add_bond(n, i, cell, str(nn + 1))
 
