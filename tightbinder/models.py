@@ -119,17 +119,24 @@ class SlaterKoster(System):
         possible_orbitals = {'s': 0, 'p': 1, 'd': 2}
         if possible_orbitals[initial_orbital_type] > possible_orbitals[final_orbital_type]:
             position_diff = np.array(position_diff) * (-1)
-            orbitals = [final_orbital, final_species, initial_orbital, initial_species, neigh]
-            hopping = self._hopping_amplitude(position_diff, orbitals)
-            return hopping
+
+            initial_orbital, final_orbital = final_orbital, initial_orbital
+            initial_species, final_species = final_species, initial_species
+
+            initial_orbital_type = initial_orbital[0]
+            final_orbital_type = final_orbital[0]
+            
         d_orbitals = {'dxy': 0, 'dyz': 0, 'dzx': 0, 'dx2-y2': 1, 'd3z2-r2':2}
         if (initial_orbital_type == "d" and final_orbital_type == "d"
                 and
             d_orbitals[initial_orbital] > d_orbitals[final_orbital]):
             position_diff = np.array(position_diff) * (-1)
-            orbitals = [final_orbital, final_species, initial_orbital, initial_species, neigh]
-            hopping = self._hopping_amplitude(position_diff, orbitals)
-            return hopping
+           
+            initial_orbital, final_orbital = final_orbital, initial_orbital
+            initial_species, final_species = final_species, initial_species
+
+            initial_orbital_type = initial_orbital[0]
+            final_orbital_type = final_orbital[0]
         
         species_pair = str(initial_species) + str(final_species)
         if species_pair not in amplitudes.keys():
@@ -360,7 +367,7 @@ class SlaterKoster(System):
                     h_cell = self._unit_cell_list.index(list(cell))
                     hopping_amplitude = self._hopping_amplitude(position_difference, orbital_config)
                     hamiltonian[h_cell][atom_index[initial_atom_index] + i,
-                                        atom_index[final_atom_index] + j] += hopping_amplitude
+                                        atom_index[final_atom_index] + j] = hopping_amplitude
         if verbose:
             print("Hoppings computed")
 
@@ -670,11 +677,13 @@ class AmorphousSlaterKoster(SlaterKoster):
         displacement = round(r - reference_bond_length, 4)
         
         hopping = super()._hopping_amplitude(position_diff, orbitals)
+        
         if self.decay_mode == "exponential":
             hopping *= np.exp(-self.decay_amplitude*displacement)
         else:
             # hopping *= 1./(1 + self.decay_amplitude*(r - reference_bond_length))
             hopping *= (r/reference_bond_length)**(-self.decay_amplitude)
+
         return hopping
 
     @overrides(SlaterKoster)
