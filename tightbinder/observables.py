@@ -437,9 +437,7 @@ class TransportDevice:
             device_green = self.__device_green_function(energy, self.device_h, lead_selfenergy_L, lead_selfenergy_R, delta)
 
             T = (extended_lead_selfenergy_L @ device_green.transpose().conjugate() @ extended_lead_selfenergy_R @ device_green).trace()
-            currents.append(T)
-
-            print(T)
+            currents.append(T.real)
 
         return (currents, energies)
 

@@ -574,6 +574,7 @@ class System(Crystal):
         :param width: Width of the ribbon (number of cells).
         :param orientation: 'horizontal' or 'vertical'. Defaults to 'horizontal'.
         :param periodic: Boolean to keep the ribbon periodic along the direction it is built. Defauts to False.
+            Turning this one would correspond to a nanotube instead of nanoribbon (finite).
         :return: Modified System object.
         """
         
