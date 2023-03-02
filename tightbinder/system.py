@@ -640,12 +640,13 @@ class System(Crystal):
 
             return self
         
-    def extend_copy(self, vector: List[list, np.ndarray], n: int = 1) -> None:
+    def extend_copy(self, vector: List[list, np.ndarray], n: int = 1) -> System:
         """
         Method to extend the system by attaching a copy of the motif displaced by some input vector.
 
         :param vector: Vector by which we displace the copy of the system.
         :param n: Number of copies to attach. The n-th copy will be displaced by n*vector. Defaults to 1.
+        :return: Extended system.
         """
 
         displaced_motif = np.copy(self.motif)
@@ -653,8 +654,29 @@ class System(Crystal):
             displaced_motif[:, :3] += np.array(vector)
             self.motif = np.concatenate((self.motif, displaced_motif))  
 
-        return self      
+        return self
+    
+    def rotate(self, angle: float = 90) -> System:
+        """
+        Method to rotate the whole system in the xy plane by some angle.
 
+        :param angle: Value of rotation angle in degrees. Defaults to 90 degrees.
+        :return: Rotated system.
+        """
+
+        rotation_matrix = np.array([[np.cos(np.pi*angle/180), -np.sin(np.pi*angle/180), 0],
+                                    [np.sin(np.pi*angle/180),  np.cos(np.pi*angle/180), 0],
+                                    [                      0,                        0, 1]])
+
+        for n in range(self.natoms):
+            self.motif[n, :3] = rotation_matrix @ self.motif[n, :3]
+
+        rotated_bravais = np.zeros(self.bravais_lattice.shape)
+        for n in range(self.ndim):
+            rotated_bravais[n] = rotation_matrix @ self.bravais_lattice[n]
+        self.bravais_lattice = rotated_bravais
+
+        return self
 
     def restrict_lattice2rectangle(self) -> None:
         """
