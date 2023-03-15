@@ -289,16 +289,18 @@ class Spectrum:
 
     def calculate_fermi_energy(self, filling: int) -> float:
         """ 
-        Routine to compute the Fermi level energy according to the given filling 
+        Routine to compute the Fermi level energy according to the given filling .
+        Fermi energy is set systematically in-between the last occupied state and the first
+        unoccupied state (midgap for insulators and approximately last filled for metals).
         
         :param filling: Total number of electrons in the system.
         :return: Value of Fermi energy.
         """
         
-        filling *= self.eigen_energy.shape[1]
+        filling = int(filling*self.eigen_energy.shape[1])
         all_energies = self.eigen_energy.reshape(-1)
         all_energies = np.sort(all_energies)
-        fermi_energy = all_energies[int(filling) - 1]
+        fermi_energy = (all_energies[filling - 1] + all_energies[filling])/2
 
         return fermi_energy
 
