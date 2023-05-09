@@ -857,7 +857,6 @@ class WilsonAmorphous(System):
         self.norbitals = 4
         self.basisdim = self.norbitals * len(self.motif)
         self.boundary = "PBC"
-        np.var
 
         self.a = side
         self.t = t
