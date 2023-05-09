@@ -208,13 +208,15 @@ class Spectrum:
 
         # ax.grid(linestyle='--')
 
-    def plot_spectrum(self, title: str = '',  ax: Axes = None) -> None:
+    def plot_spectrum(self, title: str = '',  ax: Axes = None, fontsize: int = 10) -> None:
         """ 
         Routine to plot all the eigenvalues coming from the Bloch Hamiltonian diagonalization
         in an ordered way.
         Specially suitable for open systems, although it can be used for periodic systems as well.
 
         :param title: Optional title for the plot.
+        :param ax: Matplotlib Axes object to the plot.
+        :param fontsize: Fontsize for plot labels. Defaults to 10.
         """
         if ax is None:
             fig, ax = plt.subplots(1, 1)
@@ -224,11 +226,12 @@ class Spectrum:
 
         ax.plot(all_eigenvalues, 'g+')
         if title != '':
-            ax.set_title(f"Spectrum of {title}")
+            ax.set_title(f"Spectrum of {title}", fontsize=fontsize)
         else:
-            ax.set_title("Spectrum")
-        ax.set_ylabel(r"$\varepsilon (eV)$")
-        ax.set_xlabel("n")
+            ax.set_title("Spectrum", fontsize=fontsize)
+        ax.set_ylabel(r"$\varepsilon (eV)$", fontsize=fontsize)
+        ax.set_xlabel("n", fontsize=fontsize)
+        ax.tick_params('both', labelsize=fontsize)
 
     def write_bands_to_file(self, file: str):
         """ TODO write_bands_to_file"""
@@ -411,11 +414,11 @@ class State:
 
     def __init__(self, eigenvector: np.ndarray, system: System):
         self.eigenvector = eigenvector
-        self.motif = system.motif
-        self.norbitals = system.norbitals
-        self.hoppings = system.bonds
-
-        self.amplitude = self.atomic_amplitude()
+        self.motif       = system.motif
+        self.norbitals   = system.norbitals
+        self.hoppings    = system.bonds
+        self.system      = system
+        self.amplitude   = self.atomic_amplitude()
 
     def atomic_amplitude(self) -> None:
         """ 
@@ -435,13 +438,13 @@ class State:
 
         return np.array(reduced_vector)
 
-    def plot_amplitude(self, ax: Axes = None, title: str = None, linewidth: int = 3, bonds: bool = True):
+    def plot_amplitude(self, ax: Axes = None, title: str = None, linewidth: int = 1, bonds: bool = True):
         """ 
         Method to plot the atomic amplitude of the state on top of the crystalline positions.
         
         :param ax: Axes object to plot the amplitude. Defaults to None.
         :param title: Plot title. Defaults to None.
-        :param linewidth: Change width of bonds if present. Defaults to 3.
+        :param linewidth: Change width of bonds if present. Defaults to 1.
         :param bonds: Toggle on/off bonds between atoms. Defaults to True.
         """
         
@@ -456,10 +459,8 @@ class State:
 
         atoms = np.array(self.motif)[:, :3]
         if bonds:
-            for n, bond in enumerate(self.hoppings):
-                x0, y0 = atoms[bond[0], :2]
-                xneigh, yneigh = atoms[bond[1], :2]
-                ax.plot([x0, xneigh], [y0, yneigh], "-k", linewidth=1.)
+            self.system.plot_wireframe(ax=ax, linewidth=linewidth)
+
         ax.scatter(atoms[:, 0], atoms[:, 1],
                    c="royalblue", alpha=1, s=scaled_amplitude*1500)
         ax.set_xlim([np.min(atoms[:, 0]), np.max(atoms[:, 0])])
