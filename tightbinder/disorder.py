@@ -132,6 +132,59 @@ def amorphize(system: System, spread: float = 0.1, distribution: str = "uniform"
     return system
 
 
+def hard_spheres(system: System, radius: float = 0.1) -> System:
+    """
+    Routine to treat the given model as a model of hard spheres, meaning that any two atoms that are too
+    close together (distance < 2*radius), are relocated so that (distance = 2*radius). This
+    is intended to be used with amorphous models with a high degree of disorder, to avoid atoms
+    getting too close together.
+
+    :param system: System to be treated as a model of hard spheres.
+    :param radius: Effective radius of the hard spheres. Has to be given in the units of the motif.
+    :return: System with new atomic positions.
+    """
+
+    for bond in system.bonds:
+        initial_atom_index, final_atom_index, cell, neigh = bond
+        initial_atom = system.motif[initial_atom_index, :3]
+        final_atom = system.motif[final_atom_index, :3]
+        distance = np.linalg.norm(initial_atom - final_atom)
+        if distance < 2*radius:
+            unit_vector = (final_atom - initial_atom)/distance
+            system.motif[final_atom_index, :3] = initial_atom + unit_vector * 2 * radius
+
+    return system
+
+
+def remove_dangling_bonds(system: System) -> System:
+    """
+    Routine to remove dangling bonds in a system, i.e. atoms that only have one bond to
+    another atom of the solid. It also removes atoms that are completely disconnected from
+    the solid.
+
+    :param system: System to remove dangling bonds and disconnected atoms.
+    :return: Cleaned system.
+    """
+
+    nbonds, nremoved = 0, 0
+    for atom_index in range(system.natoms):
+        for initial_atom, _, _, _ in system.bonds:
+            if initial_atom == atom_index:
+                nbonds += 1
+        if nbonds < 2:
+            system.remove_atom(atom_index)
+
+            # Update bonds with new atom indices
+            for i, (initial_atom, final_atom, cell, neigh) in enumerate(system.bonds):
+                if initial_atom > atom_index:
+                    initial_atom -= 1
+                if final_atom > atom_index:
+                    final_atom -= 1
+                system.bonds[i] = [initial_atom, final_atom, cell, neigh]
+
+    return system
+
+
 def alloy(system: System, *concentrations: float) -> System:
     """ 
     Routine to alloy a material with two or more chemical species. In practice this means that each atom
