@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import sys
 import scipy as sp
 from .system import System
+from .result import Spectrum
 from matplotlib.axes import Axes
 from io import TextIOWrapper
 
@@ -111,7 +112,8 @@ def __extract_wcc_from_wilson_loop(wilson_loop: np.ndarray) -> np.ndarray:
     return eigval
 
 
-def calculate_wannier_centre_flow(system: System, number_of_points: int, additional_k: np.ndarray = None, nk_subpath: int = 50, 
+def calculate_wannier_centre_flow(system: System, number_of_points: int, full_BZ: bool = False, 
+                                  additional_k: np.ndarray = None, nk_subpath: int = 50, 
                                   refine_mesh: bool = True, pos_tol: float = 5E-2, max_iterations: int = 20) -> np.ndarray:
     """ 
     Routine to compute the evolution of the Wannier Charge Centres (WCC) through Wilson loop calculation.
@@ -119,6 +121,8 @@ def calculate_wannier_centre_flow(system: System, number_of_points: int, additio
 
     :param system: System used to compute the WCC evolution.
     :param number_of_points: Number of points where the WCC are computed. 
+    :param full_BZ: Boolean to toggle WCC calculation on full BZ instead of half the BZ. Useful
+        for Chern number calculations (full_BZ=True). Defaults to False (for Z2 TIs).
     :param additional_k: Array corresponding to kpoints to displace the closed paths by that vector.
     :param nk_subpath: Number of points for each closed path for which we compute the Wilson loop. Defaults to 50.
     :param refine_mesh: Boolean to toggle mesh refinement. Defaults to True.
@@ -138,8 +142,12 @@ def calculate_wannier_centre_flow(system: System, number_of_points: int, additio
     fixed_kpoints = []
 
     # First generate uniform mesh in BZ
+    if full_BZ:
+        factor = 1
+    else:
+        factor = 2
     for i in range(0, number_of_points + 1):
-        k_fixed = system.reciprocal_basis[1]*i/(2*number_of_points)
+        k_fixed = system.reciprocal_basis[1]*i/(factor*number_of_points)
         if additional_k is not None:
             k_fixed += additional_k
         fixed_kpoints.append(k_fixed)
@@ -353,7 +361,7 @@ def calculate_z2_invariant(wcc_flow: np.ndarray) -> int:
 
 
 def plot_wannier_centre_flow(wcc_flow: np.ndarray, show_midpoints: bool = True, ax: Axes = None, title: str = None,
-                             fontsize: int = 10, symmetric: bool = False) -> None:
+                             fontsize: int = 10, symmetric: bool = False, full_BZ: bool = False) -> None:
     """ 
     Routine to plot the WCC evolution. 
     
@@ -363,6 +371,7 @@ def plot_wannier_centre_flow(wcc_flow: np.ndarray, show_midpoints: bool = True, 
     :param title: Name of the plot. Defaults to empty string.
     :param fontsize: Value to change the fontsize in the plot. Defaults to 10.
     :param symmetric: Boolean to plot the WCC over the whole BZ instead of half of it.
+    :param full_BZ: Boolean to plot WCC over complete BZ. Defaults to False.
     """
 
     if ax is None:
@@ -388,10 +397,13 @@ def plot_wannier_centre_flow(wcc_flow: np.ndarray, show_midpoints: bool = True, 
     if symmetric:
         ax.set_xticks([0, wcc_flow.shape[0] - 1, 2*wcc_flow.shape[0] - 2])
         ax.set_xticklabels([r'$-\pi$', r"0", r'$\pi$'], fontsize=fontsize)
-        
     else:
         ax.set_xticks([0, wcc_flow.shape[0] - 1])
-        ax.set_xticklabels([r"0", r'$\pi$'], fontsize=fontsize)
+        if not full_BZ:
+            ax.set_xticklabels([r"0", r'$\pi$'], fontsize=fontsize)
+        else:
+            ax.set_xticklabels([r"-$\pi$", r'$\pi$'], fontsize=fontsize)
+
     ax.tick_params(axis="both", labelsize=fontsize)
     ax.set_xlim([0, wcc_flow.shape[0] - 1])
     ax.set_ylim(bottom=-1, top=1)
@@ -423,6 +435,58 @@ def plot_polarization_flow(wcc_flow: np.ndarray) -> None:
     plt.figure()
     plt.plot(polarization_array)
 
+
+def chern_marker(system: System, results: Spectrum, ef: float = 0) -> np.ndarray:
+    """
+    Routine to evaluate the Chern marker at every position of the lattice.
+    Must be used with systems with OBC or PBC at k=0.
+
+    :param system: System to compute the Chern marker.
+    :param results: Spectrum object with the results from the diagonalization.
+    :param ef: Fermi energy, defaults to 0 (for particle-hole symmetric systems).
+    :return: Array with the Chern marker evaluated at each atomic position.
+    """
+
+    
+    P = np.diag((results.eigen_energy < ef).reshape(-1))
+    Q = np.eye(system.basisdim) - P
+    x = np.zeros([system.basisdim, system.basisdim])
+    y = np.zeros([system.basisdim, system.basisdim])
+    it = 0
+    for n, atom in enumerate(system.motif):
+        norbitals = system.norbitals[int(atom[3])]
+        for i in range(norbitals):
+            x[it, it] = atom[0]
+            y[it, it] = atom[1]
+            it += 1
+
+    eigvec = results.eigen_states[0]
+
+    x = eigvec.T.conj() @ x @ eigvec
+    y = eigvec.T.conj() @ y @ eigvec
+
+    PxP, PyP = P @ x @ P, P @ y @ P
+
+    C = 2 * np.pi * np.imag(PxP @ PyP - PyP @ PxP)
+
+    # PxQ, PyQ, QxP, QyP = P @ x @ Q, P @ y @ Q, Q @ x @ P, Q @ y @ P
+    # C1 = 2 * np.pi * np.imag(QxP @ PyQ - QyP @ PxQ)
+    # C2 = -2 * np.pi * np.imag(PxQ @ QyP - PyQ @ QxP)
+    # C = (C1 + C2)/2
+    C = eigvec @ C @ eigvec.T.conj()
+    C = np.diag(C).real
+    
+    # Finally sum over orbitals
+    it = 0
+    trC = []
+    for n in range(system.natoms):
+        species = int(system.motif[n, 3])
+        norbitals = int(system.norbitals[species])
+        summed_chern = np.sum(C[it : it + norbitals])
+        trC.append(summed_chern)
+        it += norbitals
+    
+    return np.array(trC)
 
 # ---------------------------- Entanglement entropy ----------------------------
 def __truncate_eigenvectors(eigenvectors: np.ndarray, sector: np.ndarray, system: System) -> np.ndarray:
