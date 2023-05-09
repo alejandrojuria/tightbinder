@@ -13,6 +13,7 @@ from .crystal import Crystal
 import numpy as np
 import scipy.sparse as sp
 import scipy.sparse.linalg
+import matplotlib.pyplot as plt
 import sys
 from itertools import product
 
@@ -498,6 +499,26 @@ class System(Crystal):
             print("Warning: No boundary atoms found")
 
         return np.array(atoms, dtype=int)
+    
+    def plot_wireframe(self, ax: plt.Axes = None, linewidth: float = 1, alpha: float = 0.5) -> None:
+        """
+        Method to plot a wireframe of the system according to the detected bonds.
+
+        :param ax: Matplotlib axes object. If None, a new Axis object is created.
+        :param linewidth: Linewidth of the wireframe. Defaults to 1.
+        """
+
+        if not self.bonds:
+            raise LookupError("plot_wireframe requires having computed the bonds of the system.")
+
+        if ax is None:
+            fig, ax = plt.subplots(1, 1)
+        
+        for n, bond in enumerate(self.bonds):
+
+            x0, y0 = self.motif[bond[0], :2]
+            xneigh, yneigh = self.motif[bond[1], :2]
+            ax.plot([x0, xneigh], [y0, yneigh], "-k", linewidth=linewidth, alpha=alpha)
 
 
     # ####################################################################################
