@@ -132,6 +132,7 @@ class Crystal:
 
         if type(self.motif) == list:
             self.motif.pop(index)
+            self.natoms -= 1
         elif type(self.motif) == np.ndarray:
             self.motif = np.delete(self.motif, index, 0)
 
@@ -524,11 +525,14 @@ class Crystal:
         plt.axis('off')
         plt.show()
 
-    def plot_2d_crystal(self, ax = None) -> None:
+    def plot_2d_crystal(self, ax = None, fontsize: int = 10, size: int = 10) -> None:
         """ 
         Method to visualize the crystalline structure (Bravais lattice + motif) in two dimensions.
-
+        If the crystal is 3D, it will plot only the x, y coordinates.
+        
         :param ax: Axis to plot the projection of the crystal. If None, creates one.
+        :param fontsize: Size of labels. Defaults to 10.
+        :param size: Size of markers. Defaults to 10.
         """
 
         if ax is None:
@@ -537,13 +541,14 @@ class Crystal:
         [min_axis, max_axis] = [np.min(self.motif), np.max(self.motif)]
 
         for atom in self.motif:
-            ax.scatter(atom[0], atom[1], color='y', s=50)
+            ax.scatter(atom[0], atom[1], color='y', s=size)
 
-        ax.set_xlabel('x (A)')
-        ax.set_ylabel('y (A)')
+        ax.set_xlabel('x (A)', fontsize=fontsize)
+        ax.set_ylabel('y (A)', fontsize=fontsize)
         ax.set_xlim(min_axis, max_axis)
         ax.set_ylim(min_axis, max_axis)
         ax.axis('equal')
+        ax.tick_params('both', labelsize=fontsize)
 
     def visualize(self) -> None:
         """ 
