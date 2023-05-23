@@ -565,11 +565,12 @@ class CrystalView:
     """ 
     The CrystalView class' aim is to wrap all the logic relative to the visualization of the crystal using the
     vpython library. This is, rendering the solid appropriately, and also rendering a minimal user interface to interact
-    with the visualization. 
+    with the visualization. Note that typehints for VPython components have been deleted to avoid importing the 
+    library beforehand.
     """
 
-    import vpython as vp
     def __init__(self, crystal: Crystal) -> None:
+
         self.bravais_lattice = crystal.bravais_lattice
         self.motif = np.array(crystal.motif)
         self.ndim = crystal.ndim
@@ -578,11 +579,18 @@ class CrystalView:
         self.bonds = []
         self.extra_bonds = []
         self.atom_radius = None
+        try:
+            self.vp = __import__("vpython")
+        except:
+            raise AssertionError("visualize(): Requires having installed the library VPython.")
 
         try:
             self.edge_atoms = crystal.identify_boundary(corner_atoms=True)
+        except AssertionError as e:
+            print("CrystalView.visualize(): Unable to determine open boundary (too few atoms or inexistent with PBC)")
+
+        try:
             self.neighbours = crystal.bonds
-            print(self.edge_atoms)
         except IndexError or AttributeError as e:
             print('visualize(): System must be initialized first')
             raise
@@ -691,17 +699,21 @@ class CrystalView:
         self.vp.scene.bind("mousedown", self.__mousedown)
         self.vp.scene.bind("mouseup", self.__mouseup)
 
-    def __mousedown(self, event: vp.event_return) -> None:
+    def __mousedown(self, event) -> None:
         """ 
-        Private method to detect mouse buttons press. 
+        Private method to detect mouse buttons press.
+
+        :param event: vpython.event_return object. 
         """
 
         self.initial_position = self.vp.scene.mouse.pos
         self.drag = True
 
-    def __mouseup(self, event: vp.event_return) -> None:
+    def __mouseup(self, event) -> None:
         """ 
         Private method to detect mouse buttons release. 
+
+        :param event: vpython.event_return object.
         """
 
         if self.drag:
@@ -710,17 +722,21 @@ class CrystalView:
             self.vp.scene.camera.pos -= increment
         self.drag = False
 
-    def __add_unit_cells(self, button: vp.button) -> None:
+    def __add_unit_cells(self, button) -> None:
         """ 
         Private method to render additional unit cells from the origin. 
+
+        :param button: vpython.button object.
         """
 
         for atom in self.extra_atoms:
             atom.visible = True
 
-    def __show_bonds(self, button: vp.button) -> None:
+    def __show_bonds(self, button) -> None:
         """ 
-        Private method to render the bonds between atoms 
+        Private method to render the bonds between atoms.
+
+        :param button: vpython.button object.
         """
 
         for bond in self.bonds:
@@ -729,9 +745,11 @@ class CrystalView:
             for bond in self.extra_bonds:
                 bond.visible = True
 
-    def __remove_unit_cells(self, button: vp.button) -> None:
+    def __remove_unit_cells(self, button) -> None:
         """ 
         Private method to derender the additional unit cells. 
+
+        :param button: vpython.button object.
         """
 
         for atom in self.extra_atoms:
@@ -740,9 +758,11 @@ class CrystalView:
             for bond in self.extra_bonds:
                 bond.visible = False
 
-    def __remove_bonds(self, button: vp.button) -> None:
+    def __remove_bonds(self, button) -> None:
         """ 
         Private method to derender the bonds between atoms. 
+
+        :param button: vpython.button object.
         """
 
         for bond in self.bonds:
@@ -750,10 +770,12 @@ class CrystalView:
         for bond in self.extra_bonds:
             bond.visible = False
 
-    def __draw_boundary(self, button: vp.button) -> None:
+    def __draw_boundary(self, button) -> None:
         """ 
         Private method to draw the boundary of the unit cell.
         TODO: Requires fixing. 
+
+        :param button: vpython.button object.
         """
 
         self.cell_vectors = []
@@ -773,18 +795,22 @@ class CrystalView:
                               shaftwidth=0.1)
             self.cell_vectors.append(vector)
 
-    def __remove_boundary(self, button: vp.button) -> None:
+    def __remove_boundary(self, button) -> None:
         """ 
-        Private method to remove the boundary of the unit cell. 
+        Private method to remove the boundary of the unit cell.
+
+        :param button: vpython.button object. 
         """
 
         self.cell_boundary.visible = False
         for vector in self.cell_vectors:
             vector.visible = False
 
-    def __highlight_edge(self, button: vp.button) -> None:
+    def __highlight_edge(self, button) -> None:
         """ 
         Private method to highlight the edges of the atom of the solid. 
+
+        :param button: vpython.button object.
         """
 
         if button.text == "highlight edge atoms":
