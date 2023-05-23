@@ -94,6 +94,14 @@ class Spectrum:
         :param fontsize: Adjusts size of lines and text.
         """
 
+        # First get distances of relevant high symmetry points
+        points = [self.system.high_symmetry_points[point] for point in labels]
+        path_distances = [np.linalg.norm(points[i + 1] - points[i]) for i in range(len(points) - 1)]
+        cummulative_path_weights = [0] 
+        cummulative_path_weights += [np.sum(path_distances[:i + 1])/np.sum(path_distances) for i in range(len(labels) - 1)]
+
+        print(cummulative_path_weights)
+
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
@@ -104,14 +112,22 @@ class Spectrum:
             self.rescale_bands_to_fermi_level()
 
         nk = len(self.kpoints)
-        x_points = np.arange(0, nk)
+        x_points = np.arange(0, nk, dtype=float)
         x_ticks = []
         number_of_paths = len(labels) - 1
 
+        label_points = []
         for n, label in enumerate(labels):
-            xpos = (nk - 1)/number_of_paths*n
+            xpos = (nk - 1)*cummulative_path_weights[n]
             x_ticks.append(xpos)
-        
+            factor = int((nk - 1)/number_of_paths)
+                    
+        x_points = [0]
+        for n, point in enumerate(x_ticks[:-1]):
+            next_point = x_ticks[n + 1]
+            path_points = np.linspace(point, next_point, factor + 1, endpoint=True)
+            x_points += list(path_points[1:])
+                
         for eigen_energy_k in self.eigen_energy:
             ax.plot(x_points, eigen_energy_k, 'k-', linewidth=linewidth)
 
