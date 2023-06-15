@@ -435,9 +435,47 @@ class SlaterKoster(System):
             hamiltonian_k += self.hamiltonian[cell_index] * cmath.exp(1j*np.dot(k, cell))
 
         return hamiltonian_k
+    
+    def add_flat_band(self, energy: float, atom_index: int, spin: bool = False) -> None:
+        """
+        Adds a new orbital to one atom with given onsite energy and no hoppings to other atoms,
+        resulting in a flat band in the Bloch Hamiltonian (localized state).
+
+        :param energy: Onsite energy of new orbital.
+        :param atom_index: Index of atom to which we add the new orbital.
+        :param spin: If set to True, two orbitals are added (one per spin).
+        """
+
+        if atom_index < 0:
+            raise ValueError("Atom index must be a positive number.")
+        elif atom_index > (self.natoms - 1):
+            raise ValueError("Index of atom higher than number of chemical species (counting starts at 0).")
+                
+        index = 0
+        for i in range(atom_index + 1):
+            index += self.norbitals[i]
+
+        nbasisdim = self.basisdim + 1 + spin
+        for n, fock_matrix in enumerate(self.hamiltonian):
+            new_fock_matrix = np.zeros([nbasisdim, nbasisdim])
+
+            new_fock_matrix[0:index, 0:index] = fock_matrix[0:index, 0:index]
+            new_fock_matrix[0:index, (index + 1 + spin):] = fock_matrix[0:index, index:]
+            new_fock_matrix[(index + 1 + spin):, 0:index] = fock_matrix[index:, 0:index]
+            new_fock_matrix[(index + 1 + spin):, (index + 1 + spin):] = fock_matrix[index:, index:]
+
+            self.hamiltonian[n] = new_fock_matrix
+        
+        self.hamiltonian[0][index, index] = energy
+        if spin:
+            self.hamiltonian[0][index + 1, index + 1] = energy
+
+        self.norbitals[atom_index] += 1 + spin
+        self.basisdim += 1 + spin
+
 
     # ---------------------------- IO routines ----------------------------
-    def export_model(self, filename: str, fmt: str = "%12.6f") -> None:
+    def export_model(self, filename: str, fmt: str = "%20.16f") -> None:
         """ 
         Routine to write the Hamiltonian matrices calculated to a file. 
         
