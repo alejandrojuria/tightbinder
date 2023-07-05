@@ -7,7 +7,7 @@
 ! -------------------------- Material parameters -------------------------
 #System name
 ! Model taken from https://doi.org/10.3390/app6100284
-MoS2
+MoS$_2$
 
 #Dimensionality
 2

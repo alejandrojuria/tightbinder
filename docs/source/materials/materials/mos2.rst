@@ -1,9 +1,9 @@
 MoS2
 =========================
-To describe MoS:math:`_2`` we use a Slater-Koster model consisting of :math:`d_{xy}, d_{xz}, d_{yz}, d_{x^2-y^2}, d_{3z^2-r^2}` orbitals for the Mo atom, and :math:`p_x, p_y, p_z` orbitals for
-the S atoms. The model also includes spin-orbit coupling, which produces a splitting of around 100 meV of the valence band at the :math:`\bold{K}` point. The crystal can
-be regarded as a honeycomb lattice, although it is non planar since each atom of the unit cell lies in a different plane, following the order S-Mo-S. The model includes
-hoppings between the same and different chemical species, Mo-Mo, S-S and Mo-S, up to first neighbours in all cases. Depending on how the SK parameters were fitted
+To describe :math:`\text{MoS}_2` we use a Slater-Koster model consisting of :math:`d_{xy}, d_{xz}, d_{yz}, d_{x^2-y^2}, d_{3z^2-r^2}` orbitals for the :math:`\text{Mo}` atom, and :math:`p_x, p_y, p_z` orbitals for
+the :math:`\text{S}` atoms. The model also includes spin-orbit coupling, which produces a splitting of around 100 meV of the valence band at the :math:`K` point. The crystal can
+be regarded as a honeycomb lattice, although it is non planar since each atom of the unit cell lies in a different plane, following the order :math:`\text{S}-\text{Mo}-\text{S}`. The model includes
+hoppings between the same and different chemical species, :math:`\text{Mo}-\text{Mo}`, :math:`\text{S}-\text{S}` and :math:`\text{Mo}-\text{S}`, up to first neighbours in all cases. Depending on how the SK parameters were fitted
 to the DFT bands, the resulting model can vary. We show two different SK models for MoS:math:`_2` [Ridolfi2015]_ [Silva-Guillén2016]_.
 
 * Model [Ridolfi2015]_
@@ -11,6 +11,7 @@ to the DFT bands, the resulting model can vary. We show two different SK models 
 The band structure is:
 
 .. image:: ../plots/mos2_ridolfi_bands.png
+    :width: 640
     :align: center
 
 Do note that the model has more bands than those showed; however the relevant ones are the ones close to the Fermi energy. This model provides a good fit 
@@ -109,11 +110,12 @@ The configuration file is:
     G K M G
 
 
-* Model [Silva-Guillén2016]
+* Model [Silva-Guillén2016]_
 
 The band structure is:
 
 .. image:: ../plots/mos2_silva_bands.png
+    :width: 640
     :align: center
 
 There are less conduction bands in this model compared with the previous model, but instead all the valence bands have been fitted to the DFT calculation so
