@@ -1051,7 +1051,116 @@ class HaldaneModel(System, FrozenClass):
         return h
     
 
+class AwargalaChern(System):
+    """
+    Implementation of the Agarwala model of amorphous Chern insulators in 2D, which is a generalization 
+    of the BHZ model for arbitrary atomic positions, with additional terms to break particle-hole and inversion symmetry.
 
+    :param side: First-neighbour distance in the crystalline system. Defaults to 1.
+    :param t: Hopping parameter. Defaults to 1.
+    :param m: Mass term. Defaults to 1.
+    :param t2: Particle-hole symmetry breaking parameter. Defaults to 0.
+    :param lda: Inversion symmetry breaking parameters. Defaults to 0
+    :param r: Cutoff distance for neighbour interaction. Defaults to side*1.1.
+    """
+
+    def __init__(self, side=1, t=1, m=1, t2=0, lda=0,  r=1.1):
+        super().__init__(system_name="Wilson Amorphous model",
+                         crystal=Crystal([[side, 0, 0], [0, side, 0]],
+                                         motif=[[0, 0, 0, 0]]))
+
+        self.filling = 1
+        self.norbitals = [2]
+        self.basisdim = self.norbitals[0] * len(self.motif)
+        self.boundary = "PBC"
+
+        self.a = side
+        self.t = t
+        self.m = m
+        self.t2 = t2
+        self.lda = lda
+        self.r = r * self.a
+        self.parameters = {"C": self.t, "a": self.a, "M": self.m, "t2": self.t2, "lambda": lda}
+
+    def _hopping_matrix(self, initial_position: np.ndarray, final_position: np.ndarray) -> np.ndarray:
+        """ 
+        Computes hopping matrix according to Wilson-fermion model for two
+        given atomic positions.
+
+        :param initial_position: Array 1x3 initial position.
+        :param final_position: Array 1x3 final position.
+        :return: Hopping matrix.
+        """
+
+        x, y, z = final_position - initial_position
+        r = math.sqrt(x ** 2 + y ** 2 + z ** 2)
+        theta = math.atan2(y, x)
+
+        hopping = np.zeros([2, 2], dtype=np.complex_)
+        hopping[0, 0] = -1 + self.t2
+        hopping[1, 1] =  1 + self.t2
+        hopping[0, 1] = -1j*cmath.exp(-1j*theta) + self.lda * (math.sin(theta)**2*(1 + 1j) - 1)
+        hopping[1, 0] = -1j*cmath.exp(1j*theta) + self.lda * (math.sin(theta)**2*(1 - 1j) - 1)
+        
+        hopping *= 0.5 * math.exp(-(r - self.a))
+
+        return hopping
+
+    def initialize_hamiltonian(self, find_bonds: bool = True) -> None:
+        """ 
+        Routine to initialize the matrices that compose the Bloch Hamiltonian
+        
+        :param find_bonds: Toggle to find bonds in the system before initializating
+            the Hamiltonian.
+        """
+
+        self.basisdim = self.natoms * self.norbitals[0]
+        if find_bonds:
+            print("Computing neighbours...")
+            self.find_neighbours(mode="radius", r=self.r)
+        if not find_bonds and self.bonds is None:
+            raise ArithmeticError("No bonds found to initialize Hamiltonian, exiting...")
+        self._determine_connected_unit_cells()
+
+        hamiltonian = []
+        for _ in self._unit_cell_list:
+            hamiltonian.append(np.zeros([self.basisdim, self.basisdim], dtype=np.complex_))
+
+        hamiltonian_atom_block = np.array([[       2 + self.m, (1 - 1j)*self.lda], 
+                                           [(1 + 1j)*self.lda,       -2 - self.m]])
+
+        for n, atom in enumerate(self.motif):
+            hamiltonian[0][self.norbitals[0] * n:self.norbitals[0] * (n + 1),
+                           self.norbitals[0] * n:self.norbitals[0] * (n + 1)] = hamiltonian_atom_block
+
+        for bond in self.bonds:
+            initial_atom_index, final_atom_index, cell, _ = bond
+            initial_atom = self.motif[initial_atom_index][:3]
+            final_atom = self.motif[final_atom_index][:3]
+            neigh_position = np.array(final_atom) + np.array(cell)
+            h_cell = self._unit_cell_list.index(list(cell))
+            hamiltonian[h_cell][2 * initial_atom_index:2 * (initial_atom_index + 1),
+                                2 * final_atom_index:2 * (final_atom_index + 1)] = \
+                self._hopping_matrix(initial_atom, neigh_position)
+
+        self.hamiltonian = hamiltonian
+
+    def hamiltonian_k(self, k: Union[list, np.ndarray]) -> np.ndarray:
+        """
+        Routine to evaluate the Bloch Hamiltonian at a given k point. It adds the k dependency of the Bloch Hamiltonian
+        through the complex exponentials.
+
+        :param k: k vector (Array 1x3)
+        :param conditions: defaults to PBC. Can be either PBC or OBC
+        :return: Bloch Hamiltonian matrix
+        """
+
+        dimension = len(self.hamiltonian[0])
+        hamiltonian_k = np.zeros((dimension, dimension), dtype=np.complex_)
+        for cell_index, cell in enumerate(self._unit_cell_list):
+            hamiltonian_k += (self.hamiltonian[cell_index] * cmath.exp(1j * np.dot(k, cell)))
+
+        return hamiltonian_k
 
 
 class RealSpace(System):
