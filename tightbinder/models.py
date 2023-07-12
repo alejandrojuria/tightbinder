@@ -986,6 +986,72 @@ class WilsonAmorphous(System):
 
         hamiltonian_k = (hamiltonian_k + np.transpose(np.conjugate(hamiltonian_k)))
         return hamiltonian_k
+    
+
+class HaldaneModel(System, FrozenClass):
+    """
+    Implementation of Haldane model in reciprocal space.
+
+    :param t1: Strength of first-neighbour hoppings.
+    :param t2: Strength of second-neighbour hoppings.
+    :param phi: Phase of time-reversal breaking term.
+    :param m: Mass term.
+    """
+
+    def __init__(self, t1: float = -1, t2: float = 0, phi: float = 0, m: float = 0):
+        
+        lattice_vectors = np.array([[np.sqrt(3)/2,  1./2, 0], 
+                                    [np.sqrt(3)/2, -1./2, 0]])
+        motif = np.array([[            0, 0, 0, 0],
+                          [1./np.sqrt(3), 0, 0, 0]])
+        super().__init__(system_name="Haldane model", crystal=Crystal(lattice_vectors, motif))
+
+        self.t1  = t1
+        self.t2  = t2
+        self.phi = phi
+        self.m   = m 
+
+        
+
+        self.norbitals = [1]
+        self.basisdim  = self.norbitals[0] * len(self.motif)
+        self.boundary  = "PBC"
+        self.filling   = 1
+
+        self._freeze()
+
+    def hamiltonian_k(self, k: Union[List, np.ndarray]) -> np.ndarray:
+        """
+        Routine to evaluate the Bloch Hamiltonian at a given k point. It adds the k dependency of the Bloch Hamiltonian
+        through the complex exponentials.
+
+        :param k: k vector (Array 1x3)
+        :return: Bloch Hamiltonian matrix
+        """
+
+        global sigma_x, sigma_y, sigma_z
+        identity = np.eye(2)
+
+        a = 1./np.sqrt(3)
+        angle = 60 * np.pi / 180
+        a1 = np.array([a, 0., 0.]) 
+        a2 = np.array([-a * np.cos(angle), a * np.sin(angle), 0]) 
+        a3 = np.array([-a * np.cos(angle), -a * np.sin(angle), 0])
+
+        first_neighbours = [a1, a2, a3]
+        second_neighbours = [-a2 + a3, -a3 + a1, -a1 + a2]
+
+        h = np.zeros([2, 2], dtype=np.complex_)
+
+        h += 2 * self.t2 * np.cos(self.phi) * np.sum([np.cos(np.dot(k, b)) for b in second_neighbours]) * identity
+        h += self.t1 * np.sum([np.cos(np.dot(k, a)) for a in first_neighbours]) * sigma_x
+        h += self.t1 * np.sum([np.sin(np.dot(k, a)) for a in first_neighbours]) * sigma_y
+        h += (self.m - 2 * self.t2 * np.sin(self.phi) * np.sum([np.sin(np.dot(k, b)) for b in second_neighbours])) * sigma_z
+        
+        return h
+    
+
+
 
 
 class RealSpace(System):
