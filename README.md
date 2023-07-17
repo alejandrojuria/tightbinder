@@ -1,6 +1,13 @@
-![logo](images/logo.png)
-[![Documentation Status](https://readthedocs.org/projects/tightbinder/badge/?version=latest)](https://tightbinder.readthedocs.io/en/latest/?badge=latest)
-## Introduction
+<div align="center">
+  
+  ![logo](images/logo.png)
+  [![Documentation Status](https://readthedocs.org/projects/tightbinder/badge/?version=latest)](https://tightbinder.readthedocs.io/en/latest/?badge=latest)
+  [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/alejandrojuria/tightbinder/issues)
+  [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+  ![GitHub all releases](https://img.shields.io/github/downloads/alejandrojuria/tightbinder/total)
+  
+</div>
+
 General purpose tight-binding code for electronic structure calculations based on the Slater-Koster approximation.
 The code is yet to be finished: so far the modules include the strictly necessary routines to compute band structures
 without additional information. 
