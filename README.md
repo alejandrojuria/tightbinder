@@ -8,76 +8,56 @@
   
 </div>
 
-General purpose tight-binding code for electronic structure calculations based on the Slater-Koster approximation.
-The code is yet to be finished: so far the modules include the strictly necessary routines to compute band structures
-without additional information. 
-It is designed to allow band structure calculations of alloys up to two atomic species (provided one gives the corresponding SK amplitudes).
+tightbinder is a Python library for electronic structure calculations based on the Slater-Koster approximation for tight-binding models. It provides all the necessary tools to build, 
+modify and characterize any crystalline or disordered material.
 
-The idea behind the program is to allow calculations simply using the configuration file, without any need to fiddle with the code (although that option is always available).
-Some examples are provided (cube.txt, chain.txt) which show the parameters needed to run a simulation.
+The construction of a Slater-Koster model relies on the definition of a configuration file, which contains all the information needed to build the model.
+Namely, one has to specify completely the crystalline structure, i.e. the Bravais vectors and motif, and the electronic structure which amounts to the
+orbitals, onsite energies and hoppings between orbitals. The configuration file then fully characterizes the Slater-Koster models and constitutes the starting point for the majority of the calculations done
+with the library. Alternatively, it is also possible to define custom models that can still leverage the capabilities of the package. 
 
-* Last Update: Added spin-orbit coupling up to d orbitals
+Some of the features of the library are:
+* Construction of Slater-Koster tight-binding models up to $d$ orbitals, with intraatomic spin-orbit coupling.
+* Methods to modify the system as desired: construction of supercells, finite systems, introduction of vacancies or impurities, amorphization of the lattice,
+  application of electric or magnetic fields.
+* Complete topological characterization of materials: evolution of Wannier charge centers, $\mathbb{Z}_2$ invariant, Chern number and marker, and spatial entanglement spectrum.
+* Transport calculations in two-terminal devices based on the Landauer-Buttiker formalism.
+* Computation of observables such as the band structure, expected value of the spin components, density of states or local density of states, as well as the plotting routines for
+  the corresponding quantities.
+* Predefined models (e.g. Haldane or BHZ) and ability to define custom ones.
+
+For a complete description of the capabilities of the package, we refer to the [documentation](https://tightbinder.readthedocs.io/en/latest/) where several usage examples can be found together with the full API 
+reference.
+
 
 ## Installation
-Usage of a **virtual environment** is recommended to avoid conflicts, specially since this package is still in development so
-it will experiment changes periodically.
 
-* From within the root folder of the repository, install the required packages:
+Usage of a **virtual environment** is recommended in general to avoid conflicts between packages.
+
+To install the latest version of the package, simply run:
+```bash
+pip install tightbinder
 ```
-$ cd {path}/tightbinder
-$ pip install -r requirements.txt
+
+Alternatively, you can clone the repository to get the most up-to-date version of the package. 
 ```
-* Then install the tightbinder package
-``` 
-$ pip install .
+git clone https://github.com/alejandrojuria/tightbinder.git
 ```
-* You can use the application from within the repository, using the ```bin/app.py``` program in the following fashion:
-``` 
-$ python bin/app.py {config_file} 
+
+From the root folder of the repository, install the required dependencies and then the library itself:
 ```
-Or since the library is installed, create your own scripts. For now, usage of the ```app.py``` program is advised.
+cd {path}/tightbinder
+pip install -r requirements.txt
+pip install .
+```
 
-### Documentation
-To generate the documentation, you must have installed GNU Make previously. To do so, simply ``` $ cd docs/source``` and 
-run ```$ make html```. The documentation will then be created in ```docs/build/html```.
+## Documentation
+The documentation can be accessed [online](https://tightbinder.readthedocs.io/en/latest/). To build it, you must have installed GNU Make previously. 
+To do so, ```cd docs/source``` and run ```make html```. The documentation will then be created in ```docs/build/html```. It can be accessed through ```index.html```.
 
-## Examples
-The folder ```examples/``` contains some basic cases to test that the program is working correcly.
-* One-dimensional chain (1 orbital):
-To run the example do ```$ python bin/app.py examples/chain.txt ```
-
-This model is analytically solvable, its band dispersion relation is:
-<img src="https://latex.codecogs.com/gif.latex?%5Cinline%20%5Cvarepsilon%28k%29%20%3D%20%5Cvarepsilon_0%20-%202t%5Ccos%28ka%29"/> 
-
-![alt text](images/test_chain_band.png)
-
-* Bi(111) bilayer:
-To run it: ```$python bin/app.py examples/bi(111).txt```
-In this case we use a four-orbital model (s, px, py and pz). Since we are modelling a real material, we need to input some valid Slater-Koster coefficients as well as the spin-orbit coupling amplitude. These are given in [1, 2].
-
-The resulting band structure is:
-
-![alt text](images/bi(111)_w_soc.png)
-
-Bi(111) bilayers are known to be topological insulators. To confirm this, one can use the routines provided in the ```topology``` module to calculate its 
-<img src="http://latex.codecogs.com/svg.latex?\mathbb{Z}_2" title="http://latex.codecogs.com/svg.latex?\mathbb{Z}_2"/> invariant.
-
-To do so, we can compute its hybrid Wannier centre flow, which results to be:
-
-![alt text](screenshots/wcc_flow_bi(111).png)
-
-The crossing of the red dots indicates that the material is topological. For more complex cases, there is a routine implemented to automatize the counting of crossings, based on [3].
-
-## Workroad
-The future updates will be:
-- [x] hamiltonian.py: Module for inititializing and solving the Hamiltonian of the system given in the config. file
-- [x] topology.py: This module will include routines for computing topological invariants of the system.
-  (19/12/20) Z2 invariant routines added. It remains to fix routines related to Chern invariant.
-- [ ] disorder.py: Module with routines to introduce disorder in the system such as vacancies or impurities
-
-A working GUI might be done in the future
-
-## References
+## Contributing
+The library is still under development as new features and optimizations are added. Therefore, any kind of contribution is welcome, from completing the documentation, bug fixing, adding new features or reporting bugs of the library.
+In general, any contribution should stick to the [PEP style guidelines](https://peps.python.org/pep-0008/). If in doubt, do not hesitate to contact!
 
 
 
