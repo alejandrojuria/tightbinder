@@ -1,18 +1,17 @@
-Germanene
+Stanene
 =========================
 
-Germanene is a material analog to graphene, but with germanium atoms instead of carbon. The structure is also buckled (meaning that each atom of the motif lies on a different :math:`z` plane).
-The Slater-Koster model used here consists of :math:`s, p_x, p_y, p_z` orbitals, and also includes spin-orbit coupling [Hattori2017]_. The electronic band structure of germanene is:
+Stanene is a two-dimensional material analogue to graphene, germanene or silicine. It consists of lead atoms on a buckled honeycomb lattice. The Slater-Koster model used for its description consists of :math:`s, p_x, p_y, p_z` orbitals together
+with spin-orbit coupling, and the corresponding parameters are taken from [Hattori2017]_. The band structure obtained is:
 
-.. image:: ../plots/germanene_bands.png
+.. image:: ../plots/stanene_bands.png
     :width: 640
     :align: center
 
-
-The corresponding configuration file:
+The configuration file for this model is:
 
 .. code-block::
-    :caption: examples/germanene.txt
+    :caption: examples/stanene.txt
 
     ! --------------------- Config file formatting rules ---------------------
     ! Lines starting with ! are comments
@@ -23,7 +22,7 @@ The corresponding configuration file:
     ! -------------------------- Material parameters -------------------------
     #System name
     ! Parameters taken from 
-    Germanene
+    Stanene
 
     #Dimensionality
     2
@@ -31,8 +30,8 @@ The corresponding configuration file:
     #Bravais lattice
     ! Each row corresponds to one vector of the basis (vectors have to be in R^3)
     ! For 1D and 2D systems, the z (third) component must be zero (z should always be regarded as height component)
-    3.48142212 2.01 0.0
-    3.48142212 -2.01 0.0
+    4.07032 2.35 0.0
+    4.07032 -2.35 0.0
 
     #Species
     ! Number of atomic species.
@@ -42,7 +41,7 @@ The corresponding configuration file:
     ! Each row corresponds to one vector of the basis; fourth number denotes atomic species
     ! Numbering of species starts at 0.
     0 0 0 0
-    2.3209481 0 -0.687496 0
+    2.713546 0 -0.8347958 0
 
     #Orbitals
     ! Always use cubic harmonic orbitals
@@ -58,7 +57,7 @@ The corresponding configuration file:
     #Onsite energy
     ! One for each different orbital defined above.
     ! In case of having several atomic species multiple line must be specified, one for each element.
-    -7.9 -1.16 -1.16 -1.16
+    -9.00 -3.39 -3.39 -3.39
 
     #SK amplitudes
     ! Order is fixed: Vsss, Vsps, Vpps, Vppp, Vsds, Vpds, Vpdp, Vdds, Vddp, Vddd (separated by spaces).
@@ -66,7 +65,7 @@ The corresponding configuration file:
     ! The syntax for SK amplitudes allows to specify between which species are the hoppings, as well as
     ! which is the corresponding neighbour. 
     ! Syntax is: [species1, species2; n-th neighbour] V1 V2 ...
-    [0, 0] -1.79 2.36 4.15 -1.04
+    [0, 0] -2.6245 2.6504 1.4926 -0.7877
 
     #Spin
     ! Determine whether the model is spinless (spin polarized) or spinful.
@@ -77,7 +76,7 @@ The corresponding configuration file:
     #Spin-orbit coupling
     ! Note: Using a non-zero value will automatically produce a spinful model.
     ! Amplitude must be specified for all species; one line per species.
-    0.588
+    1.2
 
     ! --------------------- Simulation parameters ---------------------
     #Mesh
