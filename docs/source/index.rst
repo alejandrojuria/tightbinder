@@ -3,6 +3,9 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+tightbinder
+======================
+
 tightbinder is a Python library 
 
 .. math::
@@ -11,14 +14,14 @@ tightbinder is a Python library
 .. toctree::
    :maxdepth: 2
 
-   intro
+   self
    
 .. toctree::
    :maxdepth: 2
    :caption: User guide
    
-   install/index
-   files/index
+   install
+   config
    tutorial/index
    examples/index
 
@@ -26,8 +29,8 @@ tightbinder is a Python library
    :maxdepth: 2
    :caption: Documentation
 
-   materials/index
-   api/index
+   materials/index.rst
+   api/index.rst
 
 Indices and tables
 ==================

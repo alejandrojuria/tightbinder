@@ -1,14 +1,19 @@
 Documentation
 =======================================
 
+
 .. autosummary::
    :toctree: _api
 
    tightbinder.crystal
-   tightbinder.system.System
-   tightbinder.models.SlaterKoster
-   tightbinder.models.AmorphousSlaterKoster
-   tightbinder.models.RealSpace
-   tightbinder.result.Spectrum
-   tightbinder.result.State
+   tightbinder.system
+   tightbinder.models
+   tightbinder.result
+   tightbinder.disorder
+   tightbinder.topology
+   tightbinder.fileparse
+   tightbinder.observables
+   tightbinder.modifiers
+   tightbinder.result
+   tightbinder.optimize
     
