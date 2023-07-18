@@ -8,12 +8,11 @@ of the library such as the band structure, to more advanced use cases which requ
     :maxdepth: 1
 
     scripts/band_structure
-    
+    scripts/wannier_charge_bi111
+    scripts/phase_diagram_bi111
     
     agarwala_pbc_v_obc
-    bands_ribbon_bi111
     density_states
-    z2_invariant_soc_diagram
     transmission_hydrogen_ribbon
     transmission_bi_ribbon_pbc
     amorphous_slater_koster
