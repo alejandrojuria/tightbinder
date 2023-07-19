@@ -10,6 +10,7 @@ of the library such as the band structure, to more advanced use cases which requ
     scripts/band_structure
     scripts/wannier_charge_bi111
     scripts/phase_diagram_bi111
+    scripts/bands_ribbon_bi111
     
     agarwala_pbc_v_obc
     density_states
