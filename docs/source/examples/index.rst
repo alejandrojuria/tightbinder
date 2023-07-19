@@ -11,9 +11,12 @@ of the library such as the band structure, to more advanced use cases which requ
     scripts/wannier_charge_bi111
     scripts/phase_diagram_bi111
     scripts/bands_ribbon_bi111
-    
-    agarwala_pbc_v_obc
-    density_states
+    scripts/spectrum_obc_v_pbc
+    scripts/density_states
+    scripts/density_states_kpm
+    scripts/entanglement_spectrum
+    scripts/edge_state
+
     transmission_hydrogen_ribbon
     transmission_bi_ribbon_pbc
     amorphous_slater_koster
