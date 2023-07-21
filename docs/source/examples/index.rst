@@ -16,8 +16,8 @@ of the library such as the band structure, to more advanced use cases which requ
     scripts/density_states_kpm
     scripts/entanglement_spectrum
     scripts/edge_state
+    scripts/transport_hydrogen_ribbon
+    scripts/transport_hydrogen_nanotube
 
-    transmission_hydrogen_ribbon
-    transmission_bi_ribbon_pbc
-    amorphous_slater_koster
-    bands_fitting
+
+

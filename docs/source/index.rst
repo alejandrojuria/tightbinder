@@ -12,25 +12,15 @@ tightbinder is a Python library
    \Psi
 
 .. toctree::
-   :maxdepth: 2
+   :hidden: 
 
-   self
-   
-.. toctree::
-   :maxdepth: 2
-   :caption: User guide
-   
-   install
-   config
-   tutorial/index
-   examples/index
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Documentation
-
-   materials/index.rst
-   api/index.rst
+   Home <self>
+   Installation <install>
+   Configuration files <config>
+   Tutorial <tutorial/index>
+   Examples <examples/index>
+   Materials <materials/index>
+   Documentation <api/_autosummary/tightbinder>
 
 Indices and tables
 ==================

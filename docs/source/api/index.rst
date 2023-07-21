@@ -1,19 +1,12 @@
 Documentation
 =======================================
 
-
 .. autosummary::
-   :toctree: _api
+   :toctree: _autosummary
+   :template: custom-module-template.rst
+   :recursive:
 
-   tightbinder.crystal
-   tightbinder.system
-   tightbinder.models
-   tightbinder.result
-   tightbinder.disorder
-   tightbinder.topology
-   tightbinder.fileparse
-   tightbinder.observables
-   tightbinder.modifiers
-   tightbinder.result
-   tightbinder.optimize
+   tightbinder
+
+
     
