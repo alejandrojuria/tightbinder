@@ -7,13 +7,13 @@ tags:
   - tight-binding
   - Slater-Koster
 authors:
-  - name: Alejandro José Uría
+  - name: Alejandro José Uría-Álvarez
     orcid: 0000-0001-6668-7333
     affiliation: 1 # (Multiple affiliations must be quoted)
 affiliations:
  - name: Departamento de Física de la Materia Condensada, Universidad Autónoma de Madrid
    index: 1
-date: 24 October 2022
+date: 22 July 2023
 bibliography: paper.bib
 
 ---
@@ -92,6 +92,8 @@ density of states (also available using the kernel polynomial method), localizat
 There are plotting routines available for the different quantities.
 - Fitting of the Slater-Koster parameters (or any user-defined model parameter) to reproduce
 some given energy bands, usually from DFT calculations. 
+
+![Features of the code](paper_plot.png)
 
 The basic workflow starts with the preparation of a configuration file, where we set all the parameters relative
 to the material we want to describe. This is, the crystalographic information and then the details of the Slater-Koster model,
