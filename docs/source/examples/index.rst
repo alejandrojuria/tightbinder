@@ -18,6 +18,7 @@ of the library such as the band structure, to more advanced use cases which requ
     scripts/edge_state
     scripts/transport_hydrogen_ribbon
     scripts/transport_hydrogen_nanotube
+    scripts/amorphous_slater_koster
 
 
 
