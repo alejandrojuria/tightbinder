@@ -6,7 +6,7 @@ Documentation
    :template: custom-module-template.rst
    :recursive:
 
-   tightbinder.system
+   tightbinder
 
 
     
