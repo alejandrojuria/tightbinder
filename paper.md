@@ -38,7 +38,7 @@ due to the modular approach taken in its construction.
 The determination of the band structure of a solid is the starting point for any calculation in condensed matter physics. 
 This amounts to determining the hopping amplitudes $t^{\alpha\beta}_{ij}$ of the electronic Hamiltonian:
 $$H=\sum_{ij,\alpha\beta}t^{\alpha\beta}_{ij}c^{\dagger}_{i\alpha}c_{j\beta}$$
-where the indices $i,j$ run over atomic positions, and the indices $\alpha, \beta$ run over orbitals. $c^{\dagger}_{i\alpha}$ ($c_{i\alpha}$) are creation (annihialtion)
+where the indices $i,j$ run over atomic positions, and the indices $\alpha, \beta$ run over orbitals. $c^{\dagger}_{i\alpha}$ ($c_{i\alpha}$) are creation (annihilation)
 operators of electrons at atom $i$ and orbital $\alpha$. There exist several techniques to address this problem, 
 varying in degrees of sophistication and scope. The most established method is density-functional theory (DFT) [@DFT_review], 
 which provides an accurate description of the electronic structure, usually at the cost of slower computations. Tight-binding
