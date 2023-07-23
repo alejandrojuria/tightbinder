@@ -10,9 +10,14 @@ authors:
   - name: Alejandro José Uría-Álvarez
     orcid: 0000-0001-6668-7333
     affiliation: 1 # (Multiple affiliations must be quoted)
+  - name: Juan José Palacios
+    orcid: 0000-0003-2378-0866
+    affiliation: "1,2"
 affiliations:
- - name: Departamento de Física de la Materia Condensada, Universidad Autónoma de Madrid
+ - name: Departamento de Física de la Materia Condensada, Universidad Autónoma de Madrid, 28049 Madrid, Spain
    index: 1
+ - name: Instituto Nicolás Cabrera, Condensed Matter Physics Centre (IFIMAC), 28049 Madrid, Spain
+   index: 2
 date: 22 July 2023
 bibliography: paper.bib
 
