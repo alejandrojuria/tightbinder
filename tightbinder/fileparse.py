@@ -1,6 +1,6 @@
-# Implementation of routines to parse the tight-binding parameters written in
-# the input file. Config file can have blank spaces or comments starting with "!" 
-# (without commas) which are ommited at parsing
+""" 
+Routines to parse the tight-binding parameters written in the input file.
+"""
 
 from io import TextIOWrapper
 import re

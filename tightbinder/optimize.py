@@ -1,14 +1,15 @@
-from typing import Callable, List, Tuple
-import numpy as np
-from scipy.optimize import minimize
-from tightbinder.models import SlaterKoster
-from tightbinder.fileparse import transform_sk_coefficients
-
 """
 The optimize module provides several routines to fit the parameters of a SlaterKoster model
 to reproduce some given bands, usually from DFT. The optimization is done using the
 minimize function from SciPy.
 """
+
+
+from typing import Callable, List, Tuple
+import numpy as np
+from scipy.optimize import minimize
+from tightbinder.models import SlaterKoster
+from tightbinder.fileparse import transform_sk_coefficients
 
 
 def extract_model_parameters(model: SlaterKoster) -> List[float]:

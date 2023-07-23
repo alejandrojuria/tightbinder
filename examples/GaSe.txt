@@ -1,12 +1,14 @@
 ! --------------------- Config file formatting rules ---------------------
 ! Lines starting with ! are comments
-! Lines with # denote argument types and must be present (removing one or wirting it wrogn will result in error)
+! Lines starting with # denote argument types and must be present (removing one or wirting it wrogn will result in error)
 ! Blank spaces are irrelevant
 ! All numbers must be separated by either spaces, commas or semicolons
-! Beware: Leaving a blank space at the beginning of a line will result in it being skipped
-! -------------------------- Material parameters -------------------------
+! BEWARE: Leaving a blank space at the beginning of a line will result in it being skipped
+!
+! This model is based on the paper "Excitons in Boron Nitride Single Layer"
+! --------------------- Material parameters ---------------------
 #System name
-MoS2
+GaSe
 
 #Dimensionality
 2
@@ -14,69 +16,67 @@ MoS2
 #Bravais lattice
 ! Each row corresponds to one vector of the basis (vectors have to be in R^3)
 ! For 1D and 2D systems, the z (third) component must be zero (z should always be regarded as height component)
-3.16 0.0 0.0
-1.58 2.73664 0.0
+3.30735 -1.90950  0.00000
+0.00000  3.81900  0.00000
 
 #Species
 ! Number of atomic species (isoelectronic at the moment)
 2
 
 #Motif
-! Each row corresponds to one vector of the basis; fourth number denotes atomic species
-! Species have to be either 1 or 2
-0 0 0 0
-0.0 1.8246186736331629 1.5683120530778172 1
-0.0 1.8246186736331629 -1.5683120530778172 1
+! Each row corresponds to one vector (atom) of the basis; fourth number denotes atomic species
+! Species have to be either 0 or 1
+-1.102  -1.910  1.235  0
+-1.102  -1.909 -1.235  0
+-2.205  -0.000  2.409  1
+
+
+#Filling
+! Must provide filling per species, each filling can be fractional if the system is spinless.
+! Sum of the total number of electrons in the system must be an integer.
+0.5
+0.5
 
 #Orbitals
 ! Always use cubic harmonic orbitals
+! Order is irrelevant
+! Species have to be isoelectronic (same number of valence shell electrons)
 ! Possible orbitals are: s, px, py, pz, dxy, dyz, dzx, dx2-y2, d3z2-r2
-! NOTE: Order must be kept
-dxy dyz dzx dx2-y2 d3z2-r2
-px py pz
-
-#Filling
-6
-4
+pz
+pz
 
 #Onsite energy
 ! One for each different orbital defined above
 ! In case of having two atomic species, two lines must be appended, one for each element
--0.352 -1.563 -1.563 -0.352 0.201
--54.839 -54.839 -39.275
+0.41
+-0.41
 
 #SK amplitudes
 ! Order is fixed: Vsss, Vsps, Vpps, Vppp, Vsds, Vpds, Vpdp, Vdds, Vddp, Vddd (separated by spaces)
 ! Not present amplitudes can be omitted but ordering has te be respected always
-! Species must be specified using brackets. 
-[0, 0; 1] -1.153 0.612 0.086
-[0, 1; 1] -9.880 4.196
-[1, 1; 1] 12.734 -2.175
+! In case of having two atomic species, two lines must be appended, one for each element
+[0, 1; 1] 0 -2.33
+[0, 1; 2] 0 0.61
+[0, 0; 3] 0 0.07
+[1, 1, 3] 0 0.07
+[0, 1; 4] 0 0.13
+[0, 0; 5] 0 -0.09
+[1, 1, 5] 0 -0.09
 
 #Spin
 ! Determine whether the model is spinless (spin polarized) or spinful
 ! Must be either True (spinful) or False (spinless); if left blank it will default to False
 ! NOTE: True or False must be capitalized
-True
+False
 
 #Spin-orbit coupling
-! Note: Using a non-zero value will automatically produce a spinful model
-0.1125
-0.078
+0
+0
 
 ! --------------------- Simulation parameters ---------------------
-#Radius
-! If present, SlaterKoster model runs in "radius" mode, meaning that it will look
-! for neighbours up to the given radius value
-3.16
-
 #Mesh
-! Number of kpoints in each direction. Syntax is Nx Ny Nz
-! It suffices to provide the required number of points depending on the system's dimension
-200 200
+100 100
 
 #High symmetry points
 ! Label of points which make the path to evalute the bands of the system
-G K M G
-
-
+M 

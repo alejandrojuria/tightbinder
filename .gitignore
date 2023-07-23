@@ -4,6 +4,9 @@ __pycache__/
 tightbinder/__pycache__/
 docs/build/
 Entanglement/
-plots/
+./plots/
 results/
 results/Plots/
+_autosummary/
+./docs/build/
+.DS_Store

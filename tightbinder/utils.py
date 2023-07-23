@@ -1,3 +1,8 @@
+"""
+Miscellaneous routines used in the other modules.
+"""
+
+
 from typing import Callable, Union
 import numpy as np
 from scipy.spatial import Delaunay
@@ -10,8 +15,8 @@ def generate_basis_combinations(ndim: int) -> np.ndarray:
 
     :param ndim: Dimension of the basis.
     :return: Matrix where each row are the coefficients for a given
-    combination of the basis vectors, i.e. [c1, c2, ...] such that
-    v = c1*basis_1 + c2*basis_2 + ... 
+        combination of the basis vectors, i.e. [c1, c2, ...] such that
+        v = c1*basis_1 + c2*basis_2 + ... 
     """
 
     mesh_points = []

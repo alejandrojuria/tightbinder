@@ -13,6 +13,11 @@ import time
 from tightbinder.models import SlaterKoster
 import matplotlib.pyplot as plt
 
+plt.rcParams.update({
+    "text.usetex": True,
+    "font.family": "serif"
+})
+
 
 def main():
     """ Main routine """
@@ -40,6 +45,7 @@ def main():
 
     # Possible system modifications before initialize_hamiltonian
     model.initialize_hamiltonian()
+    print(len(model.bonds))
 
     if args.crystalview:
         model.visualize()
@@ -56,7 +62,7 @@ def main():
         modelfile = args.file
         # Remove extension if present and blanks
         modelfile = modelfile.replace(".txt", '').strip() + ".model"
-        model.export_model(modelfile)
+        model.export_model(modelfile, fmt="%10.6f")
         print(f"Written model to file {modelfile}")
 
     labels = configuration['High symmetry points']

@@ -10,7 +10,7 @@ Here we go over the different fields expected in the configuration files, as wel
 The configuration files are defined in terms of fields. Each field begins with the # character, and must be within those specified next. In fields with 
 multiple values (e.g. vectors), the numbers must be separated by a single space, or instead by a comma or a semicolon.
 
-.. warning::
+.. tip::
 
     In general, the body of every field is parsed to ensure that its content has the expected shape and values, and to raise an error describing 
     the source of the problem in case it was incorrectly filled. Nevertheless, it is possible that unseen errors arise, which is why we recommend 

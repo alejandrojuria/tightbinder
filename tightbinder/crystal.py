@@ -1,9 +1,9 @@
-# Module with all the routines necessary to extract information
-# about the crystal from the configuration file: reciprocal space,
-# symmetry group and high symmetry points
-
-# Definition of all routines to build and solve the tight-binding hamiltonian
-# constructed from the parameters of the configuration file
+""" 
+Implementation of the Crystal class, responsible of storing all the 
+information relative to the Bravais lattice and the reciprocal lattice,
+such as high symmetry points, producing the k point mesh or visualizing
+the crystal itself.
+"""
 
 import numpy as np
 from scipy.spatial import ConvexHull

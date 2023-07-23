@@ -1,3 +1,7 @@
+"""
+Modifications of the system such as strain or electric field.
+"""
+
 from shutil import ExecError
 import numpy as np
 from tightbinder.models import SlaterKoster
@@ -49,9 +53,9 @@ def saturate_bonds(system: SlaterKoster, onsite: float = 0, vss: float = 0, vsp:
     :param system: SlaterKoster model to saturate 
     :param onsite: Value of the onsite energy for H atoms.
     :param vss: Value of the SK amplitude for s-s orbitals. It will be mixed with the hopping of the
-    species that participate. 
+        species that participate. 
     :param vsp: Value of the SK amplitude for s-p orbitals. It will be mixed with the hopping of the
-    species that participate. 
+        species that participate. 
     :param edge_atoms: Optional list of atoms to which we connect the H atoms
     :return: Modified SlaterKoster object. 
     """

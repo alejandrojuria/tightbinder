@@ -35,6 +35,7 @@ extensions = [
     'sphinx.ext.intersphinx',  # Link to other project's documentation (see mapping below)
     'sphinx.ext.viewcode',  # Add a link to the Python source code for classes, functions etc.
     'sphinx_autodoc_typehints', # Automatically document param types (less noise in class signature)
+    'sphinx.ext.mathjax', # Render LaTeX
 ]
 
 # Mappings for sphinx.ext.intersphinx. Projects have to have Sphinx-generated doc! (.inv file)
@@ -96,7 +97,8 @@ html_css_files = ["readthedocs-custom.css"] # Override some CSS settings
 
 # Pydata theme
 html_theme = "pydata_sphinx_theme"
-html_logo = "_static/logo-company.png"
+html_logo = "_static/logo.png"
+html_favicon = '_static/favicon.png'
 html_theme_options = { "show_prev_next": False}
 html_css_files = ['pydata-custom.css']
 

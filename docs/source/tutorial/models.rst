@@ -4,12 +4,12 @@ Defining custom models
 The library has been built with a particular focus on Slater-Koster models. However, sometimes it is useful to define instead a specific model instead of 
 using a Slater-Koster parametrization. For instance, we may have a toy model whose band structure can be obtained analitically, or the Bloch Hamiltonian
 can be written directly. In those cases, it is more convenient to hard-code directly the Bloch Hamiltonian instead of constructing it following the SK approach.
-The library currently implements several models, which can be seen in the :doc:`Models <tightbinder.models>` section. Here, we show how to define 
+The library currently implements several models, which can be seen in the :mod:`tightbinder.models` section. Here, we show how to define 
 one of this models.
 
 Any new model has to extend the :class:`tightbinder.system.System` class. Then, the minimum requirements to be able to instanciate the new class is 
 to implement the constructor, ``__init__()`` and the Bloch Hamiltonian via ``hamiltonian_k()``. For instance, next we show the implementation of the 
-BHZ model, which is a toy model known to describe time-reversal topological insulators [Hughes]_
+BHZ model, which is a toy model known to describe time-reversal topological insulators [Bernevig2013]_
 
 .. code-block:: python
 
@@ -55,3 +55,5 @@ Note that the attributes of the model have to comply with those of :class:`tight
 expected values. This is the very minimum needed to define a new model, but one can also define more complex models where the Bloch Hamiltonian is not 
 known from the beginning, but has to be built with a call to :meth:`tightbinder.system.System.initialize_hamiltonian()`. This is useful if as with a SK model, 
 before getting the spectrum we want to modify the unit cell in different ways.
+
+.. [Bernevig2013] Bernevig, B. A. (2013). Topological insulators and topological superconductors. Princeton university press.

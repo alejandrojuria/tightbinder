@@ -1,11 +1,16 @@
-# Module with routines to introduce disorder in a system such as vacancies
-# or impurities. All this routines are intended to be used with supercells, although
-# no explicit check is done on that.
-# There can be found routines of two types:
-# - Random: Unless one fixes the seed (np.seed), each call to this routines
-# will have a different effect upon the system it is being used on
-# - Listing: Instead of generating pseudorandom numbers to select the target atoms,
-# alternatively we can specify which atoms
+""" 
+Introduction of disorder in a system such as vacancies
+or impurities. 
+
+All this routines are intended to be used with supercells, although
+no explicit check is done on that.
+
+There can be found routines of two types:
+- Random: Unless one fixes the seed (np.seed), each call to this routines
+will have a different effect upon the system it is being used on
+- Listing: Instead of generating pseudorandom numbers to select the target atoms,
+alternatively we can specify which atoms
+"""
 
 import numpy as np
 from tightbinder.models import SlaterKoster

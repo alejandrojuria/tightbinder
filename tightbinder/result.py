@@ -1,4 +1,6 @@
-# Definition of Result class to handle diagonalization results from Hamiltonian and observable calculation
+"""
+Definition of Result class to handle diagonalization results from Hamiltonian and observable calculation.
+"""
 
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
@@ -78,7 +80,8 @@ class Spectrum:
         plt.show()
 
     def plot_along_path(self, labels: List[str], title: str = '', edge_states: bool = False, rescale: bool = True,
-                        ax: Axes = None, e_values: List[float] = [], fontsize: float = 10, linewidth: float = 2) -> None:
+                        ax: Axes = None, e_values: List[float] = [], fontsize: float = 10, linewidth: float = 2,
+                        edgecolor = "red") -> None:
         """ 
         Method to plot the bands along a path in reciprocal space, normally along high symmetry points.
 
@@ -92,6 +95,7 @@ class Spectrum:
         :param e_values: List with two values, [e_min, e_max] to show bands only in that energy range.
         :param linewidth: Linewidth. Defaults to 2.
         :param fontsize: Adjusts size of lines and text.
+        :param edgecolor: Color of the edge bands if edge_states=True.
         """
 
         # First get distances of relevant high symmetry points
@@ -99,8 +103,6 @@ class Spectrum:
         path_distances = [np.linalg.norm(points[i + 1] - points[i]) for i in range(len(points) - 1)]
         cummulative_path_weights = [0] 
         cummulative_path_weights += [np.sum(path_distances[:i + 1])/np.sum(path_distances) for i in range(len(labels) - 1)]
-
-        print(cummulative_path_weights)
 
         if ax is None:
             fig = plt.figure()
@@ -134,11 +136,11 @@ class Spectrum:
         if edge_states and self.system.filling is not None:
             edge_states_indices = [int(self.system.filling) + i for i in range(-2, 2)]
             for state in edge_states_indices:
-                ax.plot(x_points, self.eigen_energy[state], 'r-', linewidth=linewidth)
+                ax.plot(x_points, self.eigen_energy[state], '-', linewidth=linewidth, c=edgecolor)
 
         ax.set_xticks(x_ticks)
         ax.set_xticklabels(labels, fontsize=fontsize)
-        ax.set_ylabel(r'$\varepsilon$ (eV)', fontsize=fontsize)
+        ax.set_ylabel(r'$E$ (eV)', fontsize=fontsize)
         ax.tick_params('y', labelsize=fontsize)
         if title != '':
             ax.set_title(title + " band structure", fontsize=fontsize)
@@ -306,20 +308,24 @@ class Spectrum:
 
         return edge_states
 
-    def calculate_fermi_energy(self, filling: int) -> float:
+    def calculate_fermi_energy(self, filling: int, bottom: bool = True) -> float:
         """ 
         Routine to compute the Fermi level energy according to the given filling .
         Fermi energy is set systematically in-between the last occupied state and the first
         unoccupied state (midgap for insulators and approximately last filled for metals).
         
         :param filling: Total number of electrons in the system.
+        :param bottom: Whether to set Fermi energy at maximum of valence band. Defaults to True.
         :return: Value of Fermi energy.
         """
         
         filling = int(filling*self.eigen_energy.shape[1])
         all_energies = self.eigen_energy.reshape(-1)
         all_energies = np.sort(all_energies)
-        fermi_energy = (all_energies[filling - 1] + all_energies[filling])/2
+        if bottom:
+            fermi_energy = all_energies[filling - 1]
+        else:
+            fermi_energy = (all_energies[filling - 1] + all_energies[filling])/2
 
         return fermi_energy
 
@@ -454,7 +460,7 @@ class State:
 
         return np.array(reduced_vector)
 
-    def plot_amplitude(self, ax: Axes = None, title: str = None, linewidth: int = 1, bonds: bool = True):
+    def plot_amplitude(self, ax: Axes = None, title: str = None, linewidth: int = 1, bonds: bool = True, factor: int = 200):
         """ 
         Method to plot the atomic amplitude of the state on top of the crystalline positions.
         
@@ -462,6 +468,7 @@ class State:
         :param title: Plot title. Defaults to None.
         :param linewidth: Change width of bonds if present. Defaults to 1.
         :param bonds: Toggle on/off bonds between atoms. Defaults to True.
+        :param factor: To scale the amplitude up or down.
         """
         
         amplitude = np.array(self.atomic_amplitude())
@@ -477,8 +484,8 @@ class State:
         if bonds:
             self.system.plot_wireframe(ax=ax, linewidth=linewidth)
 
-        ax.scatter(atoms[:, 0], atoms[:, 1],
-                   c="royalblue", alpha=1, s=scaled_amplitude*1500)
+        ax.scatter(atoms[:, 0], atoms[:, 1], c=scaled_amplitude,
+                   cmap="plasma", alpha=1, s=scaled_amplitude*factor)
         ax.set_xlim([np.min(atoms[:, 0]), np.max(atoms[:, 0])])
         ax.set_ylim([np.min(atoms[:, 1]), np.max(atoms[:, 1])])
         ax.set_xticks([0, 29])

@@ -1,7 +1,13 @@
 Installation
 =======================================
 
-To install the library, first clone the repository with:
+The library can be installed directly with:
+
+.. code-block:: bash 
+
+    pip install tightbinder
+
+Alternatively, it can also be manually installed. First clone the repository:
 
 .. code-block:: bash
 
@@ -24,7 +30,7 @@ The package is installed finally with
 
     To avoid possible incompatibilities between dependencies, the usage of a virtual environment (venv) is advised. To do so,
     create one either using ``conda`` (for which we refer to the `documentation <https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html>`_) 
-    or with python, which we describe here (extracted from the official `documentation <https://docs.python.org/3/library/venv.html>`_):
+    or with python, which we describe here (extracted from the official `docs <https://docs.python.org/3/library/venv.html>`_):
 
     .. code-block:: bash
 

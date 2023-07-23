@@ -93,7 +93,7 @@ There are plotting routines available for the different quantities.
 - Fitting of the Slater-Koster parameters (or any user-defined model parameter) to reproduce
 some given energy bands, usually from DFT calculations. 
 
-![Features of the code](paper_plot.png)
+![Characterization of Bi(111) with the library: (a) Band structure of a zigzag nanoribbon, with the edge bands highlighted in green. (b) Evolution of the Wannier charge centers (WCC). (c) The topological invariant can be obtained algorithmically from the WCC, allowing to compute the topological phase diagram as a function of the spin-orbit coupling. (d) Probability density of an edge state. (e) Transmission as a function of energy on an armchair nanoribbon. ](paper_plot.png)
 
 The basic workflow starts with the preparation of a configuration file, where we set all the parameters relative
 to the material we want to describe. This is, the crystalographic information and then the details of the Slater-Koster model,
@@ -112,6 +112,6 @@ website, where we will also provide a changelist for each new version.
 
 # Acknowledgements
 
-AJU acknowledges financial support from Spanish MICIN through Grant No. PRE2018-086552.
+AJUA acknowledges financial support from Spanish MICIN through Grant No. PRE2018-086552.
 
 # References

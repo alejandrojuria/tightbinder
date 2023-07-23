@@ -30,6 +30,12 @@ Minimal hBN model
 0 0 0 0
 1.443376 0 0 1
 
+#Filling
+! Must provide filling per species, each filling can be fractional if the system is spinless.
+! Sum of the total number of electrons in the system must be an integer.
+0.5
+0.5
+
 #Orbitals
 ! Always use cubic harmonic orbitals.
 ! Order is irrelevant.
@@ -67,6 +73,8 @@ False
 ! Note: Using a non-zero value will automatically produce a spinful model.
 ! Amplitude must be specified for all species; one line per species.
 0
+0
+
 
 ! --------------------- Simulation parameters ---------------------
 #Mesh

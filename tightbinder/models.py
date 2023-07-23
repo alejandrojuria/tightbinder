@@ -1,6 +1,9 @@
-# Module with all the models declarations, from the Slater-Koster tight-binding model
-# to toy models such as the BHZ model or Wilson fermions.
+""" 
+Model declarations, from the Slater-Koster tight-binding model
+to toy models such as the BHZ model or Wilson fermions.
+"""
 
+from __future__ import annotations
 from typing import List, Tuple, Union
 from .system import System, FrozenClass
 from .crystal import Crystal
@@ -436,10 +439,11 @@ class SlaterKoster(System):
 
         return hamiltonian_k
     
-    def add_flat_band(self, energy: float, atom_index: int, spin: bool = False) -> None:
+    def add_flat_band(self, energy: float, atom_index: int, spin: bool = False) -> SlaterKoster:
         """
         Adds a new orbital to one atom with given onsite energy and no hoppings to other atoms,
         resulting in a flat band in the Bloch Hamiltonian (localized state).
+        Only works with crystalline systems.
 
         :param energy: Onsite energy of new orbital.
         :param atom_index: Index of atom to which we add the new orbital.
@@ -472,6 +476,57 @@ class SlaterKoster(System):
 
         self.norbitals[atom_index] += 1 + spin
         self.basisdim += 1 + spin
+
+        return self
+    
+    def insert_SK_model(self, config: dict) -> SlaterKoster:
+        """
+        Takes a configuration dictionary of a system with only one atom and appends the corresponding
+        model as a block to the current Hamiltonian. Note that it must describe the
+        same lattice to make sense. Works only with crystalline systems.
+
+        :param config: Configuration dictionary.
+        """
+
+        core_model = SlaterKoster(config)
+        if len(core_model.motif) != 1:
+            ValueError("New subsystem must have only one atom.")
+
+        core_model.initialize_hamiltonian()
+        nbasisdim = self.basisdim
+
+        atom = core_model.motif[0][:3]
+        self.motif = np.array(self.motif)
+        atom_index = np.where(np.linalg.norm(self.motif[:, :3] - atom, axis=1) < 1E-4)[0]
+        if len(atom_index) != 1:
+            raise IndexError("Invalid atom positions in block SK model.")
+        
+        atom_index = atom_index[0]
+        species = int(self.motif[atom_index, 3])
+        
+        index = 0
+        for i in range(atom_index + 1):
+            index += self.norbitals[i]
+        
+        norb = core_model.norbitals[0]
+        nbasisdim += norb
+        for n, fock_matrix in enumerate(self.hamiltonian):
+            new_fock_matrix = np.zeros([nbasisdim, nbasisdim], dtype=np.complex_)
+
+            new_fock_matrix[0:index, 0:index] = fock_matrix[0:index, 0:index]
+            new_fock_matrix[0:index, (index + norb):] = fock_matrix[0:index, index:]
+            new_fock_matrix[(index + norb):, 0:index] = fock_matrix[index:, 0:index]
+            new_fock_matrix[(index + norb):, (index + norb):] = fock_matrix[index:, index:]
+
+            new_fock_matrix[index:index + norb, index:index + norb] = core_model.hamiltonian[n]
+
+            self.hamiltonian[n] = new_fock_matrix
+        
+        self.norbitals[atom_index] += core_model.norbitals[0]
+        self.configuration["Filling"][species] += core_model.configuration["Filling"][0]
+        self.basisdim = nbasisdim
+        
+        return self
 
 
     # ---------------------------- IO routines ----------------------------

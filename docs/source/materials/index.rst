@@ -22,4 +22,3 @@ All the bands shown here can be reproduced with the corresponding configuration 
    materials/mos2
    materials/germanene
    materials/stanene
-   materials/ges

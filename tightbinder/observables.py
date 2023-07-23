@@ -1,5 +1,7 @@
-# Module containing routines for computation of observables
-
+"""
+Module containing routines for computation of observables.
+"""
+ 
 from tightbinder.result import Spectrum
 from tightbinder.system import System
 from tightbinder.models import SlaterKoster

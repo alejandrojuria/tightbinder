@@ -1,11 +1,9 @@
-# Implementation of System class, which incorporates both Hamiltonian and Crystal classes.
-# Specifically, System includes the Crystal as a class attribute.
-# The reasoning behind this, is to make available the crystal specific routines and attributes to the system,
-# while being explicit about its ambit and without the crystal being a separate entity.
-# As for the Hamiltonian, its functionality is directly available from System due to the inheritance.
-# Base Hamiltonian class implementation. It will be used for the other hamiltonians to derive
-# from it
-# System has the basic functionality for the other models to derive from it.
+""" 
+Implementation of System class.
+
+The System class extendes the Crystal class, and it 
+has the basic functionality for the other models to derive from it.
+"""
 
 from __future__ import annotations
 from typing import Tuple, Union, List
@@ -715,6 +713,7 @@ class System(Crystal):
             for position in self.motif:
                 atom_position = vector + position
 
+
     # ####################################################################################
     # ################################### Hamiltonian ####################################
     # ####################################################################################
@@ -855,7 +854,6 @@ def generate_near_cells(bravais_lattice: Union[list, np.ndarray], n: int = 1, ha
         near_cells[n, :] = cell_vector
 
     return near_cells
-
 
 
 

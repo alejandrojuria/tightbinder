@@ -9,7 +9,7 @@ entanglement spectrum can be also computed as it may provide information about t
 Calculation of Wannier charge centers
 ---------------------------------------
 The simplest way to determine if a crystalline system is topological or not is to extract the corresponding topological invariant from the
-evolution of the Wannier charge centers. This can be done with the methods defined inside the module :module:`tightbinder.topology`, specifically
+evolution of the Wannier charge centers. This can be done with the methods defined inside the module :mod:`tightbinder.topology`, specifically
 via :meth:`tightbinder.topology.calculate_wannier_centre_flow()`
 
 .. code-block:: python
@@ -35,7 +35,7 @@ via :meth:`tightbinder.topology.calculate_wannier_centre_flow()`
     on the different parameters it can take.
 
 
-:math:`\mathbb{Z}_2` invariant
+Z2 invariant
 ---------------------------------------
 Once we have the Wannier charge centers, we can plot their evolution to see if there is charge pumping or not. In a time-reversal topological 
 insulator, one has to inspect the evolution over half BZ (in 2D), since the other half is the same because of time-reveral symmetry. With 
@@ -65,7 +65,7 @@ Chern number
 ---------------------------------------
 Alternatively, we might want to determine the Chern number of a Chern insulator (i.e. topological insulator without time-reveral symmetry). The procedure
 is analogue to that of the :math:`\mathbb{Z}_2` invariant, although in this case we have to look at the evolution of the WCC along the whole BZ for 2D materials, which
-can be done with the option ``full_BZ=True``in :meth:`tightbinder.topology.calculate_wannier_centre_flow()`.
+can be done with the option `full_BZ=True` in :meth:`tightbinder.topology.calculate_wannier_centre_flow()`.
 Then, inspecting their evolution we can determine the Chern number.
 
 .. code-block:: python

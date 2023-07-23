@@ -1,7 +1,10 @@
-# Module for topology-related routines. It incorporates routines to compute the Wilson loop spectra,
-# as well as the topological invariants derived from it. Local markers such as the Bott index or the
-# local Chern number are implemented as well.
+"""
+Topology-related routines. 
 
+It incorporates routines to compute the Wilson loop spectra,
+as well as the topological invariants derived from it. Local markers such as the
+local Chern number are implemented as well.
+"""
 
 from typing import Union, Tuple
 import numpy as np
@@ -227,7 +230,7 @@ def __detect_wcc_position_difference(wcc: np.ndarray, next_wcc: np.ndarray, pos_
 def calculate_polarization(wcc: np.ndarray) -> float:
     """ 
     Routine to compute the polarization from the WCC. Note that it requires computing
-    the WCCs in the hole BZ, and not half BZ (which is the default calculation). 
+    the WCCs in the whole BZ, and not half BZ (which is the default calculation). 
     Useful for Chern insulators. TODO: Has to be fixed.
     
     :param wcc: Array with the WCCs for all paths.
@@ -387,7 +390,7 @@ def plot_wannier_centre_flow(wcc_flow: np.ndarray, show_midpoints: bool = True, 
         midpoints, _ = calculate_wcc_gap_midpoints(wcc_flow)
         if symmetric:
             midpoints = np.concatenate((midpoints[::-1][:-1], midpoints))
-        ax.plot(midpoints, 'Dr')
+        ax.plot(midpoints, 'Dr', label="Midpoints")
 
     if title is not None:
         ax.set_title('WCC flow ' + title)
@@ -477,16 +480,16 @@ def chern_marker(system: System, results: Spectrum, ef: float = 0) -> np.ndarray
     C = np.diag(C).real
     
     # Finally sum over orbitals
-    it = 0
-    trC = []
-    for n in range(system.natoms):
-        species = int(system.motif[n, 3])
-        norbitals = int(system.norbitals[species])
-        summed_chern = np.sum(C[it : it + norbitals])
-        trC.append(summed_chern)
-        it += norbitals
+    # it = 0
+    # trC = []
+    # for n in range(system.natoms):
+    #     species = int(system.motif[n, 3])
+    #     norbitals = int(system.norbitals[species])
+    #     summed_chern = np.sum(C[it : it + norbitals])
+    #     trC.append(summed_chern)
+    #     it += norbitals
     
-    return np.array(trC)
+    return C
 
 # ---------------------------- Entanglement entropy ----------------------------
 def __truncate_eigenvectors(eigenvectors: np.ndarray, sector: np.ndarray, system: System) -> np.ndarray:
