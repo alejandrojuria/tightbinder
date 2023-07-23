@@ -26,7 +26,7 @@ Some of the features of the library are:
 * Predefined models (e.g. Haldane or BHZ) and ability to define custom ones.
 
 
-.. figure:: ../../paper_plot.png
+.. figure:: ../../images/paper_plot.png
    :align: center 
    :width: 800
 
