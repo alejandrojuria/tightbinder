@@ -26,6 +26,8 @@ Some of the features of the library are:
   the corresponding quantities.
 * Predefined models (e.g. Haldane or BHZ) and ability to define custom ones.
 
+![Features](paper_plot.png)
+
 For a complete description of the capabilities of the package, we refer to the [documentation](https://tightbinder.readthedocs.io/en/latest/) where several usage examples can be found together with the full API 
 reference.
 
