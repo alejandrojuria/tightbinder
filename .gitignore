@@ -3,10 +3,6 @@ venv/
 __pycache__/
 tightbinder/__pycache__/
 docs/build/
-Entanglement/
-./plots/
-results/
-results/Plots/
 _autosummary/
 ./docs/build/
 .DS_Store
