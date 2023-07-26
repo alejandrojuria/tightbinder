@@ -470,7 +470,7 @@ def chern_marker(system: System, results: Spectrum, ef: float = 0) -> np.ndarray
 
     PxP, PyP = P @ x @ P, P @ y @ P
 
-    C = 2 * np.pi * np.imag(PxP @ PyP - PyP @ PxP)
+    C = 2 * np.pi * 1j * (PxP @ PyP - PyP @ PxP)
 
     # PxQ, PyQ, QxP, QyP = P @ x @ Q, P @ y @ Q, Q @ x @ P, Q @ y @ P
     # C1 = 2 * np.pi * np.imag(QxP @ PyQ - QyP @ PxQ)
@@ -489,6 +489,8 @@ def chern_marker(system: System, results: Spectrum, ef: float = 0) -> np.ndarray
     #     trC.append(summed_chern)
     #     it += norbitals
     
+    return C
+
     return C
 
 # ---------------------------- Entanglement entropy ----------------------------
@@ -542,7 +544,7 @@ def specify_partition_plane(system: System, plane: list) -> np.ndarray:
     
     :param system: System whose atoms we want to separate into two partitions.
     :param plane: List with coefficients of the plane generating the partition. 
-        Array [A,B,C,D] <-> Ax + By + Cz + D = 0
+        Array [A,B,C,D] <-> Ax + By + Cz = D
     :return: Array with indices of atoms on a side. """
 
     sector = []
@@ -699,12 +701,14 @@ def plot_entanglement_spectrum(spectrum: np.ndarray, system: System, ax: Axes = 
     if system.boundary == "OBC" or len(spectrum.shape) == 1 or spectrum.shape[1] == 1:
         ax.plot(spectrum, 'o', c=color, markersize=markersize)
         ax.set_xlim(0, len(spectrum))
+        ax.set_xlabel(r"$n$", fontsize=fontsize)
     else:
         for entanglement_band in spectrum:
             ax.plot(entanglement_band, 'o', c=color)
         ax.set_xlim(0, len(spectrum.T) - 1)
         ax.set_xticks([0, len(spectrum.T)/2 - 1/2, len(spectrum.T) - 1])
         ax.set_xticklabels([r"-$\pi/a$", "0", r"$\pi/a$"], fontsize=fontsize)
+        ax.set_xlabel(r"$k_y$", fontsize=fontsize)
 
     if title is not None:
         ax.set_title(title, fontsize=fontsize)
@@ -713,9 +717,52 @@ def plot_entanglement_spectrum(spectrum: np.ndarray, system: System, ax: Axes = 
     ax.set_ylim(0, 1)
     ax.set_yticks([0, 0.5, 1])
     # ax.set_title(f"Entanglement spectrum of {system.system_name}", fontsize=15)
-    ax.set_xlabel("n", fontsize=fontsize)
+    
     ax.set_ylabel(rf"$\xi_n$", fontsize=fontsize)
 
+
+
+# ---------------------- Quantum geometry ----------------------
+def berry_curvature(model: System, nk: int, band_index: int = 0) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Calculation of the Berry curvature of a single band using the Fukui method.
+    Only valid for 2D systems.
+    Note that this routine is only valid for single bands without degeneracies, for
+    non-abelian Berry curvatures one should use the generalized method.
+
+    :param model: System from which we want to obtain the Berry curvature.
+    :param nk: Number of k points along one axis of the BZ.
+    :param band_index:
+    :returns: List of kpoints and field strenght of Berry connection.
+    """
+
+    if model.ndim != 2:
+        raise AttributeError("Model must be two-dimensional.")
+    
+    kpoints = model.brillouin_zone_mesh([nk, nk])
+    
+    unit_displacements = []
+    for i in range(model.ndim):
+        unit_displacements.append(model.reciprocal_basis[i]/nk)
+
+    curvature = []
+    for kpoint in kpoints:
+        local_kpoints = [kpoint, kpoint + unit_displacements[0], 
+                         kpoint + unit_displacements[0] + unit_displacements[1], 
+                         kpoint + unit_displacements[1], kpoint]
+        eigvec = model.solve(local_kpoints).eigen_states
+
+        links = []
+        for i in range(len(local_kpoints) - 1):
+            link = np.vdot(eigvec[i][:, band_index], eigvec[i + 1][:, band_index])
+            link /= np.abs(link)
+            links.append(link)
+
+        strength = -1j * np.log(np.prod(links))
+        curvature.append(strength)
+
+
+    return kpoints, np.array(curvature)
 
 
 
