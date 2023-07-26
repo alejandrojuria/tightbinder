@@ -53,7 +53,7 @@ def dos(result: Spectrum, energy: float = None, delta: float = 0.1, npoints: int
     dos = []
     for energy in energies:
         density = (np.sum(-np.imag(_retarded_green_function(energy, eigval, delta))/np.pi)
-                /(nkpoints*result.system.unit_cell_area))
+                /(nkpoints))
         dos.append(density)
 
     return dos, energies
@@ -103,6 +103,7 @@ def dos_kpm(system: System, energy: float = None, npoints: int = 200, nmoments: 
         densities.append(density)
 
     energies = energies * h_norm
+    densities = np.array(densities).real * h_norm
     return densities, energies
 
 
@@ -781,7 +782,8 @@ class TransportDevice:
 
         if ax is None:
             if pbc and self.system.boundary == "PBC":
-                fig, ax = plt.subplots(1, 1, subplot_kw={"projection": "3d"})
+                ax = plt.figure().add_subplot(projection='3d')
+                # fig, ax = plt.subplots(1, 1, subplot_kw={"projection": "3d"})
             elif pbc and self.system.boundary == "OBC":
                     print("Warning: plot set to periodic but system is finite. Plot will be 2d.")
             else:
