@@ -273,7 +273,7 @@ class Crystal:
         kpoints = []
         mesh_points = []
         for i in range(self.ndim):
-            mesh_points.append(list(range(0, mesh[i] + 1)))
+            mesh_points.append(list(range(0, mesh[i])))
 
         mesh_points = np.array(np.meshgrid(*mesh_points)).T.reshape(-1, self.ndim)
 
