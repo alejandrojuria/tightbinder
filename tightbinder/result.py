@@ -55,15 +55,20 @@ class Spectrum:
 
         return new_kpoints
 
-    def plot_bands(self, title: str = '') -> None:
+    def plot_bands(self, title: str = '', ax: Axes = None) -> None:
         """ 
         Method to plot bands from diagonalization in the whole Brillouin zone.
 
         :param title: Title for plot. Defaults to empty string.
+        :param ax: Axes object. Defaults to None.
         """
 
-        fig = plt.figure()
-        ax = plt.axes(projection='3d')
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection="3d")
+
+        ax.view_init(0, 0)
+
         nk = len(self.kpoints[:, 0])
         size = int(math.sqrt(nk))
         x = self.kpoints[:, 0].reshape(size, size)
@@ -73,11 +78,10 @@ class Spectrum:
             en = self.eigen_energy[i, :].reshape(size, size)
             ax.plot_surface(x, y, en)
 
-        plt.title(title + 'band structure')
-        plt.xlabel(r'k ($A^{-1}$)')
-        plt.ylabel(r'$\epsilon$ $(eV)$')
+        ax.set_title(title + 'band structure')
+        ax.set_xlabel(r'$k_x$ ($A^{-1}$)')
+        ax.set_ylabel(r'$k_y$ ($A^{-1}$)')
 
-        plt.show()
 
     def plot_along_path(self, labels: List[str], title: str = '', edge_states: bool = False, rescale: bool = True,
                         ax: Axes = None, e_values: List[float] = [], fontsize: float = 10, linewidth: float = 2,
@@ -337,13 +341,14 @@ class Spectrum:
         fermi_energy = self.calculate_fermi_energy(self.system.filling)
         self.eigen_energy -= fermi_energy
 
-    def calculate_gap(self, filling: float) -> float:
+    def calculate_gap(self) -> float:
         """ 
         Routine to compute the gap of a material based on its Fermi level/filling. 
         
-        :param filling: Value of filling.
         :return: Gap value.
         """
+
+        filling = self.system.filling
         
         valence_band = self.eigen_energy[filling - 1, :]
         conduction_band = self.eigen_energy[filling, :]

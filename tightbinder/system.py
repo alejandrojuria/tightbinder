@@ -232,7 +232,8 @@ class System(Crystal):
         if mode is "radius":
             if r is None:
                 raise Exception("Error: Search mode is radius but no r given, exiting...")
-            nn = 1 # Set nn to 1 in case it has other value
+            min_cell_size = np.min(np.linalg.norm(self.bravais_lattice, axis=1))
+            nn = int(r // min_cell_size + 1)
 
         elif mode is "minimal" and r is not None:
             print("Search mode is minimal but a radius was given (will not be used)")
@@ -246,7 +247,7 @@ class System(Crystal):
         # Determine neighbour distances up to nn
         neigh_distances = self.compute_neighbour_distances(nn)
         self.first_neighbour_distance = neigh_distances[0]
-        print(f"Neighbour distances: {neigh_distances}")
+        # print(f"Neighbour distances: {neigh_distances}")
         if mode == "radius" and r < self.first_neighbour_distance:
             print("Warning: Radius smaller than first neighbour distance")
 
@@ -498,12 +499,14 @@ class System(Crystal):
 
         return np.array(atoms, dtype=int)
     
-    def plot_wireframe(self, ax: plt.Axes = None, linewidth: float = 1, alpha: float = 0.5) -> None:
+    def plot_wireframe(self, ax: plt.Axes = None, linewidth: float = 1, alpha: float = 0.5, color="black") -> None:
         """
         Method to plot a wireframe of the system according to the detected bonds.
 
         :param ax: Matplotlib axes object. If None, a new Axis object is created.
         :param linewidth: Linewidth of the wireframe. Defaults to 1.
+        :param alpha: Sets wireframe transparency. Defaults to 0.5
+        :param color: Wireframe color. Defaults to black.
         """
 
         if not self.bonds:
@@ -516,7 +519,7 @@ class System(Crystal):
 
             x0, y0 = self.motif[bond[0], :2]
             xneigh, yneigh = self.motif[bond[1], :2]
-            ax.plot([x0, xneigh], [y0, yneigh], "-k", linewidth=linewidth, alpha=alpha)
+            ax.plot([x0, xneigh], [y0, yneigh], "-", linewidth=linewidth, alpha=alpha, color=color)
 
 
     # ####################################################################################
@@ -843,9 +846,9 @@ def generate_near_cells(bravais_lattice: Union[list, np.ndarray], n: int = 1, ha
         
     ndim = len(bravais_lattice)
     if not half:
-        mesh_points = generate_all_combinations(ndim)
+        mesh_points = generate_all_combinations(ndim, n)
     else:
-        mesh_points = generate_half_combinations(ndim)
+        mesh_points = generate_half_combinations(ndim, n)
     near_cells = np.zeros([len(mesh_points), 3])
     for n, coefficients in enumerate(mesh_points):
         cell_vector = np.array([0.0, 0.0, 0.0])
