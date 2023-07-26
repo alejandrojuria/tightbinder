@@ -50,12 +50,9 @@ which provides an accurate description of the electronic structure, usually at t
 models are as equally popular since they constitute a quick and inexpensive way to model systems, although by contruction, 
 they are restricted to simpler, effective description of the bands. Slater-Koster tight-binding models [@SlaterKoster] provide a middle ground
 since they allow to give a more accurate description of the material based on empirical considerations, while still being simple to compute.
-
-In principle, one would resort to the most accurate methods available to predict properties of the material. 
-However, DFT might become too expensive computationally if the amount of iteration needed to perform the numerical experients is too high. 
-This is precisely the role of tight-binding models: supposed that the model captures the key features of the material, it can be used instead to describe the solid,
+Then, supposed that the Slater-Koster model captures the key features of the material, it can be used instead of DFT to describe the solid,
 as long as the desired properties depend on those relevant features. In general, this approach allows for a qualitative 
-exploration of the materials, while one should look for first principles calculations when seeking quantitive results. 
+exploration of the properties of materials, while one should look for first principles calculations when seeking quantitive results. 
 
 Currently, there are several tight-binding packages available, such as PyBinding [@pybinding], Pyqula, PythTB, Kwant [@kwant] and PySKTB [@pysktb]
 as well as $\mathbb{Z}_2$Pack [@z2pack] for the computation of topological invariants. Of those libraries, only PySKTB was
@@ -97,15 +94,18 @@ density of states (also available using the kernel polynomial method), localizat
 There are plotting routines available for the different quantities.
 - Fitting of the Slater-Koster parameters (or any user-defined model parameter) to reproduce
 some given energy bands, usually from DFT calculations. 
+- Transport calculations in two-terminal devices based on the Landauer-Buttiker formalism.
 
-![Characterization of Bi(111) with the library: (a) Band structure of a zigzag nanoribbon, with the edge bands highlighted in green. (b) Evolution of the Wannier charge centers (WCC). (c) The topological invariant can be obtained algorithmically from the WCC, allowing to compute the topological phase diagram as a function of the spin-orbit coupling. (d) Probability density of an edge state. (e) Transmission as a function of energy on an armchair nanoribbon.](images/paper_plot.png)
+![Characterization of Bi(111) with the library: (a) Band structure of a zigzag nanoribbon, with the edge bands highlighted in green. (b) Evolution of the Wannier charge centers (WCC). (c) The topological invariant can be obtained algorithmically from the WCC, allowing to compute the topological phase diagram as a function of the spin-orbit coupling. (d) Probability density of an edge state. (e) Transmission as a function of energy on an armchair nanoribbon.\label{plot}](images/paper_plot.png)
 
 The basic workflow starts with the preparation of a configuration file, where we set all the parameters relative
 to the material we want to describe. This is, the crystalographic information and then the details of the Slater-Koster model,
 which imply specifying which orbitals participate for each chemical species, and the corresponding SK amplitudes.
 With the configuration prepared, the model is initialized simply passing the parsed configuration to the class constructor.
 From here, one can perform transformations of the base model, or directly obtain its spectrum and then perform
-some postprocessing. `tightbinder` has already been valuable for one previous work [@uria], and continues to be used in the 
+some postprocessing. In fig. \ref{plot} we illustrate the results of this process, where we declared a configuration file for Bi(111) and then used it
+to explore the topological nature of the material from different quantities.
+`tightbinder` has already been valuable for one previous work [@uria], and continues to be used in the 
 research of topological amorphous materials. We hope that more researchers will benefit from the package in their study of topological disordered solids.
 
 The library provides a stable API, but is still under development to incorporate new functionality. Future plans include
@@ -117,6 +117,6 @@ website, where we will also provide a changelist for each new version.
 
 # Acknowledgements
 
-AJUA acknowledges financial support from Spanish MICIN through Grant No. PRE2018-086552.
+The authors acknowledge financial support from Spanish MICINN (Grant Nos. PID2019-109539GB-C43, TED2021-131323B-I00 & PID2022-141712NB-C21), María de Maeztu Program for Units of Excellence in R&D (GrantNo.CEX2018-000805-M), Comunidad Autónoma de Madrid through the Nanomag COST-CM Program (Grant No. S2018/NMT-4321), Generalitat Valenciana through Programa Prometeo (2021/017), Centro de Computación Científica of the Universidad Autónoma de Madrid, and the Red Española de Supercomputación.
 
 # References
