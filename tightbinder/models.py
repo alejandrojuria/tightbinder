@@ -5,6 +5,8 @@ to toy models such as the BHZ model or Wilson fermions.
 
 from __future__ import annotations
 from typing import List, Tuple, Union
+
+from tightbinder.crystal import Crystal
 from .system import System, FrozenClass
 from .crystal import Crystal
 import numpy as np
@@ -387,7 +389,7 @@ class SlaterKoster(System):
                 hamiltonian[index] = sp.kron(hamiltonian[index], sp.eye(2, 2))
 
             # Add Zeeman term
-            self.__zeeman_term(1E-7)
+            self.__zeeman_term(0)
             hamiltonian[0] += self.__zeeman
 
             if self.configuration['Spin-orbit coupling'] != 0:
@@ -461,7 +463,7 @@ class SlaterKoster(System):
 
         nbasisdim = self.basisdim + 1 + spin
         for n, fock_matrix in enumerate(self.hamiltonian):
-            new_fock_matrix = np.zeros([nbasisdim, nbasisdim])
+            new_fock_matrix = np.zeros([nbasisdim, nbasisdim], dtype=np.complex_)
 
             new_fock_matrix[0:index, 0:index] = fock_matrix[0:index, 0:index]
             new_fock_matrix[0:index, (index + 1 + spin):] = fock_matrix[0:index, index:]
@@ -474,8 +476,10 @@ class SlaterKoster(System):
         if spin:
             self.hamiltonian[0][index + 1, index + 1] = energy
 
+        # Modify model attributes to take into account new orbital
         self.norbitals[atom_index] += 1 + spin
         self.basisdim += 1 + spin
+        self.configuration["Filling"][atom_index] += 1 + spin
 
         return self
     
@@ -946,9 +950,9 @@ class WilsonAmorphous(System):
                          crystal=Crystal([[side, 0, 0], [0, side, 0], [0, 0, side]],
                                          motif=[[0, 0, 0, 0]]))
 
-        self.filling = 0.5
-        self.norbitals = 4
-        self.basisdim = self.norbitals * len(self.motif)
+        self.filling = 2
+        self.norbitals = [4]
+        self.basisdim = self.norbitals[0] * len(self.motif)
         self.boundary = "PBC"
 
         self.a = side
@@ -994,7 +998,8 @@ class WilsonAmorphous(System):
             the Hamiltonian.
         """
 
-        self.basisdim = self.natoms * self.norbitals
+        self.basisdim = self.natoms * self.norbitals[0]
+        norbitals = 4
         if find_bonds:
             print("Computing neighbours...")
             self.find_neighbours(mode="radius", r=self.r)
@@ -1009,11 +1014,11 @@ class WilsonAmorphous(System):
         hamiltonian_atom_block = np.diag(np.array([-3 + self.m, -3 + self.m,
                                                    3 - self.m, 3 - self.m])*0.5)
         for n, atom in enumerate(self.motif):
-            hamiltonian[0][self.norbitals * n:self.norbitals * (n + 1),
-                           self.norbitals * n:self.norbitals * (n + 1)] = hamiltonian_atom_block
+            hamiltonian[0][norbitals * n:norbitals * (n + 1),
+                           norbitals * n:norbitals * (n + 1)] = hamiltonian_atom_block
 
         for bond in self.bonds:
-            initial_atom_index, final_atom_index, cell = bond
+            initial_atom_index, final_atom_index, cell, _ = bond
             initial_atom = self.motif[initial_atom_index][:3]
             final_atom = self.motif[final_atom_index][:3]
             neigh_position = np.array(final_atom) + np.array(cell)
@@ -1030,7 +1035,6 @@ class WilsonAmorphous(System):
         through the complex exponentials.
 
         :param k: k vector (Array 1x3)
-        :param conditions: defaults to PBC. Can be either PBC or OBC
         :return: Bloch Hamiltonian matrix
         """
 
@@ -1106,7 +1110,7 @@ class HaldaneModel(System, FrozenClass):
         return h
     
 
-class AwargalaChern(System):
+class AgarwalaChern(System):
     """
     Implementation of the Agarwala model of amorphous Chern insulators in 2D, which is a generalization 
     of the BHZ model for arbitrary atomic positions, with additional terms to break particle-hole and inversion symmetry.
@@ -1154,8 +1158,8 @@ class AwargalaChern(System):
         hopping = np.zeros([2, 2], dtype=np.complex_)
         hopping[0, 0] = -1 + self.t2
         hopping[1, 1] =  1 + self.t2
-        hopping[0, 1] = -1j*cmath.exp(-1j*theta) + self.lda * (math.sin(theta)**2*(1 + 1j) - 1)
-        hopping[1, 0] = -1j*cmath.exp(1j*theta) + self.lda * (math.sin(theta)**2*(1 - 1j) - 1)
+        hopping[0, 1] = -1j*cmath.exp(-1j*theta) + self.lda * ((1 + 1j)*math.sin(theta)**2 - 1)
+        hopping[1, 0] = -1j*cmath.exp(1j*theta) + self.lda * ((1 - 1j)*math.sin(theta)**2 - 1)
         
         hopping *= 0.5 * math.exp(-(r - self.a))
 
