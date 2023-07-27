@@ -41,7 +41,7 @@ due to the modular approach taken in its construction.
 # Statement of need
 
 The determination of the band structure of a solid is the starting point for any calculation in condensed matter physics. 
-This amounts to determining the hopping amplitudes $t^{\alpha\beta}_{ij}$ of the electronic Hamiltonian:
+This amounts to determining the matrix elements $t^{\alpha\beta}_{ij}$ of the electronic Hamiltonian:
 $$H=\sum_{ij,\alpha\beta}t^{\alpha\beta}_{ij}c^{\dagger}_{i\alpha}c_{j\beta}$$
 where the indices $i,j$ run over atomic positions, and the indices $\alpha, \beta$ run over orbitals. $c^{\dagger}_{i\alpha}$ ($c_{i\alpha}$) are creation (annihilation)
 operators of electrons at atom $i$ and orbital $\alpha$. There exist several techniques to address this problem, 
@@ -51,7 +51,7 @@ models are as equally popular since they constitute a quick and inexpensive way 
 they are restricted to simpler, effective description of the bands. Slater-Koster tight-binding models [@SlaterKoster] provide a middle ground
 since they allow to give a more accurate description of the material based on empirical considerations, while still being simple to compute.
 Then, supposed that the Slater-Koster model captures the key features of the material, it can be used instead of DFT to describe the solid,
-as long as the desired properties depend on those relevant features. In general, this approach allows for a qualitative 
+as long as the desired properties depend on those relevant features. In general, this approach allows for a qualitative
 exploration of the properties of materials, while one should look for first principles calculations when seeking quantitive results. 
 
 Currently, there are several tight-binding packages available, such as PyBinding [@pybinding], Pyqula, PythTB, Kwant [@kwant] and PySKTB [@pysktb]
@@ -94,7 +94,7 @@ density of states (also available using the kernel polynomial method), localizat
 There are plotting routines available for the different quantities.
 - Fitting of the Slater-Koster parameters (or any user-defined model parameter) to reproduce
 some given energy bands, usually from DFT calculations. 
-- Transport calculations in two-terminal devices based on the Landauer-Buttiker formalism.
+- Transport calculations in two-terminal devices based on the non-equilibrium Green's function formalism and the Landauer formula.
 
 ![Characterization of Bi(111) with the library: (a) Band structure of a zigzag nanoribbon, with the edge bands highlighted in green. (b) Evolution of the Wannier charge centers (WCC). (c) The topological invariant can be obtained algorithmically from the WCC, allowing to compute the topological phase diagram as a function of the spin-orbit coupling. (d) Probability density of an edge state. (e) Transmission as a function of energy on an armchair nanoribbon.\label{plot}](images/paper_plot.png)
 
