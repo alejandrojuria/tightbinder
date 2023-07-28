@@ -9,6 +9,7 @@ tags:
 authors:
   - name: Alejandro José Uría-Álvarez
     orcid: 0000-0001-6668-7333
+    corresponding: true
     affiliation: 1 # (Multiple affiliations must be quoted)
   - name: Juan José Palacios
     orcid: 0000-0003-2378-0866
