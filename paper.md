@@ -111,8 +111,8 @@ research of topological amorphous materials. We hope that more researchers will 
 
 The library provides a stable API, but is still under development to incorporate new functionality. Future plans include
 additional routines to extract information from the models such as the pair distribution function $g(r)$, and rewriting
-core parts of the library in C++ to improve performance. For an up-to-date list of features, we recommend visiting the (documentation
-website)[https://tightbinder.readthedocs.io], where we will also provide a changelist for each new version. 
+core parts of the library in C++ to improve performance. For an up-to-date list of features, we recommend visiting the [documentation
+website](https://tightbinder.readthedocs.io), where we will also provide a changelist for each new version. 
 
 
 
