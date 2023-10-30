@@ -86,7 +86,7 @@ class Crystal:
             for atom in motif:
                 if len(atom) != 4:
                     raise Exception("Each position must have three components")
-            self._motif = motif
+            self._motif = np.array(motif)
             self.natoms = len(motif)
 
     def add_atom(self, position: Union[list, np.ndarray], species: int = 0) -> None:
