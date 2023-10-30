@@ -18,7 +18,7 @@ via :meth:`tightbinder.topology.calculate_wannier_centre_flow()`
     from tightbinder.models import SlaterKoster
     from tightbinder.topology import calculate_wannier_centre_flow
     
-    file = open("/examples/hBN.txt", "r")
+    file = open("./examples/hBN.txt", "r")
     config = parse_config_file(file)
     model = SlaterKoster(config).reduce(n1=5, n2=5)
 
@@ -48,7 +48,7 @@ us to examine the evolution to ensure the invariant is correct.
     from tightbinder.models import SlaterKoster
     from tightbinder.topology import calculate_wannier_centre_flow, plot_wannier_centre_flow, calculate_z2_invariant
     
-    file = open("/examples/hBN.txt", "r")
+    file = open("./examples/hBN.txt", "r")
     config = parse_config_file(file)
     model = SlaterKoster(config).reduce(n1=5, n2=5)
 

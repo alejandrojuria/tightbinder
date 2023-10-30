@@ -11,7 +11,7 @@ By default the models are built with periodic boundary conditions (PBC), special
     from tightbinder.fileparse import parse_config_file
     from tightbinder.models import SlaterKoster
     
-    file = open("/examples/hBN.txt", "r")
+    file = open("./examples/hBN.txt", "r")
     config = parse_config_file(file)
     model = SlaterKoster(config)
 
@@ -33,7 +33,7 @@ For instance, we can change the unit cell to describe instead a supercell made o
     from tightbinder.fileparse import parse_config_file
     from tightbinder.models import SlaterKoster
     
-    file = open("/examples/hBN.txt", "r")
+    file = open("./examples/hBN.txt", "r")
     config = parse_config_file(file)
     model = SlaterKoster(config).supercell(n1=2, n2=2)
 
@@ -51,7 +51,7 @@ of a semi-infinite system such as a ribbon or a slab, or directly to study a fin
     from tightbinder.fileparse import parse_config_file
     from tightbinder.models import SlaterKoster
     
-    file = open("/examples/hBN.txt", "r")
+    file = open("./examples/hBN.txt", "r")
     config = parse_config_file(file)
     model = SlaterKoster(config).supercell(n1=2).reduce(n2=2)
 
@@ -79,7 +79,7 @@ system, and then move the positions of the atoms sampling the displacements from
     from tightbinder.models import SlaterKoster
     from tightbinder.disorder import amorphize
     
-    file = open("/examples/hBN.txt", "r")
+    file = open("./examples/hBN.txt", "r")
     config = parse_config_file(file)
     model = SlaterKoster(config).supercell(n1=2, n2=2)
 
@@ -97,7 +97,7 @@ analogous way to the ``amorphize()`` method with ``introduce_vacancies()``:
     from tightbinder.models import SlaterKoster
     from tightbinder.disorder import introduce_vacancies
     
-    file = open("/examples/hBN.txt", "r")
+    file = open("./examples/hBN.txt", "r")
     config = parse_config_file(file)
     model = SlaterKoster(config).supercell(n1=2, n2=2)
 
@@ -137,7 +137,7 @@ This can be done calling the method ``find_neighbours()``, and they can be visua
     from tightbinder.models import SlaterKoster
     from tightbinder.disorder import introduce_vacancies
     
-    file = open("/examples/hBN.txt", "r")
+    file = open("./examples/hBN.txt", "r")
     config = parse_config_file(file)
     model = SlaterKoster(config)
 

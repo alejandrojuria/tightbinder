@@ -11,7 +11,7 @@ is done with :meth:`tightbinder.system.System.initialize_hamiltonian()`.
     from tightbinder.fileparse import parse_config_file
     from tightbinder.models import SlaterKoster
     
-    file = open("/examples/hBN.txt", "r")
+    file = open("./examples/hBN.txt", "r")
     config = parse_config_file(file)
     model = SlaterKoster(config)
 
@@ -28,7 +28,7 @@ For instance, since hBN has a triangular lattice, we define the path in the IBZ 
     from tightbinder.fileparse import parse_config_file
     from tightbinder.models import SlaterKoster
     
-    file = open("/examples/hBN.txt", "r")
+    file = open("./examples/hBN.txt", "r")
     config = parse_config_file(file)
     model = SlaterKoster(config)
 
@@ -50,7 +50,7 @@ obtain the spectrum calling the :meth:`tightbinder.system.System.solve()` method
     from tightbinder.fileparse import parse_config_file
     from tightbinder.models import SlaterKoster
     
-    file = open("/examples/hBN.txt", "r")
+    file = open("./examples/hBN.txt", "r")
     config = parse_config_file(file)
     model = SlaterKoster(config)
 
@@ -73,7 +73,7 @@ This is done with the :meth:`tightbinder.result.Result.plot_along_path()` method
     from tightbinder.fileparse import parse_config_file
     from tightbinder.models import SlaterKoster
     
-    file = open("/examples/hBN.txt", "r")
+    file = open("./examples/hBN.txt", "r")
     config = parse_config_file(file)
     model = SlaterKoster(config)
 
@@ -98,7 +98,7 @@ is simpler since we do not need to generate the k points first. When the spectru
     from tightbinder.fileparse import parse_config_file
     from tightbinder.models import SlaterKoster
     
-    file = open("/examples/hBN.txt", "r")
+    file = open("./examples/hBN.txt", "r")
     config = parse_config_file(file)
     model = SlaterKoster(config).reduce(n1=5, n2=5)
 

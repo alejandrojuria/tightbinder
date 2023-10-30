@@ -19,7 +19,7 @@ are defined as a motif: they contain the positions of the unit cell of the lead.
 
     length, width = 10, 4
 
-    file = open("examples/chain.txt", "r")
+    file = open("./examples/chain.txt", "r")
     config = parse_config_file(file)
     model = SlaterKoster(config)
 
@@ -52,7 +52,7 @@ the creation of the device one also has to specify the Bravais lattice vector us
 
     length, width = 10, 4
     
-    file = open("examples/chain.txt", "r")
+    file = open("./examples/chain.txt", "r")
     config = parse_config_file(file)
     model = SlaterKoster(config)
 
@@ -86,7 +86,7 @@ with the :meth:`tightbinder.observables.TransportDevice.conductance()` method.
 
     length, width = 10, 4
     
-    file = open("examples/chain.txt", "r")
+    file = open("./examples/chain.txt", "r")
     config = parse_config_file(file)
     model = SlaterKoster(config)
 
@@ -120,7 +120,7 @@ This can be done calling the :meth:`tightbinder.observables.TransportDevice.visu
 
     length, width = 10, 4
     
-    file = open("examples/chain.txt", "r")
+    file = open("./examples/chain.txt", "r")
     config = parse_config_file(file)
     model = SlaterKoster(config)
 
