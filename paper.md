@@ -82,8 +82,8 @@ different chemical species with different numbers of electrons.
 - Configuration file based description of the model of the solid: Using a standarized
 format for configuration files, one can specify all the relevant parameters of the model,
 from the lattice vectors to the Slater-Koster hopping amplitudes. 
-- Two main classes defined, one to describe crystalline Slater-Koster models,
-and another one for amorphous solids.
+- Two main classes defined, one to describe crystalline Slater-Koster models (`SlaterKoster`),
+and another one for amorphous solids (`AmorphousSlaterKoster`).
 There are also predefined models, and the possibility of defining custom models which inherit from a base `System` class.
 - Methods and routines to modify systems: once they are built, there are methods to modify
 the size or the boundaries of the solid, as well as routines to introduce different
@@ -101,7 +101,7 @@ some given energy bands, usually from DFT calculations.
 
 The basic workflow starts with the preparation of a configuration file, where we set all the parameters relative
 to the material we want to describe. This is, the crystalographic information and then the details of the Slater-Koster model,
-which imply specifying which orbitals participate for each chemical species, and the corresponding SK amplitudes.
+which imply specifying which orbitals participate for each chemical species, and the corresponding Slater-Koster amplitudes.
 With the configuration prepared, the model is initialized simply passing the parsed configuration to the class constructor.
 From here, one can perform transformations of the base model, or directly obtain its spectrum and then perform
 some postprocessing. In fig. \ref{plot} we illustrate the results of this process, where we declared a configuration file for Bi(111) and then used it
@@ -111,8 +111,8 @@ research of topological amorphous materials. We hope that more researchers will 
 
 The library provides a stable API, but is still under development to incorporate new functionality. Future plans include
 additional routines to extract information from the models such as the pair distribution function $g(r)$, and rewriting
-core parts of the library in C++ to improve performance. For an up-to-date list of features, we recommend visiting the documentation
-website, where we will also provide a changelist for each new version. 
+core parts of the library in C++ to improve performance. For an up-to-date list of features, we recommend visiting the (documentation
+website)[https://tightbinder.readthedocs.io], where we will also provide a changelist for each new version. 
 
 
 
