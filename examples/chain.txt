@@ -32,7 +32,6 @@ Test chain
 s
 
 #Filling
-<<<<<<< Updated upstream
 ! Specify number of electrons per chemical species; one line per species. 
 ! Fillings can be fractional, but total number of electons in unit cell must be an integer.
 1
@@ -49,20 +48,6 @@ s
 ! which is the corresponding neighbour. 
 ! Syntax is: [species1, species2; n-th neighbour] V1 V2 ...
 -0.3
-=======
-1
-
-#Onsite energy
-! One for each different orbital defined above
-! In case of having two atomic species, two lines must be appended, one for each element
-0
-
-#SK amplitudes
-! Order is fixed: Vsss, Vsps, Vpps, Vppp, Vsds, Vpds, Vpdp, Vdds, Vddp, Vddd (separated by spaces)
-! Not present amplitudes can be omitted but ordering has te be respected always
-! In case of having two atomic species, two lines must be appended, one for each element
--1
->>>>>>> Stashed changes
 
 #Spin
 ! Determine whether the model is spinless (spin polarized) or spinful.
@@ -71,12 +56,8 @@ s
 True
 
 #Spin-orbit coupling
-<<<<<<< Updated upstream
 ! Note: Using a non-zero value will automatically produce a spinful model.
 ! Amplitude must be specified for all species; one line per species.
-=======
-! Note: Using a non-zero value will automatically produce a spinful model
->>>>>>> Stashed changes
 0
 
 ! --------------------- Simulation parameters ---------------------
