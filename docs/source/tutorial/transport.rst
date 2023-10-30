@@ -117,6 +117,7 @@ This can be done calling the :meth:`tightbinder.observables.TransportDevice.visu
     from tightbinder.fileparse import parse_config_file
     from tightbinder.observables import TransportDevice
     import numpy as np
+    import matplotlib.pyplot as plt
 
     length, width = 10, 4
     
@@ -139,3 +140,5 @@ This can be done calling the :meth:`tightbinder.observables.TransportDevice.visu
 
     device = TransportDevice(model, left_lead, right_lead, period, "default")
     device.visualize_device()
+
+    plt.show()
