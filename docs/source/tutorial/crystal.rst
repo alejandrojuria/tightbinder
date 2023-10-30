@@ -135,14 +135,17 @@ This can be done calling the method ``find_neighbours()``, and they can be visua
 
     from tightbinder.fileparse import parse_config_file
     from tightbinder.models import SlaterKoster
-    from tightbinder.disorder import introduce_vacancies
-    
+    import matplotlib.pyplot as plt
+
     file = open("./examples/hBN.txt", "r")
     config = parse_config_file(file)
     model = SlaterKoster(config)
 
     model.find_neighbours()
     model.plot_wireframe()
+
+    plt.show()
+    
 
 .. note::
     In general, the use of explicit use of ``find_neighbours()`` is not advised since it is already used in ``initialize_hamiltonian()``, which 
