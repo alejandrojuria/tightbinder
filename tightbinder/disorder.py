@@ -48,7 +48,8 @@ def introduce_impurities(system: System, energy: float = 2, probability: float =
     randomly chooses atoms according to the specified probability, meaning that each call
     will generate a different distribution.
     NB: This routine will override ALL on-site energies for the selected atoms,
-    in a multi-orbital scenario.
+    in a multi-orbital scenario. The hopping terms remain as they were before the introduction
+    of impurities.
     NB2: Current implementation requires already having initialized the Hamiltonian
     to modify the corresponding matrix elements.
 
@@ -64,10 +65,12 @@ def introduce_impurities(system: System, energy: float = 2, probability: float =
         sys.exit(1)
 
     prob_array = np.random.uniform(0, 1, system.natoms)
-    selected_atoms_as_impurities = np.where(prob_array > probability)[0]
+    selected_atoms_as_impurities = np.where(prob_array < probability)[0]
 
     for i in selected_atoms_as_impurities:
-        atom_interval = np.arange(system.norbitals*i, system.norbitals*(i+1))
+        species = int(system.motif[i, 3])
+        norbitals = system.norbitals[species]
+        atom_interval = np.arange(norbitals*i, norbitals*(i+1))
         system.hamiltonian[0][atom_interval, atom_interval] = energy * np.ones(system.norbitals)
 
     return system
