@@ -1,11 +1,15 @@
-from tightbinder.models import SlaterKoster
+from tightbinder.models import SlaterKoster, AmorphousSlaterKoster
 from tightbinder.fileparse import parse_config_file
+from tightbinder.disorder import amorphize
 import numpy as np
+import math
+import matplotlib.pyplot as plt
 
 """
-This file constains tests for both the System class and the SlaterKoster class, which inherits from System.
-The approach taken here is to test the SlaterKoster class, and then to test the System class by extension.
-These constitute functional tests of the library. 
+This file constains tests for the main classes of the library, i.e. SlaterKoster and AmorphousSlaterKoster.
+This also serves to test the base classes System and Crystal, which are inherited by the former.
+All tests are functional, as they intend to check specific functionalities of the library and not 
+specific routines individually.
 """
 
 def test_configuration_parsing():
@@ -145,6 +149,19 @@ def test_add_bonds():
     assert model.bonds[2][3] == '2'
     
 
+def test_neighbour_distances():
+    """
+    Tests that neighbour distances are computed correctly.
+    """    
+    
+    model = build_slaterkoster().supercell(n1=4, n2=4)
+    model.initialize_hamiltonian()
+    
+    distances = model.compute_neighbour_distances(5)
+        
+    assert np.allclose(distances, [1.44, 2.5,  2.89, 3.82, 4.33])
+    
+
 def test_neighbours():
     """
     Tests the method find_neighbours from System.
@@ -221,4 +238,132 @@ def test_bloch_hamiltonian():
                        np.array([7.79426873,  6.85983334,  4.76896809,  3.625,       3.82600578,  4.1510816,
                         4.29309038,  5.38615122,  7.08312255,  7.79426873]))    
     
+
+def test_fermi_energy():
+    """
+    Tests that the Fermi energy is computed properly.
+    """
+    
+    model = build_slaterkoster()
+    model.initialize_hamiltonian()
+    
+    kpoints = model.high_symmetry_path(100, ['G', 'K', 'M', 'G'])
+    results = model.solve(kpoints)
+    
+    fermi_energy = results.calculate_fermi_energy(model.filling)
+    
+    assert math.isclose(fermi_energy, -3.625)
+    
+    
+def test_fermi_energy_supercell():
+    """
+    Tests that the Fermi energy is computed properly when working with supercells.
+    """
+    
+    model = build_slaterkoster().supercell(n1=2, n2=2)
+    model.initialize_hamiltonian()
+    
+    labels = ['G', 'K', 'M', 'G']
+    kpoints = model.high_symmetry_path(100, labels)
+    results = model.solve(kpoints)
+    
+    fermi_energy = results.calculate_fermi_energy(model.filling)
+    
+    assert math.isclose(fermi_energy, -3.625)
+    
+
+def test_rescale_bands_to_fermi_energy():
+    """
+    Tests method to set the Fermi energy to zero.
+    """
+    
+    model = build_slaterkoster()
+    model.initialize_hamiltonian()
+    
+    kpoints = model.high_symmetry_path(100, ['G', 'K', 'M', 'G'])
+    results = model.solve(kpoints)
+    
+    results.rescale_bands_to_fermi_level()
+    fermi_energy = results.calculate_fermi_energy(model.filling)
+    
+    assert math.isclose(fermi_energy, 0)
+    
+    
+def test_soc_bands():
+    """
+    Tests that SOC is correctly implemented.
+    """
+    
+    file = open("./examples/Bi111.txt", "r")
+    config = parse_config_file(file)
+    
+    model = SlaterKoster(config)
+    model.initialize_hamiltonian()
+    
+    kpoints = model.high_symmetry_path(10, ['G', 'K', 'M', 'G'])
+    results = model.solve(kpoints)
+        
+    results.rescale_bands_to_fermi_level()
+        
+    assert np.allclose(results.eigen_energy[model.filling - 1], 
+                       [ 0., -0.15751566, -0.92524304, -1.47481978, -1.2978014,
+                        -0.99748485, -0.85197586, -0.62417965, -0.08481005,  0.])
+    
+
+def test_edge_bands():
+    """
+    Tests that edge bands appear on the band structure of the ribbon of a topological insulator.
+    """
+    
+    file = open("./examples/Bi111.txt", "r")
+    config = parse_config_file(file)
+    
+    model = SlaterKoster(config).reduce(n1=5)
+    model.initialize_hamiltonian()
+    
+    kpoints = model.high_symmetry_path(10, ['K', 'G', 'K'])
+    results = model.solve(kpoints)
+        
+    results.rescale_bands_to_fermi_level()
+            
+    assert np.allclose(results.eigen_energy[model.filling - 1], 
+                       [0., -0.01970146, -0.01947547, -0.02035163, -0.07434333, -0.23305027,
+                        -0.07434333, -0.02035163, -0.01947547, -0.01970146,  0.])
+    
+
+def test_amorphous_slater_koster():
+    """
+    Tests that the AmorphousSlaterKoster model can be initialized, disordered and the band structure can be obtained correctly.
+    """
+    
+    np.random.seed(1)
+    
+    # Parameters of the calculation
+    ncells = 4
+    disorder = 0.1
+
+    # Parse configuration file
+    file = open("./examples/Bi111.txt", "r")
+    config = parse_config_file(file)
+
+    # Init. model and construct supercell
+    first_neighbour_distance = np.linalg.norm(config["Motif"][1][:3])
+    cutoff = first_neighbour_distance * 1.4
+    
+    model = AmorphousSlaterKoster(config, r=cutoff).supercell(n1=ncells, n2=ncells)
+    model.decay_amplitude = 1
+
+    model = amorphize(model, disorder)
+    model.initialize_hamiltonian(override_bond_lengths=True)
+
+    results = model.solve()
+        
+    assert np.allclose(results.eigen_energy[:5], 
+                       [[-12.50828339],
+                        [-12.50828339],
+                        [-12.3000533 ],
+                        [-12.3000533 ],
+                        [-12.23534886]])
+    
+
     
