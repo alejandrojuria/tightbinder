@@ -244,17 +244,20 @@ def calculate_polarization(wcc: np.ndarray) -> float:
 def calculate_chern_number(wcc_flow: np.ndarray) -> float:
     """ 
     Routine to compute the first Chern number from the WCC flow. Useful for Chern insulators.
+    NB: This routine gives an estimate of the Chern number (non quantized), and is more precise 
+    the more kpoints there are in the calculation.
 
     :param wcc_flow: Array with the WCCs for all paths.
     :return: Value of Chern number.
     """
 
     wcc_k0 = wcc_flow[0, :]
-    wcc_k2pi = wcc_flow[-1, :]
+    wcc_k2pi = wcc_flow[-2, :]
 
     chern_number = calculate_polarization(wcc_k0) - calculate_polarization(wcc_k2pi)
     chern_number = 0 if chern_number < 1E-16 else chern_number
-    return chern_number
+        
+    return chern_number / 2.
 
 
 # ---------------------------- Z2 invariant ----------------------------
@@ -410,18 +413,6 @@ def plot_wannier_centre_flow(wcc_flow: np.ndarray, show_midpoints: bool = True, 
     ax.tick_params(axis="both", labelsize=fontsize)
     ax.set_xlim([0, wcc_flow.shape[0] - 1])
     ax.set_ylim(bottom=-1, top=1)
-
-
-def calculate_chern(wannier_centre_flow: np.ndarray) -> None:
-    """ 
-    TODO calculate_chern fix broken computation. 
-    Routine to compute explicitly the first Chern number from the WCC flow calculation. 
-    
-    :param wannier_centre_flow: Array with the WCCs for all paths.
-    """
-    
-    polarization_flow = np.sum(wannier_centre_flow, axis=1)
-    plt.plot(polarization_flow)
 
 
 def plot_polarization_flow(wcc_flow: np.ndarray) -> None:
