@@ -21,7 +21,7 @@ The features of the library are:
 * Construction of **amorphous** Slater-Koster models, with hoppings modified accordingly (power or exponential law) with respect to the crystalline model.
 * Methods to **modify** the system as desired: construction of supercells, finite systems, introduction of vacancies or impurities, amorphization of the lattice,
   application of electric or magnetic fields.
-* Complete **topological characterization** of materials: evolution of Wannier charge centers, $\mathbb{Z}_2$ invariant, Chern number and marker, and spatial entanglement spectrum.
+* Complete **topological characterization** of materials: evolution of Wannier charge centers, $\mathbb{Z}_2$ invariant, Berry curvature, Chern number and marker, and spatial entanglement spectrum.
 * **Transport** calculations in **two-terminal** devices based on the Landauer-Buttiker formalism (conductance and transmission).
 * Computation of **observables** such as the band structure, expected value of the spin components, density of states (either using Green's functions or the KPM), local density of states, as well as the plotting routines for
   the corresponding quantities.
