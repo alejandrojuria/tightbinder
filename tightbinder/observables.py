@@ -78,7 +78,7 @@ def dos_kpm(system: System, energy: float = None, npoints: int = 200, nmoments: 
         print("Warning: KPM computations are intended to be run with sparse matrices (faster and less memory usage)")
 
     print("Computing DOS using the KPM...")
-    h = system.hamiltonian_k([[0., 0., 0.]])
+    h = system.hamiltonian_k([0., 0., 0.])
     if system.matrix_type == "dense":
         h = sp.bsr_matrix(h)
     # h spectrum has to be between -1 and 1
@@ -460,7 +460,7 @@ class TransportDevice:
         fermi_energy = spectrum.calculate_fermi_energy(self.system.filling)
         G = self.transmission(fermi_energy, fermi_energy, 1, delta, method)
 
-        return G
+        return G[0][0]
             
 
     def __find_direct_bonds(self, first_group: Union[List, np.ndarray], second_group: Union[List, np.ndarray], r: float) -> List:
