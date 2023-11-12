@@ -1,7 +1,9 @@
 from tightbinder.models import WilsonAmorphous, HaldaneModel, BHZ, AgarwalaChern
 from tightbinder.result import State
+from tightbinder.utils import hash_numpy_array
 import numpy as np
 import matplotlib.pyplot as plt
+import hashlib
 
 """
 This scripts contains tests to verify the functionality of the predefined models.
@@ -19,9 +21,9 @@ def test_wilson_amorphous():
     kpoints = model.high_symmetry_path(10, labels)
     results = model.solve(kpoints)
     
-    assert np.allclose(results.eigen_energy[0],
-                       [-7., -6.244998, -4.35889894, -3., -2.64575131, 
-                        -1.73205081, -1., -2.64575131, -5.56776436, -7.])
+    energies_hash = hash_numpy_array(results.eigen_energy)
+        
+    assert energies_hash == "37c74fe453e6be6ea204ed05c38fbc1e"
     
 
 def test_haldane_model():
@@ -35,10 +37,10 @@ def test_haldane_model():
     labels = ["G", "M", "K", "G"]
     kpoints = model.high_symmetry_path(10, labels)
     results = model.solve(kpoints)
+    
+    energies_hash = hash_numpy_array(results.eigen_energy)
         
-    assert np.allclose(results.eigen_energy[0],
-                       [-3.0, -2.64575131, -1.73205081, -1.00000000, -8.79385242e-01,
-                        -5.32088886e-01, 0.0, -1.34729636, -2.53208889, -3.0])
+    assert energies_hash == "de0c3a203bb1c20d98b21dbee470af4e"
     
 
 def test_bhz():
@@ -52,11 +54,10 @@ def test_bhz():
     labels = ["G", "K", "M", "G"]
     kpoints = model.high_symmetry_path(10, labels)
     results = model.solve(kpoints)
-            
-    assert np.allclose(results.eigen_energy[0],
-                       [-2., -2.28736766, -4.08609256, -4.47213595, -4.61651143,
-                        -3.40295857, -2., -1.80277564, -1.80277564, -2.])
     
+    energies_hash = hash_numpy_array(results.eigen_energy)
+        
+    assert energies_hash == "c2800de0cfe14286455358e355a1f674"
 
 def test_agarwala_chern():
     """
@@ -70,11 +71,9 @@ def test_agarwala_chern():
     kpoints = model.high_symmetry_path(10, labels)
     results = model.solve(kpoints)
     
-    print(results.eigen_energy[0])
+    energies_hash = hash_numpy_array(results.eigen_energy)
         
-    assert np.allclose(results.eigen_energy[0],
-                       [-1., -2.34520788, -4.18330013, -5., -4.58257569,
-                        -3.60555128, -3., -2.64575131, -1.73205081, -1.])
+    assert energies_hash == "8b3c10e6cdc66d57a4ab7d33a1ae6de5"
     
 
 def test_edge_state_amplitude():

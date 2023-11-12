@@ -1,9 +1,11 @@
 from tightbinder.models import SlaterKoster, AmorphousSlaterKoster
 from tightbinder.fileparse import parse_config_file
 from tightbinder.disorder import amorphize
+from tightbinder.utils import hash_numpy_array
 import numpy as np
 import math
 import matplotlib.pyplot as plt
+
 
 """
 This file constains tests for the main classes of the library, i.e. SlaterKoster and AmorphousSlaterKoster.
@@ -89,18 +91,11 @@ def test_supercell():
     
     assert model.natoms == 8    
     assert np.allclose(model.bravais_lattice[0], [4.330128, 2.5, 0.0])
-    assert np.allclose(model.bravais_lattice[1], [4.330128, -2.5, 0.0])    
+    assert np.allclose(model.bravais_lattice[1], [4.330128, -2.5, 0.0])   
     
-    expected_motif = np.array([[0, 0, 0, 0],
-                                [1.443376, 0, 0, 1],
-                                [2.16506, 1.25, 0.0, 0],
-                                [3.608436, 1.25, 0.0, 1],
-                                [2.16506, -1.25, 0.0, 0],
-                                [3.608436, -1.25, 0.0, 1],
-                                [4.330128, 0, 0, 0],
-                                [5.773504, 0, 0, 1]])
+    motif_hash = hash_numpy_array(model.motif)
         
-    assert np.allclose(model.motif, expected_motif)
+    assert motif_hash == "7acd74da1ca11574db6c62a958d11a57"
 
 
 def test_reduce():
@@ -113,16 +108,9 @@ def test_reduce():
     assert model.boundary == "OBC"    
     assert model.natoms == 8    
     
-    expected_motif = np.array([[0, 0, 0, 0],
-                                [1.443376, 0, 0, 1],
-                                [2.16506, 1.25, 0.0, 0],
-                                [3.608436, 1.25, 0.0, 1],
-                                [2.16506, -1.25, 0.0, 0],
-                                [3.608436, -1.25, 0.0, 1],
-                                [4.330128, 0, 0, 0],
-                                [5.773504, 0, 0, 1]])
+    motif_hash = hash_numpy_array(model.motif)
         
-    assert np.allclose(model.motif, expected_motif)
+    assert motif_hash == "7acd74da1ca11574db6c62a958d11a57"
     
     
 def test_add_bonds():
@@ -207,17 +195,10 @@ def test_high_symmetry_path():
     model.initialize_hamiltonian()
     
     kpoints = model.high_symmetry_path(10, ['G', 'K', 'M', 'G'])
+    
+    kpoints_hash = hash_numpy_array(np.array(kpoints))
         
-    assert np.allclose(kpoints[0], np.array([0., 0., 0.]))
-    assert np.allclose(kpoints[1], np.array([0.        , 0.55850559, 0.        ])) 
-    assert np.allclose(kpoints[2], np.array([0.        , 1.11701117, 0.        ]))
-    assert np.allclose(kpoints[3], np.array([0.        , 1.67551676, 0.        ]))
-    assert np.allclose(kpoints[4], np.array([0.24184031, 1.53589019, 0.        ]))
-    assert np.allclose(kpoints[5], np.array([0.48368061, 1.39626363, 0.        ]))
-    assert np.allclose(kpoints[6], np.array([0.72552092, 1.25663706, 0.        ]))
-    assert np.allclose(kpoints[7], np.array([0.48368061, 0.83775804, 0.        ]))
-    assert np.allclose(kpoints[8], np.array([0.24184031, 0.41887902, 0.        ]))
-    assert np.allclose(kpoints[9], np.array([0., 0., 0.]))    
+    assert kpoints_hash == "30ae3de2af6b066896efe3148349fd1f"
         
         
 def test_bloch_hamiltonian():
@@ -231,12 +212,9 @@ def test_bloch_hamiltonian():
     kpoints = model.high_symmetry_path(10, ['G', 'K', 'M', 'G'])
     results = model.solve(kpoints)
     
-    assert np.allclose(results.eigen_energy[0], 
-                       np.array([-7.79426873, -6.85983334, -4.76896809, -3.625,      -3.82600578, -4.1510816,                 
-                        -4.29309038, -5.38615122, -7.08312255, -7.79426873]))
-    assert np.allclose(results.eigen_energy[1], 
-                       np.array([7.79426873,  6.85983334,  4.76896809,  3.625,       3.82600578,  4.1510816,
-                        4.29309038,  5.38615122,  7.08312255,  7.79426873]))    
+    energies_hash = hash_numpy_array(results.eigen_energy)
+        
+    assert energies_hash == "fb14b5248ee62e5a30f758de230b8e27"
     
 
 def test_fermi_energy():
@@ -304,10 +282,10 @@ def test_soc_bands():
     results = model.solve(kpoints)
         
     results.rescale_bands_to_fermi_level()
+    
+    energies_hash = hash_numpy_array(results.eigen_energy)
         
-    assert np.allclose(results.eigen_energy[model.filling - 1], 
-                       [ 0., -0.15751566, -0.92524304, -1.47481978, -1.2978014,
-                        -0.99748485, -0.85197586, -0.62417965, -0.08481005,  0.])
+    assert energies_hash == "1c039ed332ce91213341a891a3d7586a"
     
 
 def test_edge_bands():
@@ -325,10 +303,10 @@ def test_edge_bands():
     results = model.solve(kpoints)
         
     results.rescale_bands_to_fermi_level()
+    
+    energies_hash = hash_numpy_array(results.eigen_energy)
             
-    assert np.allclose(results.eigen_energy[model.filling - 1], 
-                       [0., -0.01970146, -0.01947547, -0.02035163, -0.07434333, -0.23305027,
-                        -0.07434333, -0.02035163, -0.01947547, -0.01970146,  0.])
+    assert energies_hash == "1cfd690652093e151640f444a7c81169"
     
 
 def test_amorphous_slater_koster():
@@ -357,13 +335,10 @@ def test_amorphous_slater_koster():
     model.initialize_hamiltonian(override_bond_lengths=True)
 
     results = model.solve()
-        
-    assert np.allclose(results.eigen_energy[:5], 
-                       [[-12.50828339],
-                        [-12.50828339],
-                        [-12.3000533 ],
-                        [-12.3000533 ],
-                        [-12.23534886]])
+    
+    energies_hash = hash_numpy_array(results.eigen_energy)
+                
+    assert energies_hash == "e73dc6fc11bd9ed11692d60118537479"
     
 
     
