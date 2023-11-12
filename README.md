@@ -17,12 +17,12 @@ orbitals, onsite energies and hoppings between orbitals. The configuration file 
 with the library. Alternatively, it is also possible to define custom models that can still leverage the capabilities of the package. 
 
 Some of the features of the library are:
-* Construction of **Slater-Koster** tight-binding models up to $d$ orbitals, with intraatomic spin-orbit coupling. 
+* Construction of **Slater-Koster** tight-binding models up to $d$ orbitals, with intraatomic **spin-orbit coupling**. 
 * Construction of **amorphous** Slater-Koster models, with hoppings modified accordingly (power or exponential law) with respect to the crystalline model.
 * Methods to **modify** the system as desired: construction of supercells, finite systems, introduction of vacancies or impurities, amorphization of the lattice,
   application of electric or magnetic fields.
 * Complete **topological characterization** of materials: evolution of Wannier charge centers, $\mathbb{Z}_2$ invariant, Chern number and marker, and spatial entanglement spectrum.
-* **Transport** calculations in two-terminal devices based on the Landauer-Buttiker formalism (conductance and transmission).
+* **Transport** calculations in **two-terminal** devices based on the Landauer-Buttiker formalism (conductance and transmission).
 * Computation of **observables** such as the band structure, expected value of the spin components, density of states (either using Green's functions or the KPM), local density of states, as well as the plotting routines for
   the corresponding quantities.
 * **Predefined** models (e.g. Haldane or BHZ) and ability to define custom ones.
