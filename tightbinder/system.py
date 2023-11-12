@@ -232,8 +232,9 @@ class System(Crystal):
         if mode is "radius":
             if r is None:
                 raise Exception("Error: Search mode is radius but no r given, exiting...")
-            min_cell_size = np.min(np.linalg.norm(self.bravais_lattice, axis=1))
-            nn = int(r // min_cell_size + 1)
+            # TODO: Check if this is necessary
+            # min_cell_size = np.min(np.linalg.norm(self.bravais_lattice, axis=1))
+            # nn = int(r // min_cell_size + 1)
 
         elif mode is "minimal" and r is not None:
             print("Search mode is minimal but a radius was given (will not be used)")
