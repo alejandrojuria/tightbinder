@@ -6,6 +6,7 @@ Miscellaneous routines used in the other modules.
 from typing import Callable, Union
 import numpy as np
 from scipy.spatial import Delaunay
+import hashlib
 
 
 def generate_basis_combinations(ndim: int) -> np.ndarray:
@@ -146,3 +147,11 @@ def alpha_shape_2d(points: np.ndarray, alpha: float, only_outer: bool = True):
             add_edge(edges, ib, ic)
             add_edge(edges, ic, ia)
     return edges
+
+
+def hash_numpy_array(array: np.ndarray) -> str:
+    """
+    Function to hash a numpy array.
+    """
+    
+    return hashlib.md5(array.data.tobytes()).hexdigest()
