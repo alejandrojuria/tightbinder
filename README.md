@@ -16,7 +16,7 @@ Namely, one has to specify completely the crystalline structure, i.e. the Bravai
 orbitals, onsite energies and hoppings between orbitals. The configuration file then fully characterizes the Slater-Koster models and constitutes the starting point for the majority of the calculations done
 with the library. Alternatively, it is also possible to define custom models that can still leverage the capabilities of the package. 
 
-Some of the features of the library are:
+The features of the library are:
 * Construction of **Slater-Koster** tight-binding models up to $d$ orbitals, with intraatomic **spin-orbit coupling**. 
 * Construction of **amorphous** Slater-Koster models, with hoppings modified accordingly (power or exponential law) with respect to the crystalline model.
 * Methods to **modify** the system as desired: construction of supercells, finite systems, introduction of vacancies or impurities, amorphization of the lattice,
