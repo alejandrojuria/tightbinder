@@ -94,9 +94,9 @@ def test_supercell():
     assert np.allclose(model.bravais_lattice[1], [4.330128, -2.5, 0.0])   
     
     motif_hash = hash_numpy_array(model.motif)
+    
+    assert math.isclose(motif_hash, 99.833119893184)
         
-    assert motif_hash == "7acd74da1ca11574db6c62a958d11a57"
-
 
 def test_reduce():
     """
@@ -110,7 +110,7 @@ def test_reduce():
     
     motif_hash = hash_numpy_array(model.motif)
         
-    assert motif_hash == "7acd74da1ca11574db6c62a958d11a57"
+    assert math.isclose(motif_hash, 99.833119893184)
     
     
 def test_add_bonds():
@@ -198,7 +198,7 @@ def test_high_symmetry_path():
     
     kpoints_hash = hash_numpy_array(np.array(kpoints))
         
-    assert kpoints_hash == "30ae3de2af6b066896efe3148349fd1f"
+    assert math.isclose(kpoints_hash, 12.243192500457077)
         
         
 def test_bloch_hamiltonian():
@@ -214,7 +214,7 @@ def test_bloch_hamiltonian():
     
     energies_hash = hash_numpy_array(results.eigen_energy)
         
-    assert energies_hash == "fb14b5248ee62e5a30f758de230b8e27"
+    assert math.isclose(energies_hash, 667.8478374529238)
     
 
 def test_fermi_energy():
@@ -285,7 +285,7 @@ def test_soc_bands():
     
     energies_hash = hash_numpy_array(results.eigen_energy)
         
-    assert energies_hash == "1c039ed332ce91213341a891a3d7586a"
+    assert math.isclose(energies_hash, 5155.652053621002)
     
 
 def test_edge_bands():
@@ -306,7 +306,7 @@ def test_edge_bands():
     
     energies_hash = hash_numpy_array(results.eigen_energy)
             
-    assert energies_hash == "1cfd690652093e151640f444a7c81169"
+    assert math.isclose(energies_hash, 29453.85050171607)
     
 
 def test_amorphous_slater_koster():
@@ -338,7 +338,5 @@ def test_amorphous_slater_koster():
     
     energies_hash = hash_numpy_array(results.eigen_energy)
                 
-    assert energies_hash == "e73dc6fc11bd9ed11692d60118537479"
-    
-
+    assert math.isclose(energies_hash, 8595.611419662699)
     

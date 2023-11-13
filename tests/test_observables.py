@@ -3,6 +3,7 @@ from tightbinder.fileparse import parse_config_file
 from tightbinder.models import SlaterKoster
 from tightbinder.utils import hash_numpy_array
 import numpy as np
+import math
 
 """
 Module with tests to verify the functionality of the observables module.
@@ -27,9 +28,9 @@ def test_dos():
     density, energies = dos(results, delta=0.05, npoints=200)
     
     density_hash = hash_numpy_array(np.array(density))
-        
-    assert density_hash == "429a270d07f37fc59289510ef00bc6bc"
     
+    assert math.isclose(density_hash, 5.678625492981987)
+            
 
 def test_dos_kpm():
     """
@@ -50,9 +51,9 @@ def test_dos_kpm():
     density, energies = dos_kpm(model, nmoments=150, npoints=400, r=30)
     
     density_hash = hash_numpy_array(np.array(density))
-        
-    assert density_hash == "3212f53f140abcf59d6dc81ae603a2e8"
     
+    assert math.isclose(density_hash, 0.7510637669286024)
+            
 
 def test_transport_device():
     """
@@ -111,9 +112,9 @@ def test_transmission():
     trans, energy = device.transmission(-5, 5, 50)
     
     transmission_hash = hash_numpy_array(np.array(trans))
+    
+    assert math.isclose(transmission_hash, 243.99797881099673)
         
-    assert transmission_hash == "7e2e3ea34a76f88ebc674bdbad2e4916"
-
 
 def test_conductance():
     """

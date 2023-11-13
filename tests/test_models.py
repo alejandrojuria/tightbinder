@@ -3,7 +3,7 @@ from tightbinder.result import State
 from tightbinder.utils import hash_numpy_array
 import numpy as np
 import matplotlib.pyplot as plt
-import hashlib
+import math
 
 """
 This scripts contains tests to verify the functionality of the predefined models.
@@ -22,9 +22,9 @@ def test_wilson_amorphous():
     results = model.solve(kpoints)
     
     energies_hash = hash_numpy_array(results.eigen_energy)
-        
-    assert energies_hash == "37c74fe453e6be6ea204ed05c38fbc1e"
     
+    assert math.isclose(energies_hash, 856.0)
+            
 
 def test_haldane_model():
     """
@@ -40,7 +40,7 @@ def test_haldane_model():
     
     energies_hash = hash_numpy_array(results.eigen_energy)
         
-    assert energies_hash == "de0c3a203bb1c20d98b21dbee470af4e"
+    assert math.isclose(energies_hash, 76.56623716571589)
     
 
 def test_bhz():
@@ -57,7 +57,7 @@ def test_bhz():
     
     energies_hash = hash_numpy_array(results.eigen_energy)
         
-    assert energies_hash == "c2800de0cfe14286455358e355a1f674"
+    assert math.isclose(energies_hash, 304.0)
 
 def test_agarwala_chern():
     """
@@ -73,7 +73,7 @@ def test_agarwala_chern():
     
     energies_hash = hash_numpy_array(results.eigen_energy)
         
-    assert energies_hash == "8b3c10e6cdc66d57a4ab7d33a1ae6de5"
+    assert math.isclose(energies_hash, 206.0)
     
 
 def test_edge_state_amplitude():

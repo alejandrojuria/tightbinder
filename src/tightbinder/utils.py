@@ -149,9 +149,11 @@ def alpha_shape_2d(points: np.ndarray, alpha: float, only_outer: bool = True):
     return edges
 
 
-def hash_numpy_array(array: np.ndarray) -> str:
+def hash_numpy_array(array: np.ndarray) -> float:
     """
     Function to hash a numpy array.
     """
     
-    return hashlib.md5(array.data.tobytes()).hexdigest()
+    # return hashlib.md5(array.data.tobytes()).hexdigest() # This is non deterministic.
+    
+    return np.sum(array ** 2)

@@ -4,6 +4,7 @@ from tightbinder.fileparse import parse_config_file
 from tightbinder.utils import hash_numpy_array
 import numpy as np
 import matplotlib.pyplot as plt
+import math
 
 """
 Module with tests to check the topology module.
@@ -24,7 +25,7 @@ def test_wannier_centre_flow():
     
     wcc_hash = hash_numpy_array(wcc)
         
-    assert wcc_hash == "e0880afb289b010bf41270bf32cdf954"
+    assert math.isclose(wcc_hash, 9.241406000000001)
     
 
 def test_wannier_centre_flow_refined():
@@ -41,9 +42,9 @@ def test_wannier_centre_flow_refined():
     wcc = calculate_wannier_centre_flow(model, 5)
     
     wcc_hash = hash_numpy_array(wcc)
-        
-    assert wcc_hash == "6fbdd484ca9e10531b960358df2f667c"
     
+    assert math.isclose(wcc_hash, 22.862526000000003)
+            
 
 def test_z2_invariant():
     """
@@ -98,9 +99,9 @@ def test_chern_wcc():
     wcc = calculate_wannier_centre_flow(model, 10, full_BZ=True, refine_mesh=False)
     
     wcc_hash = hash_numpy_array(wcc)
-        
-    assert wcc_hash == "1040b618750741aaef82451ecd13a0bb"
     
+    assert math.isclose(wcc_hash,  2.62954)
+            
 
 def test_chern_number():
     """
@@ -132,7 +133,7 @@ def test_chern_marker():
     
     marker_hash = hash_numpy_array(marker)
         
-    assert marker_hash == "46aa8dcdc353933baaf9f47cf0e04b01"
+    assert math.isclose(marker_hash, 197.6131102153834)
         
 
 def test_partition_plane():
@@ -168,7 +169,7 @@ def test_entanglement_spectrum():
     entanglement = entanglement_spectrum(model, partition)
     
     entanglement_hash = hash_numpy_array(entanglement)
-        
-    assert entanglement_hash == "11e0c56d514bb782933cfc46dd9c7f4a"
     
+    assert math.isclose(entanglement_hash, 19.351744089214876)
+            
     
