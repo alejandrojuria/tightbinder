@@ -13,7 +13,7 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('../..'))  # Source code dir relative to this file
-sys.path.insert(0, os.path.abspath('../../tightbinder')) 
+sys.path.insert(0, os.path.abspath('../../src/tightbinder')) 
 
 # -- Project information -----------------------------------------------------
 
@@ -22,7 +22,7 @@ copyright = '2023, Alejandro Jose Uria Alvarez'
 author = 'Alejandro Jose Uria Alvarez'
 
 # The full version, including alpha/beta/rc tags
-release = '0.1'
+release = '0.1.1'
 
 # -- General configuration ---------------------------------------------------
 
