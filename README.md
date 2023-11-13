@@ -52,13 +52,12 @@ git clone https://github.com/alejandrojuria/tightbinder.git
 From the root folder of the repository, install the required dependencies and then the library itself:
 ```
 cd {path}/tightbinder
-pip install -r requirements.txt
 pip install .
 ```
 
 ## Documentation
 The documentation can be accessed [online](https://tightbinder.readthedocs.io/en/latest/). To build it, you must have installed GNU Make and the library itself. 
-To do so, ```cd docs/``` and run ```make html```. The documentation will then be created in ```docs/build/html```. It can be accessed through ```index.html```.
+To do so, ```cd docs/``` and first install the required dependencies with ```pip install -r requirements.txt``. Then, run ```make html``` to build the documentation. It will be created in ```docs/build/html```, and can be accessed through ```index.html```.
 
 ## Contributing
 The library is still under development as new features and optimizations are added. Therefore, any kind of contribution is welcome, from completing the documentation, bug fixing, adding new features or reporting bugs of the library.
