@@ -6,7 +6,6 @@ to toy models such as the BHZ model or Wilson fermions.
 from __future__ import annotations
 from typing import List, Tuple, Union
 
-from tightbinder.crystal import Crystal
 from .system import System, FrozenClass
 from .crystal import Crystal
 import numpy as np

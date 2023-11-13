@@ -6,3 +6,6 @@ docs/build/
 _autosummary/
 ./docs/build/
 .DS_Store
+build/
+dist/
+src/tightbinder.egg-info/
