@@ -5,6 +5,7 @@ from tightbinder.utils import hash_numpy_array
 import numpy as np
 import matplotlib.pyplot as plt
 import math
+from pathlib import Path
 
 """
 Module with tests to check the topology module.
@@ -15,17 +16,18 @@ def test_wannier_centre_flow():
     Tests the calculation of the wannier centre flow for a SlaterKoster model.
     """
     
-    file = open("./examples/Bi111.txt", "r")
-    config = parse_config_file(file)
-    
-    model = SlaterKoster(config)
-    model.initialize_hamiltonian()
-    
-    wcc = calculate_wannier_centre_flow(model, 5, refine_mesh=False)
-    
-    wcc_hash = hash_numpy_array(wcc)
+    path = Path(__file__).parent / ".." / "examples" / "inputs" / "Bi111.txt"
+    with open(path) as fp:
+        config = parse_config_file(fp)
         
-    assert math.isclose(wcc_hash, 9.241406000000001)
+        model = SlaterKoster(config)
+        model.initialize_hamiltonian()
+        
+        wcc = calculate_wannier_centre_flow(model, 5, refine_mesh=False)
+        
+        wcc_hash = hash_numpy_array(wcc)
+            
+        assert math.isclose(wcc_hash, 9.241406000000001)
     
 
 def test_wannier_centre_flow_refined():
@@ -33,17 +35,18 @@ def test_wannier_centre_flow_refined():
     Tests the calculation of the wannier centre flow but with a refined mesh.
     """
     
-    file = open("./examples/Bi111.txt", "r")
-    config = parse_config_file(file)
-    
-    model = SlaterKoster(config)
-    model.initialize_hamiltonian()
-    
-    wcc = calculate_wannier_centre_flow(model, 5)
-    
-    wcc_hash = hash_numpy_array(wcc)
-    
-    assert math.isclose(wcc_hash, 22.862526000000003)
+    path = Path(__file__).parent / ".." / "examples" / "inputs" / "Bi111.txt"
+    with open(path) as fp:
+        config = parse_config_file(fp)
+        
+        model = SlaterKoster(config)
+        model.initialize_hamiltonian()
+        
+        wcc = calculate_wannier_centre_flow(model, 5)
+        
+        wcc_hash = hash_numpy_array(wcc)
+        
+        assert math.isclose(wcc_hash, 22.862526000000003)
             
 
 def test_z2_invariant():
@@ -51,16 +54,17 @@ def test_z2_invariant():
     Tests the z2 invariant calculation algorithm.
     """
     
-    file = open("./examples/Bi111.txt", "r")
-    config = parse_config_file(file)
+    path = Path(__file__).parent / ".." / "examples" / "inputs" / "Bi111.txt"
+    with open(path) as fp:
+        config = parse_config_file(fp)
     
-    model = SlaterKoster(config)
-    model.initialize_hamiltonian()
-    
-    wcc = calculate_wannier_centre_flow(model, 10, refine_mesh=False)
-    z2 = calculate_z2_invariant(wcc)
-    
-    assert z2 == 1
+        model = SlaterKoster(config)
+        model.initialize_hamiltonian()
+        
+        wcc = calculate_wannier_centre_flow(model, 10, refine_mesh=False)
+        z2 = calculate_z2_invariant(wcc)
+        
+        assert z2 == 1
     
 
 def test_z2_phase_diagram():
@@ -68,24 +72,25 @@ def test_z2_phase_diagram():
     Tests that the z2 invariant calculation algorithm works to determine a phase diagram, changing the spin-orbit coupling.
     """
     
-    file = open("./examples/Bi111.txt", "r")
-    config = parse_config_file(file)
+    path = Path(__file__).parent / ".." / "examples" / "inputs" / "Bi111.txt"
+    with open(path) as fp:
+        config = parse_config_file(fp)
     
-    model = SlaterKoster(config)
-    model.initialize_hamiltonian()
-    
-    wcc = calculate_wannier_centre_flow(model, 10, refine_mesh=False)
-    z2 = calculate_z2_invariant(wcc)
-    
-    assert z2 == 1
-    
-    model.configuration["Spin-orbit coupling"][0] = 0.5
-    model.initialize_hamiltonian()
-    
-    wcc = calculate_wannier_centre_flow(model, 10, refine_mesh=False)
-    z2 = calculate_z2_invariant(wcc)
-    
-    assert z2 == 0
+        model = SlaterKoster(config)
+        model.initialize_hamiltonian()
+        
+        wcc = calculate_wannier_centre_flow(model, 10, refine_mesh=False)
+        z2 = calculate_z2_invariant(wcc)
+        
+        assert z2 == 1
+        
+        model.configuration["Spin-orbit coupling"][0] = 0.5
+        model.initialize_hamiltonian()
+        
+        wcc = calculate_wannier_centre_flow(model, 10, refine_mesh=False)
+        z2 = calculate_z2_invariant(wcc)
+        
+        assert z2 == 0
     
     
 def test_chern_wcc():
@@ -141,16 +146,17 @@ def test_partition_plane():
     Tests generation of two partitions of the system according to a given plane.
     """
     
-    file = open("./examples/Bi111.txt", "r")
-    config = parse_config_file(file)
+    path = Path(__file__).parent / ".." / "examples" / "inputs" / "Bi111.txt"
+    with open(path) as fp:
+        config = parse_config_file(fp)
     
-    model = SlaterKoster(config).reduce(n1=10)
-    model.initialize_hamiltonian()
-    
-    plane = [0, 1, 0, np.max(model.motif[:, 1]/2)]
-    partition = specify_partition_plane(model, plane)
+        model = SlaterKoster(config).reduce(n1=10)
+        model.initialize_hamiltonian()
         
-    assert np.allclose(partition, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+        plane = [0, 1, 0, np.max(model.motif[:, 1]/2)]
+        partition = specify_partition_plane(model, plane)
+            
+        assert np.allclose(partition, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
     
 
 def test_entanglement_spectrum():
@@ -158,18 +164,19 @@ def test_entanglement_spectrum():
     Tests calculation of the entanglement spectrum from a spatial partition of a system.
     """
     
-    file = open("./examples/Bi111.txt", "r")
-    config = parse_config_file(file)
+    path = Path(__file__).parent / ".." / "examples" / "inputs" / "Bi111.txt"
+    with open(path) as fp:
+        config = parse_config_file(fp)
     
-    model = SlaterKoster(config).reduce(n1=5)
-    model.initialize_hamiltonian()
-    
-    plane = [0, 1, 0, np.max(model.motif[:, 1]/2)]
-    partition = specify_partition_plane(model, plane)
-    entanglement = entanglement_spectrum(model, partition)
-    
-    entanglement_hash = hash_numpy_array(entanglement)
-    
-    assert math.isclose(entanglement_hash, 19.351744089214876)
+        model = SlaterKoster(config).reduce(n1=5)
+        model.initialize_hamiltonian()
+        
+        plane = [0, 1, 0, np.max(model.motif[:, 1]/2)]
+        partition = specify_partition_plane(model, plane)
+        entanglement = entanglement_spectrum(model, partition)
+        
+        entanglement_hash = hash_numpy_array(entanglement)
+        
+        assert math.isclose(entanglement_hash, 19.351744089214876)
             
     

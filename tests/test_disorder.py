@@ -19,7 +19,7 @@ def test_amorphize():
     
     np.random.seed(1)
     
-    path = Path(__file__).parent / ".." / "examples" / "Bi111.txt"
+    path = Path(__file__).parent / ".." / "examples" / "inputs" / "Bi111.txt"
     with open(path) as fp:
         config = parse_config_file(fp)
     
@@ -38,7 +38,7 @@ def test_vacancies():
     
     np.random.seed(1)
     
-    path = Path(__file__).parent / ".." / "examples" / "Bi111.txt"
+    path = Path(__file__).parent / ".." / "examples" / "inputs" / "Bi111.txt"
     with open(path) as fp:
         config = parse_config_file(fp)
     
@@ -57,7 +57,7 @@ def test_impurities():
     
     np.random.seed(1)
     
-    path = Path(__file__).parent / ".." / "examples" / "hBN.txt"
+    path = Path(__file__).parent / ".." / "examples" / "inputs" / "hBN.txt"
     with open(path) as fp:
         config = parse_config_file(fp)
     
