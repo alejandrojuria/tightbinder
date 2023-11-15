@@ -4,6 +4,7 @@ from tightbinder.fileparse import parse_config_file
 from tightbinder.utils import hash_numpy_array
 import numpy as np
 import math
+from pathlib import Path
 
 
 """
@@ -18,15 +19,16 @@ def test_amorphize():
     
     np.random.seed(1)
     
-    file = open("./examples/Bi111.txt", "r")
-    config = parse_config_file(file)
+    path = Path(__file__).parent / ".." / "examples" / "Bi111.txt"
+    with open(path) as fp:
+        config = parse_config_file(fp)
     
-    model = SlaterKoster(config).supercell(n1=2, n2=2)
-    model = amorphize(model, 0.2)
+        model = SlaterKoster(config).supercell(n1=2, n2=2)
+        model = amorphize(model, 0.2)
     
-    motif_hash = hash_numpy_array(model.motif)
+        motif_hash = hash_numpy_array(model.motif)
         
-    assert math.isclose(motif_hash, 322.32157833573854)
+        assert math.isclose(motif_hash, 322.32157833573854)
         
 
 def test_vacancies():
@@ -36,15 +38,16 @@ def test_vacancies():
     
     np.random.seed(1)
     
-    file = open("./examples/Bi111.txt", "r")
-    config = parse_config_file(file)
+    path = Path(__file__).parent / ".." / "examples" / "Bi111.txt"
+    with open(path) as fp:
+        config = parse_config_file(fp)
     
-    model = SlaterKoster(config).supercell(n1=2, n2=2)
-    model = introduce_vacancies(model, 0.2)
+        model = SlaterKoster(config).supercell(n1=2, n2=2)
+        model = introduce_vacancies(model, 0.2)
     
-    motif_hash = hash_numpy_array(model.motif)
+        motif_hash = hash_numpy_array(model.motif)
         
-    assert math.isclose(motif_hash, 171.9359264901)
+        assert math.isclose(motif_hash, 171.9359264901)
     
 
 def test_impurities():
@@ -54,18 +57,17 @@ def test_impurities():
     
     np.random.seed(1)
     
-    file = open("./examples/hBN.txt", "r")
-    config = parse_config_file(file)
+    path = Path(__file__).parent / ".." / "examples" / "hBN.txt"
+    with open(path) as fp:
+        config = parse_config_file(fp)
     
-    model = SlaterKoster(config).supercell(n1=2)
-    model.initialize_hamiltonian()
+        model = SlaterKoster(config).supercell(n1=2)
+        model.initialize_hamiltonian()
     
-    model = introduce_impurities(model, 10, 0.9)
+        model = introduce_impurities(model, 10, 0.9)
     
-    hamiltonian_hash = np.real(hash_numpy_array(model.hamiltonian[0]))
+        hamiltonian_hash = np.real(hash_numpy_array(model.hamiltonian[0]))
         
-    assert math.isclose(hamiltonian_hash, 431.73999999999995)
-    
-    
+        assert math.isclose(hamiltonian_hash, 431.73999999999995)
     
     
