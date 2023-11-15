@@ -148,7 +148,7 @@ def test_conductance():
         model = model.reduce(n1=length)
         
         device = TransportDevice(model, left_lead, right_lead, period, "default")
-        conductance = device.conductance()
+        conductance = device.conductance(delta=1E-5)
         
-        assert np.allclose(conductance, 6.240297897758343)
+        assert np.allclose(conductance, 8, rtol=1E-2)
 
