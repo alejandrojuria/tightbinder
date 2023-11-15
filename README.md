@@ -56,8 +56,12 @@ pip install .
 ```
 
 ## Documentation
-The documentation can be accessed [online](https://tightbinder.readthedocs.io/en/latest/). To build it, you must have installed GNU Make and the library itself. 
-To do so, ```cd docs/``` and first install the required dependencies with ```pip install -r requirements.txt```. Then, run ```make html``` to build the documentation. It will be created in ```docs/build/html```, and can be accessed through ```index.html```.
+The documentation can be accessed [online](https://tightbinder.readthedocs.io/en/latest/). To build it, you must have installed GNU Make and the library itself. Additional requirements to build documentation can be installed by specifying docs qualifier when installing tightbinder
+```
+cd {path}/tightbinder
+pip install ".[docs]"
+```
+Then, ```cd docs/``` and then, run ```make html``` to build the documentation. It will be created in ```docs/build/html```, and can be accessed through ```index.html```.
 
 ## Contributing
 The library is still under development as new features and optimizations are added. Therefore, any kind of contribution is welcome, from completing the documentation, bug fixing, adding new features or reporting bugs of the library.

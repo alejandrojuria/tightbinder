@@ -26,6 +26,17 @@ dependencies = [
 "Homepage" = "https://github.com/alejandrojuria/tightbinder"
 "Bug Reports" = "https://github.com/alejandrojuria/tightbinder/issues"
 
+[project.optional-dependencies]
+tests = [
+  "pytest"
+]
+docs = [
+  "sphinx",
+  "pydata-sphinx-theme",
+  "sphinx-autodoc-typehints",
+  "sphinx_rtd_theme"
+]
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
