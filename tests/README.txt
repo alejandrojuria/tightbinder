@@ -1,2 +1,2 @@
-To run the tests, it is necessary to have the library installed ('$ pip install .' from the root of the project) and also have 'pytest' installed. It can be installed with '$ pip install pytest'.
-Then, the tests can be run with '$ pytest' from the root folder.
+To run the tests, it is necessary to have the library installed ('$ pip install .' from the root of the project) and also have 'pytest' installed. 
+This dependency can be installed with '$ pip install .[tests]'. Then, the tests can be run with '$ pytest' from the root folder.
