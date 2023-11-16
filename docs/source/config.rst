@@ -7,7 +7,7 @@ different chemical species present, the orbitals for each different type of atom
 of valid configuration files can be found under the folder ``/examples`` in the repository, and are also present in the :doc:`Materials <../materials/index>` section. 
 Here we go over the different fields expected in the configuration files, as well as the syntaxis used.
 
-The configuration files are defined using the `YAML`<https://en.wikipedia.org/wiki/YAML>_ format. This format allows to write the configuration files with a structure
+The configuration files are defined using the `YAML<https://en.wikipedia.org/wiki/YAML>`_ format. This format allows to write the configuration files with a structure
 matching the interal storage of the information (this is, a dictionary), also in a readable way for humans. 
 Each field is defined by a keyword, followed by a colon and the corresponding value(s).
 When a field denotes some kind of list, there are two forms to write it: either by enclosing the elements in square brackets and separating them by commas, or by
@@ -125,7 +125,7 @@ the number of :math:`k` points has to be specified manually (which can be a refe
 
 .. code-block::
 
-    [High symmetry points]
+    [SymmetryPoints]
 
 Label of points which make the path to evalute the bands of the system. Only used automatically when plotting the bands with ``tightbinder/main.py``.
 As with ``Mesh``, one has to specify manually the high symmetry points when using the library; nevertheless in this case it is usually useful to write them 
