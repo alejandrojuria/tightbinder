@@ -3,11 +3,12 @@ from tightbinder.fileparse import parse_config_file
 from tightbinder.topology import calculate_wannier_centre_flow, calculate_z2_invariant
 import matplotlib.pyplot as plt
 import numpy as np
+from pathlib import Path
 
 def main():
     # Parse configuration file
-    file = open("./examples/Bi111.txt", "r")
-    config = parse_config_file(file)
+    path = Path(__file__).parent / ".." / "examples" / "inputs" / "Bi111.yaml"
+    config = parse_config_file(path)
 
     # Init. model
     model = SlaterKoster(config)
@@ -19,7 +20,7 @@ def main():
     soc_values = np.linspace(0.1, 2, 30)
     for soc in soc_values:
 
-        model.configuration["Spin-orbit coupling"][0] = soc
+        model.configuration["SOC"][0] = soc
         model.initialize_hamiltonian()
 
         # Compute and store Z2 invariant

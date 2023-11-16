@@ -3,6 +3,7 @@ from tightbinder.fileparse import parse_config_file
 from tightbinder.observables import dos_kpm
 import matplotlib.pyplot as plt
 import numpy as np
+from pathlib import Path
 
 def main():
     
@@ -10,8 +11,8 @@ def main():
     np.random.seed(1)
 
     # Parse configuration file and init. model
-    file = open("./examples/hBN.txt", "r")
-    config = parse_config_file(file)
+    path = Path(__file__).parent / ".." / "examples" / "inputs" / "hBN.yaml"
+    config = parse_config_file(path)
 
     ncells = 25
     model = SlaterKoster(config).supercell(n1=ncells, n2=ncells)

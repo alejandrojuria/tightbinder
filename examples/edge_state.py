@@ -4,7 +4,6 @@ from tightbinder.disorder import amorphize
 import matplotlib.pyplot as plt
 import numpy as np
 
-
 def main():
 
     # Declaration of parameters of the model

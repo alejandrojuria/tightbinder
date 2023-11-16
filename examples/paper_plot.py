@@ -7,18 +7,21 @@ from tightbinder.observables import TransportDevice
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.gridspec import GridSpec
+from pathlib import Path
 
-plt.rcParams.update({
+USE_LATEX = False
+if USE_LATEX:
+    plt.rcParams.update({
     "text.usetex": True,
     "font.family": "serif",
         'text.latex.preamble': r'\usepackage{amsfonts}'
-})
+    })
 fontsize = 20
 
 def ribbon(ax):
 
-    file = open("./examples/Bi111.txt", "r")
-    config = parse_config_file(file)
+    path = Path(__file__).parent / ".." / "examples" / "inputs" / "Bi111.yaml"
+    config = parse_config_file(path)
 
     ncells = 12
 
@@ -34,8 +37,8 @@ def ribbon(ax):
 def wannier(ax):
 
     # Parse configuration file
-    file = open("./examples/Bi111.txt", "r")
-    config = parse_config_file(file)
+    path = Path(__file__).parent / ".." / "examples" / "inputs" / "Bi111.yaml"
+    config = parse_config_file(path)
 
     # Init. model and Hamiltonian
     model = SlaterKoster(config)
@@ -53,8 +56,8 @@ def wannier(ax):
 
 def phase_diagram(ax):
     # Parse configuration file
-    file = open("./examples/Bi111.txt", "r")
-    config = parse_config_file(file)
+    path = Path(__file__).parent / ".." / "examples" / "inputs" / "Bi111.yaml"
+    config = parse_config_file(path)
 
     # Init. model
     model = SlaterKoster(config)
@@ -66,7 +69,7 @@ def phase_diagram(ax):
     soc_values = np.linspace(0.0, 2, 20)
     for soc in soc_values:
 
-        model.configuration["Spin-orbit coupling"][0] = soc
+        model.configuration["SOC"][0] = soc
         model.initialize_hamiltonian()
 
         # Compute and store Z2 invariant
@@ -108,10 +111,10 @@ def edge_state(ax):
     # Declaration of parameters of the model
     np.random.seed(1)
     disorder = 0.1
-    ncells = 15
+    ncells = 10 # Set to 15 to reproduce paper figure
 
-    file = open("./examples/Bi111.txt", "r")
-    config = parse_config_file(file)
+    path = Path(__file__).parent / ".." / "examples" / "inputs" / "Bi111.yaml"
+    config = parse_config_file(path)
 
     # Init. model
     model = AmorphousSlaterKoster(config, r=4.2837).ribbon(width=int(ncells/1.5))
@@ -144,8 +147,8 @@ def transport(ax1, ax2):
     length, width = 10, 6
 
     # Parse configuration file
-    file = open("./examples/Bi111.txt", "r")
-    config = parse_config_file(file)
+    path = Path(__file__).parent / ".." / "examples" / "inputs" / "Bi111.yaml"
+    config = parse_config_file(path)
 
     # Init. model
     model = SlaterKoster(config).ribbon(width=width, orientation="vertical")
@@ -179,9 +182,12 @@ def transport(ax1, ax2):
     # Create the transport device and compute the transmission
     device = TransportDevice(model, left_lead, right_lead, period, "default")
     # trans, energy = device.transmission(-2, 2, 200)
+    
+    pathtransmission = Path(__file__).parent / "transmission"
+    pathenergy = Path(__file__).parent / "energy"
 
-    trans = np.loadtxt("transmission")
-    energy = np.loadtxt("energy")
+    trans = np.loadtxt(pathtransmission)
+    energy = np.loadtxt(pathenergy)
 
     ax2.plot(energy - ef, trans, 'k-')
     ax2.set_ylabel(r"$T(E)$", fontsize=fontsize)
@@ -234,6 +240,7 @@ if __name__ == "__main__":
     edge_state(ax3)
     transport("ff", ax4)
 
+
     linewidth = 1.5
     for axis in ax:
         for side in ['top','bottom','left','right']:
@@ -258,7 +265,7 @@ if __name__ == "__main__":
     ax4.text(0.05, 0.9, "(e)", transform=ax4.transAxes, horizontalalignment='center',
      verticalalignment='center', fontsize=fontsize/1.5)
     
-    plt.savefig("paper_plot.png", dpi=500, bbox_inches="tight")
+    # plt.savefig("paper_plot.png", dpi=500, bbox_inches="tight")
 
     plt.show()
 

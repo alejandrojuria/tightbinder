@@ -4,6 +4,7 @@ from tightbinder.fileparse import parse_config_file
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 import numpy as np
+from pathlib import Path
 
 def main():
 
@@ -19,8 +20,8 @@ def main():
     ax = [ax0, ax1, ax2]
 
     # Parse configuration file
-    file = open("examples/chain.txt", "r")
-    config = parse_config_file(file)
+    path = Path(__file__).parent / ".." / "examples" / "inputs" / "chain.yaml"
+    config = parse_config_file(path)
 
     # Init. model
     model = SlaterKoster(config)
