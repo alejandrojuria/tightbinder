@@ -10,19 +10,20 @@ Band structure from configuration file
     from tightbinder.models import SlaterKoster
     from tightbinder.fileparse import parse_config_file
     import matplotlib.pyplot as plt
+    from pathlib import Path
 
     def main():
 
         # Open and read configuration file
-        file = open("./examples/hBN.txt", "r")
-        config = parse_config_file(file)
+        path = Path(__file__).parent / ".." / "examples" / "inputs" / "hBN.yaml"
+        config = parse_config_file(path)
 
         # Initialize model
         model = SlaterKoster(config)
 
         # Generate reciprocal path to evaluate the bands
         nk = 100
-        labels = config["High symmetry points"]
+        labels = config["SymmetryPoints"]
         kpoints = model.high_symmetry_path(nk, labels)
 
         # Initialize and solve Bloch Hamiltonian

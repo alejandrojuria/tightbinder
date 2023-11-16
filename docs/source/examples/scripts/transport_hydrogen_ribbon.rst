@@ -13,6 +13,7 @@ as well as the visualization of the device itself.
     import matplotlib.pyplot as plt
     from matplotlib.gridspec import GridSpec
     import numpy as np
+    from pathlib import Path
 
     def main():
 
@@ -28,8 +29,8 @@ as well as the visualization of the device itself.
         ax = [ax0, ax1, ax2]
 
         # Parse configuration file
-        file = open("examples/chain.txt", "r")
-        config = parse_config_file(file)
+        path = Path(__file__).parent / ".." / "examples" / "inputs" / "chain.yaml"
+        config = parse_config_file(path)
 
         # Init. model
         model = SlaterKoster(config)
@@ -62,7 +63,6 @@ as well as the visualization of the device itself.
 
         # Finally set a finite ribbon to which we attach the leads
         model = model.reduce(n1=length)
-        model.matrix_type = "sparse"
 
         # Create the transport device and compute the transmission
         device = TransportDevice(model, left_lead, right_lead, period, "default")

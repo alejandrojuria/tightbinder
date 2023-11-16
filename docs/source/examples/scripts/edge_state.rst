@@ -10,7 +10,6 @@ Visualization of an edge state
     import matplotlib.pyplot as plt
     import numpy as np
 
-
     def main():
 
         # Declaration of parameters of the model

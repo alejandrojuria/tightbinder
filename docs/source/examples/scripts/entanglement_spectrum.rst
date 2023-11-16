@@ -15,13 +15,14 @@ one of the partitions of the system.
     from tightbinder.topology import specify_partition_plane, entanglement_spectrum, plot_entanglement_spectrum
     import matplotlib.pyplot as plt
     import numpy as np
+    from pathlib import Path
 
     def main():
 
         # Parse configuration file
-        file = open("./examples/Bi111.txt", "r")
-        config = parse_config_file(file)
-
+        path = Path(__file__).parent / ".." / "examples" / "inputs" / "Bi111.yaml"
+        config = parse_config_file(path)
+        
         # Init. model and build ribbon
         width = 7
         model = SlaterKoster(config).reduce(n1=width)

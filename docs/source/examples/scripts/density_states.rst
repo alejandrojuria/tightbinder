@@ -18,12 +18,13 @@ over all energies is the number of bands:
     from tightbinder.observables import dos
     import matplotlib.pyplot as plt
     import numpy as np
+    from pathlib import Path
 
     def main():
         
         # Parse configuration file and init. model
-        file = open("./examples/hBN.txt", "r")
-        config = parse_config_file(file)
+        path = Path(__file__).parent / ".." / "examples" / "inputs" / "hBN.yaml"
+        config = parse_config_file(path)
         model = SlaterKoster(config)
 
         # Create k point mesh of the Brillouin zone

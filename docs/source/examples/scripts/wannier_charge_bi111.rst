@@ -8,12 +8,13 @@ Z2 invariant from evolution of Wannier charge centers
     from tightbinder.fileparse import parse_config_file
     from tightbinder.topology import calculate_wannier_centre_flow, plot_wannier_centre_flow, calculate_z2_invariant
     import matplotlib.pyplot as plt
+    from pathlib import Path
 
     def main():
 
         # Parse configuration file
-        file = open("./examples/Bi111.txt", "r")
-        config = parse_config_file(file)
+        path = Path(__file__).parent / ".." / "examples" / "inputs" / "Bi111.yaml"
+        config = parse_config_file(path)
 
         # Init. model and Hamiltonian
         model = SlaterKoster(config)
