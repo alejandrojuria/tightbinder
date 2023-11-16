@@ -4,10 +4,9 @@ from tightbinder.disorder import amorphize
 from tightbinder.utils import hash_numpy_array
 import numpy as np
 import math
-import matplotlib.pyplot as plt
 from pathlib import Path
 
-
+INPUT_FILE_DIR = Path(__file__).parent / ".." / "examples" / "inputs"
 """
 This file constains tests for the main classes of the library, i.e. SlaterKoster and AmorphousSlaterKoster.
 This also serves to test the base classes System and Crystal, which are inherited by the former.
@@ -20,48 +19,47 @@ def test_configuration_parsing():
     Function to test the parsing of a configuration file.
     """
 
-    path = Path(__file__).parent / ".." / "examples" / "inputs" / "hBN.txt"
-    with open(path) as fp:
-        config = parse_config_file(fp)
+    path = INPUT_FILE_DIR / "hBN.yaml"
+    config = parse_config_file(path)
 
-        assert config['Dimensionality'] == 2
-        
-        assert len(config['Bravais lattice']) == 2
-        assert config['Bravais lattice'][0] == [2.16506, 1.25, 0.0]
-        assert config['Bravais lattice'][1] == [2.16506, -1.25, 0.0]
-        
-        assert config['Species'] == 2
-        
-        assert len(config['Motif']) == 2
-        assert config['Motif'][0] == [0, 0, 0, 0]
-        assert config['Motif'][1] == [1.443376, 0, 0, 1]
-        
-        assert len(config['Filling']) == 2
-        assert config['Filling'][0] == 0.5
-        assert config['Filling'][1] == 0.5
-        
-        assert len(config['Orbitals']) == 2
-        assert config['Orbitals'][0] == ['s']
-        assert config['Orbitals'][1] == ['s']
-        
-        assert len(config['Onsite energy']) == 2
-        assert config['Onsite energy'][0] == [3.625]
-        assert config['Onsite energy'][0] == [3.625]
-        
-        assert len(config['SK amplitudes'].keys()) == 1
-        assert config['SK amplitudes']['1']['01'] == [-2.3, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        
-        assert config['Spin'] == False 
-        
-        assert len(config['Spin-orbit coupling']) == 2
-        assert config['Spin-orbit coupling'][0] == 0
-        assert config['Spin-orbit coupling'][1] == 0
-        
-        assert len(config['Mesh']) == 2
-        assert config['Mesh'][0] == 100
-        assert config['Mesh'][1] == 100
-        
-        assert config['High symmetry points'] == ['G', "K", 'M', "G"]
+    assert config['Dimensions'] == 2
+    
+    assert len(config['Lattice']) == 2
+    assert config['Lattice'][0] == [2.16506, 1.25, 0.0]
+    assert config['Lattice'][1] == [2.16506, -1.25, 0.0]
+    
+    assert len(config['Species']) == 2
+    
+    assert len(config['Motif']) == 2
+    assert config['Motif'][0] == [0, 0, 0, 0]
+    assert config['Motif'][1] == [1.443376, 0, 0, 1]
+    
+    assert len(config['Filling']) == 2
+    assert config['Filling'][0] == 0.5
+    assert config['Filling'][1] == 0.5
+    
+    assert len(config['Orbitals']) == 2
+    assert config['Orbitals'][0] == ['s']
+    assert config['Orbitals'][1] == ['s']
+    
+    assert len(config['OnsiteEnergy']) == 2
+    assert config['OnsiteEnergy'][0] == [3.625]
+    assert config['OnsiteEnergy'][0] == [3.625]
+    
+    assert len(config['SKAmplitudes'].keys()) == 1
+    assert config['SKAmplitudes']['1']['01'] == [-2.3, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    
+    assert config['Spin'] == False 
+    
+    assert len(config['SOC']) == 2
+    assert config['SOC'][0] == 0
+    assert config['SOC'][1] == 0
+    
+    assert len(config['Mesh']) == 2
+    assert config['Mesh'][0] == 100
+    assert config['Mesh'][1] == 100
+    
+    assert config['SymmetryPoints'] == ['G', "K", 'M', "G"]
     
 
 def build_slaterkoster() -> SlaterKoster:
@@ -69,11 +67,9 @@ def build_slaterkoster() -> SlaterKoster:
     Function to build a SlaterKoster model from the configuration file.
     """
     
-    path = Path(__file__).parent / ".." / "examples" / "inputs" / "hBN.txt"
-    fp = open(path)
-    
-    config = parse_config_file(fp)
-    
+    path = INPUT_FILE_DIR / "hBN.yaml"
+    config = parse_config_file(path)
+        
     model = SlaterKoster(config)
     
     return model
@@ -273,21 +269,20 @@ def test_soc_bands():
     Tests that SOC is correctly implemented.
     """
     
-    path = Path(__file__).parent / ".." / "examples" / "inputs" / "Bi111.txt"
-    with open(path) as fp:
-        config = parse_config_file(fp)
+    path = INPUT_FILE_DIR / "Bi111.yaml"
+    config = parse_config_file(path)
+
+    model = SlaterKoster(config)
+    model.initialize_hamiltonian()
     
-        model = SlaterKoster(config)
-        model.initialize_hamiltonian()
+    kpoints = model.high_symmetry_path(10, ['G', 'K', 'M', 'G'])
+    results = model.solve(kpoints)
         
-        kpoints = model.high_symmetry_path(10, ['G', 'K', 'M', 'G'])
-        results = model.solve(kpoints)
-            
-        results.rescale_bands_to_fermi_level()
+    results.rescale_bands_to_fermi_level()
+    
+    energies_hash = hash_numpy_array(results.eigen_energy)
         
-        energies_hash = hash_numpy_array(results.eigen_energy)
-            
-        assert math.isclose(energies_hash, 5155.652053621002)
+    assert math.isclose(energies_hash, 5155.652053621002)
     
 
 def test_edge_bands():
@@ -295,21 +290,20 @@ def test_edge_bands():
     Tests that edge bands appear on the band structure of the ribbon of a topological insulator.
     """
     
-    path = Path(__file__).parent / ".." / "examples" / "inputs" / "Bi111.txt"
-    with open(path) as fp:
-        config = parse_config_file(fp)
+    path = INPUT_FILE_DIR / "Bi111.yaml"
+    config = parse_config_file(path)
     
-        model = SlaterKoster(config).reduce(n1=5)
-        model.initialize_hamiltonian()
+    model = SlaterKoster(config).reduce(n1=5)
+    model.initialize_hamiltonian()
+    
+    kpoints = model.high_symmetry_path(10, ['K', 'G', 'K'])
+    results = model.solve(kpoints)
         
-        kpoints = model.high_symmetry_path(10, ['K', 'G', 'K'])
-        results = model.solve(kpoints)
+    results.rescale_bands_to_fermi_level()
+    
+    energies_hash = hash_numpy_array(results.eigen_energy)
             
-        results.rescale_bands_to_fermi_level()
-        
-        energies_hash = hash_numpy_array(results.eigen_energy)
-                
-        assert math.isclose(energies_hash, 29453.85050171607)
+    assert math.isclose(energies_hash, 29453.85050171607)
     
 
 def test_amorphous_slater_koster():
@@ -324,9 +318,8 @@ def test_amorphous_slater_koster():
     disorder = 0.1
 
     # Parse configuration file
-    path = Path(__file__).parent / ".." / "examples" / "inputs" / "Bi111.txt"
-    fp = open(path)
-    config = parse_config_file(fp)
+    path = INPUT_FILE_DIR / "Bi111.yaml"
+    config = parse_config_file(path)
 
     # Init. model and construct supercell
     first_neighbour_distance = np.linalg.norm(config["Motif"][1][:3])
