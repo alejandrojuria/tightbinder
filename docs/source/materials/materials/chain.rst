@@ -22,16 +22,16 @@ per unit cell must be an integer. The configuration file is:
     SystemName: Test chain
     Dimensions: 1
     Lattice: 
-    - [1.0, 0.0, 0.0]
+      - [1.0, 0.0, 0.0]
     Species: H
     Motif:
-    - [0.0, 0.0, 0.0, 0]
+      - [0.0, 0.0, 0.0, 0]
     Filling: 1
     Orbitals: s
     OnsiteEnergy:
-    - 1
+      - 1
     SKAmplitudes: 
-    - (0, 0) -0.3
+      - (0, 0) -0.3
     Spin: True
     SOC: 0
     Mesh: 200
