@@ -7,8 +7,17 @@ different chemical species present, the orbitals for each different type of atom
 of valid configuration files can be found under the folder ``/examples`` in the repository, and are also present in the :doc:`Materials <../materials/index>` section. 
 Here we go over the different fields expected in the configuration files, as well as the syntaxis used.
 
-The configuration files are defined in terms of fields. Each field begins with the # character, and must be within those specified next. In fields with 
-multiple values (e.g. vectors), the numbers must be separated by a single space, or instead by a comma or a semicolon.
+The configuration files are defined using the ![YAML](https://en.wikipedia.org/wiki/YAML) format. This format allows to write the configuration files with a structure
+matching the interal storage of the information (this is, a dictionary), also in a readable way for humans. 
+Each field is defined by a keyword, followed by a colon and the corresponding value(s).
+When a field denotes some kind of list, there are two forms to write it: either by enclosing the elements in square brackets and separating them by commas, or by
+writing each element on a different line, starting with a hyphen.
+Note that since this is YAML file, there are several ways to write the same information (as we saw now for arrays). We recommend to follow the example inputs provided
+to build the configuration files, and optionally to read how the YAML format works to have a deeper understanding.
+
+.. warning::
+
+    The YAML format only works with spaces, and not with tabs. Files can have any form of indentation, as long as it is consistent and only uses spaces.
 
 .. tip::
 
@@ -20,21 +29,22 @@ The expected input depends on the specific field, which we describe in the follo
 
 .. code-block:: 
 
-    System name
+    SystemName
 
 Name of the system, used mainly to write the system name in the title of plots.
 
 .. code-block:: 
 
-    Dimensionality
+    Dimensions
 
 Dimension of the system, must be a number between 0 and 3. It must match the number of Bravais vectors present.
 
 .. code-block:: 
 
-    Bravais lattice
+    Lattice
 
-Each row corresponds to one vector of the basis (vectors have to be in :math:`\mathbb{R}^3`).
+Bravais lattice of the system; each row corresponds to one vector of the basis (vectors have to be in :math:`\mathbb{R}^3`).
+Each vector has to be given in form ``[x, y, z]``, with the three components separated by commas and enclosed in square brackets.
 For 1D and 2D systems, the z (third) component must be zero (z should always be regarded as height component). Number of vectors must match the 
 dimension of the system.
 
@@ -42,39 +52,43 @@ dimension of the system.
 
     Species
 
-Number of different chemical species.
+Symbols used to denote the different chemical species present in the system, e.g. ``[B, N]``. They must be separated by commas and enclosed by brackets.
+If there is only one, the square brackets can be omitted.
 
 .. code-block:: 
 
     Motif
 
 Each row corresponds to one vector of the basis, where the first three numbers are the coordinates and the fourth number denotes the atomic species.
-Numbering of species starts at 0.
+Numbering of species starts at 0. As with the Bravais lattice, each vector has to be given in form ``[x, y, z, species]``, with the four components separated by commas and enclosed in square brackets.
 
 .. code-block:: 
 
     Orbitals
 
 The Slater-Koster description is based on cubic harmonic orbitals. The possible orbitals are: s, px, py, pz, dxy, dyz, dzx, dx2-y2, d3z2-r2.
-They can be specified in any order, and each row specifies the orbitals for each chemical species.
+They can be specified in any order, and each row specifies the orbitals for each chemical species. The orbitals can be separated using spaces, commas or both.
 
 .. code-block::
 
     Filling
 
-Specify number of electrons per chemical species; one line per species. 
+Specify number of electrons per chemical species; one value per species following the YAML syntax
+for lists. If there is only one, it can be written directly.
 Fillings can be fractional, but the total number of electons in unit cell must be an integer.
 
 .. code-block::
 
-    Onsite energy
+    OnsiteEnergy
 
-We must specify the onsite energy of each orbital.
-In case of having several atomic species multiple line must be specified, one for each element.
+Used to specify the onsite energy of each orbital of each species.
+In case of having several atomic species multiple lines must be specified, one per species.
+For each line, the onsite energies are specified following the YAML format for lists.
+If there is only one value per species, it can be written without brackets.
 
 .. code-block::
     
-    SK amplitudes
+    SKAmplitudes
  
 As opposed to the orbitals, for the hopping or Slater-Koster amplitudes the order is fixed: 
 Vsss, Vsps, Vpps, Vppp, Vsds, Vpds, Vpdp, Vdds, Vddp, Vddd (separated by spaces).
@@ -96,7 +110,9 @@ NOTE: True or False must be capitalized to follow Python naming.
     [Spin-orbit coupling]
 
 Using a non-zero value of spin-orbit coupling will automatically produce a spinful model, i.e. it sets 
-the ``spin`` option to ``True`` even if it was set to ``False`` before. The amplitudes must be specified for all species, one line per species.
+the ``spin`` option to ``True`` even if it was set to ``False`` before. The amplitudes must be specified for all species, one value per species following the YAML syntax
+for lists.
+If there is only one value, it can be written without brackets.
 
 
 .. code-block::
@@ -113,4 +129,5 @@ the number of :math:`k` points has to be specified manually (which can be a refe
 
 Label of points which make the path to evalute the bands of the system. Only used automatically when plotting the bands with ``tightbinder/main.py``.
 As with ``Mesh``, one has to specify manually the high symmetry points when using the library; nevertheless in this case it is usually useful to write them 
-in the configuration file and simply read them when generating the reciprocal path.
+in the configuration file and simply read them when generating the reciprocal path. As opposed to the ``Species`` field, the high symmetry points 
+do not have to be separated by commas and enclosed in square brackets; they have to be written in the same line separated by spaces, commas or both.
