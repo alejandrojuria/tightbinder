@@ -512,7 +512,7 @@ class TransportDevice:
         """
 
 
-        max_nn = max(int(value) for value in self.system.configuration["SK amplitudes"].keys())
+        max_nn = max(int(value) for value in self.system.configuration["SKAmplitudes"].keys())
         device_motif = np.concatenate((self.left_lead, self.system.motif, self.right_lead))
         model_device = deepcopy(self.system)
         model_device.matrix_type = "sparse"

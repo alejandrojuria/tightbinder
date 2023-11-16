@@ -319,7 +319,9 @@ class Spectrum:
         unoccupied state (midgap for insulators and approximately last filled for metals).
         
         :param filling: Total number of electrons in the system.
-        :param bottom: Whether to set Fermi energy at maximum of valence band. Defaults to True.
+        :param bottom: Whether to set Fermi energy at maximum of valence band, or 
+            in the middle between the valence band maximum and the next state (usually the conduction 
+            band minimum). Defaults to True.
         :return: Value of Fermi energy.
         """
         

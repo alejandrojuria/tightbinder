@@ -6,6 +6,8 @@ from io import TextIOWrapper
 import re
 from tightbinder.utils import pretty_print_dictionary
 from typing import List
+import yaml
+from numbers import Number
 
 def parse_raw_arguments(file: TextIOWrapper) -> dict:
     """ 
@@ -66,46 +68,23 @@ def shape_arguments(arguments: dict) -> dict:
     """
 
     for arg in arguments:
-        if arg == 'System name':
-            try:
-                arguments[arg] = arguments[arg][0]
-            except IndexError as e:
-                print(f'{type(e).__name__}: No system name given')
-                raise
-
-        elif arg in ['Dimensionality', 'Species']:
-            try:
-                arguments[arg] = int(arguments[arg][0])
-            except IndexError as e:
-                print(f'{type(e).__name__}: No {arg} given')
-                raise
-            except ValueError as e:
-                print(f'{type(e).__name__}: {arg} has to be an integer')
-                raise
-
-        elif arg == 'Bravais lattice':
-            aux_array = []
-            for line in arguments[arg]:
-                try:
-                    aux_array.append([float(num) for num in re.split(' |, |,', line)])
-                except IndexError as e:
-                    print(f'{type(e).__name__}: No {arg} vectors given given')
-                    raise
-                except ValueError as e:
-                    print(f'{type(e).__name__}: {arg} vectors have to be numbers')
-                    raise
-            arguments[arg] = aux_array
-
-        elif arg == 'Motif':
-            aux_array = []
+        
+        if arg == 'Species':
+            if type(arguments[arg]) is str:
+                arguments[arg] = [arguments[arg]]
+        
+        elif arg in ['Filling', 'SOC']:
+            if isinstance(arguments[arg], Number):
+                arguments[arg] = [float(arguments[arg])]
+                
+        elif arg == 'Mesh':
+            if isinstance(arguments[arg], Number):
+                arguments[arg] = [int(arguments[arg])]
+                
+        elif arg == 'OnsiteEnergy':
             for n, line in enumerate(arguments[arg]):
-                aux_array.append([float(num) for num in re.split(' |, |,|; |;', line)])
-                if arguments['Species'] == 1:
-                    try:
-                        aux_array[n][3] = 0  # Default value to 1
-                    except IndexError:
-                        aux_array[n].append(0)
-            arguments[arg] = aux_array
+                if isinstance(line, Number):
+                    arguments[arg][n] = [float(line)] 
 
         elif arg == 'Orbitals':
             possible_orbitals = ['s', 'px', 'py', 'pz', 'dxy', 'dyz', 'dzx', 'dx2-y2', 'd3z2-r2']
@@ -126,31 +105,18 @@ def shape_arguments(arguments: dict) -> dict:
                     aux_array.append(orbitals)
             arguments[arg] = aux_array
 
-        elif arg == 'Onsite energy':
-            aux_array = []
-            for line in arguments[arg]:
-                try:
-                    aux_array.append([float(num) for num in re.split(' |, |,', line)])
-                except IndexError as e:
-                    print(f'{type(e).__name__}: No onsite energies included')
-                    raise
-                except ValueError as e:
-                    print(f'{type(e).__name__}: Onsite energies must be numbers')
-                    raise
-            arguments[arg] = aux_array
-
-        elif arg == 'SK amplitudes':
+        elif arg == 'SKAmplitudes':
             dictionary = {}
             for n, line in enumerate(arguments[arg]):
                 if not line:
                     raise SyntaxError('No Slater-Koster amplitudes given')
                 else:
                     # First try to parse square brakets
-                    if ((line.find('[') != -1 and line.find(']') == -1) 
+                    if ((line.find('(') != -1 and line.find(')') == -1) 
                         or 
-                        (line.find('[') == -1 and line.find(']') != -1)):
+                        (line.find('(') == -1 and line.find(')') != -1)):
                         raise SyntaxError('SK amplitudes: Square brackets must be closed')
-                    line = list(filter(None, re.split(r'\[|\]', line)))
+                    line = list(filter(None, re.split(r'\(|\)', line)))
                     if len(line) == 1 and len(arguments[arg]) == 1:
                         species_neigh = ['0', '0', '1']
                     elif len(line) == 1 and len(arguments[arg]) != 1:
@@ -182,67 +148,12 @@ def shape_arguments(arguments: dict) -> dict:
 
             arguments[arg] = dictionary
 
-        elif arg == 'Spin':
-            if arguments[arg][0] == "True":
-                arguments[arg] = True
-            elif arguments[arg][0] == "False":
-                arguments[arg] = False
-            else:
-                print('Error: Spin parameter must be True or False (or 1 or 0 respectively)')
-                raise
-
-        elif arg == 'Spin-orbit coupling':
-            aux_array = []
-            for line in arguments[arg]:
-                try:
-                    aux_array.append(float(line))
-                except IndexError as e:
-                    print(f'Warning: No spin-orbit coupling given, defaulting to 0...')
-                    arguments[arg] = 0.0
-                except ValueError as e:
-                    print(f'{type(e).__name__}: Spin-orbit coupling must be a number')
-                    raise
-            arguments[arg] = aux_array
-
-        elif arg == 'Filling':
-            aux_array = []
-            for line in arguments[arg]:
-                try:
-                    aux_array.append(float(line))
-                except ValueError as e:
-                    print(f'{type(e).__name__}: Filling must be a number')
-                    raise
-            arguments[arg] = aux_array
-
-        elif arg == 'Mesh':
+        elif arg == 'SymmetryPoints':
             try:
-                arguments[arg] = [int(num) for num in re.split(' |, |,', arguments[arg][0])]
-            except IndexError as e:
-                print(f'{type(e).__name__}: No mesh given')
-                raise
-            except ValueError as e:
-                print(f'{type(e).__name__}: Mesh must be integer numbers')
-                raise
-
-        elif arg in ['Radius', 'Mixing']:
-            try:
-                arguments[arg] = float(arguments[arg][0])
-            except IndexError as e:
-                print(f'{type(e).__name__}: No {arg} given')
-                raise
-            except ValueError as e:
-                print(f'{type(e).__name__}: {arg} has to be a float')
-                raise
-
-        elif arg == 'High symmetry points':
-            try:
-                arguments[arg] = [str(label) for label in re.split(' |, |,', arguments[arg][0])]
+                arguments[arg] = [str(label) for label in re.split(' |, |,', arguments[arg])]
             except IndexError as e:
                 print(f'{type(e).__name__}: No high symmetry points given')
                 raise
-
-        else:
-            raise NotImplementedError(f'{arg} is not a valid parameter')
 
     return arguments
 
@@ -256,24 +167,24 @@ def check_coherence(arguments: dict) -> None:
 
     # --------------- Model ---------------
     # Check dimensions
-    if arguments['Dimensionality'] > 3 or arguments['Dimensionality'] < 0:
+    if arguments['Dimensions'] > 3 or arguments['Dimensions'] < 0:
         raise ValueError('Error: Invalid dimension!')
 
     # Check species
-    if arguments['Species'] < 0:
+    if len(arguments['Species']) < 0:
         raise ValueError('Error: Species has to be a positive number (1 or 2)')
 
     # Check vector basis
-    if arguments['Dimensionality'] != len(arguments['Bravais lattice']):
+    if arguments['Dimensions'] != len(arguments['Lattice']):
         raise AssertionError('Error: Dimension and number of basis vectors do not match')
 
     # Check length of vector basis
-    for vector in arguments['Bravais lattice']:
+    for vector in arguments['Lattice']:
         if len(vector) != 3:
             raise ValueError('Error: Bravais vectors must have three components')
 
-    # Check that motif has elements specified if num. of species = 2
-    if arguments['Species'] == 2:
+    # Check that motif has elements specified if num. of species > 2
+    if len(arguments['Species']) >= 2:
         for atom in arguments['Motif']:
             try:
                 atom_element = atom[3]  # Try to access
@@ -281,31 +192,31 @@ def check_coherence(arguments: dict) -> None:
                 print('Error: Atomic species not specified in motif')
                 raise
 
-            if atom_element > arguments['Species']:
+            if atom_element > len(arguments['Species']):
                 raise AssertionError('Incorrect species labeling in motif')
 
     # Check onsite energies are present for all species
-    if len(arguments['Onsite energy']) > arguments['Species']:
+    if len(arguments['OnsiteEnergy']) > len(arguments['Species']):
         raise AssertionError('Too many onsite energies for given species')
-    elif len(arguments['Onsite energy']) < arguments['Species']:
+    elif len(arguments['OnsiteEnergy']) < len(arguments['Species']):
         raise AssertionError('Missing onsite energies for both atomic species')
 
     # Check orbitals present for all species
-    if (len(arguments['Orbitals']) != arguments['Species']):
+    if (len(arguments['Orbitals']) != len(arguments['Species'])):
         raise AssertionError("Orbitals must be specified for each species")
 
     # Check number of SK coefficients
-    for neighbour in arguments["SK amplitudes"].keys():
-        nspecies_pairs = len(arguments['SK amplitudes'][neighbour].keys())
-        if nspecies_pairs > arguments['Species']*(arguments['Species'] + 1)/2:
+    for neighbour in arguments["SKAmplitudes"].keys():
+        nspecies_pairs = len(arguments['SKAmplitudes'][neighbour].keys())
+        if nspecies_pairs > len(arguments['Species'])*(len(arguments['Species']) + 1)/2:
             raise AssertionError('Too many rows of SK coefficients')
 
     # Check number of SOC strenghts
-    if arguments['Spin'] and len(arguments['Spin-orbit coupling']) != arguments["Species"]:
+    if arguments['Spin'] and len(arguments['SOC']) != len(arguments['Species']):
         raise AssertionError("Values for SOC strength must match number of species")
 
     # Check if SOC are non-zero
-    for soc in arguments['Spin-orbit coupling']:
+    for soc in arguments['SOC']:
         if soc != 0 and not arguments['Spin']:
             print('Warning: Spin-orbit coupling is non-zero but spin was set to False. ')
             arguments['Spin'] = True
@@ -324,7 +235,7 @@ def check_coherence(arguments: dict) -> None:
             raise AssertionError("Radius must be a positive number")
 
     if 'Filling' in arguments:
-        if len(arguments['Filling']) != arguments['Species']:
+        if len(arguments['Filling']) != len(arguments['Species']):
             raise AssertionError("Must provide number of electrons of each chemical species.")
 
         total_electrons = 0.0
@@ -336,13 +247,13 @@ def check_coherence(arguments: dict) -> None:
 
     # ------------ Orbital consistency ------------
     # Check onsite energy per orbital per species
-    for n, onsite_energies in enumerate(arguments["Onsite energy"]):
+    for n, onsite_energies in enumerate(arguments["OnsiteEnergy"]):
         if len(onsite_energies) != len(arguments["Orbitals"][n]):
             raise AssertionError("Error: Each orbital requires one onsite energy value")
 
     # Check SK amplitudes match present orbitals
-    for neighbour in arguments["SK amplitudes"].keys():
-        for species, coefs in arguments["SK amplitudes"][neighbour].items():
+    for neighbour in arguments["SKAmplitudes"].keys():
+        for species, coefs in arguments["SKAmplitudes"][neighbour].items():
             needed_SK_coefs = 0
 
             first_orbitals = arguments["Orbitals"][int(species[0])]
@@ -376,10 +287,10 @@ def check_coherence(arguments: dict) -> None:
 
     # ---------------- Simulation ----------------
     # Check mesh matches dimension
-    if len(arguments['Mesh']) != arguments['Dimensionality']:
+    if len(arguments['Mesh']) != arguments['Dimensions']:
         raise AssertionError('Mesh dimension does not match system dimension')
 
-    if 'Radius' in arguments and len(arguments['SK amplitudes'].keys()) > 1:
+    if 'Radius' in arguments and len(arguments['SKAmplitudes'].keys()) > 1:
         raise AssertionError('Must not specify neighbours in radius mode')
 
 
@@ -406,12 +317,12 @@ def transform_sk_coefficients(configuration: dict) -> None:
     """
 
     # First store untransformed amplitudes.
-    configuration['SK'] = configuration["SK amplitudes"]
+    configuration['SK'] = configuration["SKAmplitudes"]
 
     dict = {}
-    for neighbour in configuration["SK amplitudes"].keys():
+    for neighbour in configuration["SKAmplitudes"].keys():
         dict[neighbour] = {}
-        for species, coefs in configuration["SK amplitudes"][neighbour].items():
+        for species, coefs in configuration["SKAmplitudes"][neighbour].items():
             amplitudes = [0]*10  # Number of possible SK amplitudes
             first_orbitals = configuration["Orbitals"][int(species[0])]
             second_orbitals = configuration["Orbitals"][int(species[1])]
@@ -460,7 +371,7 @@ def transform_sk_coefficients(configuration: dict) -> None:
 
             dict[neighbour][species] = amplitudes
         
-    configuration['SK amplitudes'] = dict
+    configuration['SKAmplitudes'] = dict
 
 
 
@@ -476,36 +387,59 @@ def mix_parameters(configuration: dict) -> None:
     else:
         mixing = configuration['Mixing']
 
-    for i in range(configuration['Species']):
-        for j in range(i + 1, configuration['Species']):
+    for i in range(len(configuration['Species'])):
+        for j in range(i + 1, len(configuration['Species'])):
             species   = str(i) + str(j)
             species_i = str(i) + str(i)
             species_j = str(j) + str(j)
-            for neighbour in configuration['SK amplitudes'].keys():
-                SK_dictionary = configuration['SK amplitudes'][neighbour]
+            for neighbour in configuration['SKAmplitudes'].keys():
+                SK_dictionary = configuration['SKAmplitudes'][neighbour]
                 if species not in SK_dictionary and species_i in SK_dictionary and species_j in SK_dictionary:
                     SK_dictionary[species] = [SK_dictionary[species_i][n]*mixing + SK_dictionary[species_j][n]*(1 - mixing) for n in range(len(SK_dictionary[species_i]))]
 
 
-def parse_config_file(file: TextIOWrapper) -> dict:
-    """ 
-    Routine to obtain all the information from the configuration file, already shaped and verified.
+# def parse_config_file(file: TextIOWrapper) -> dict:
+#     """ 
+#     Routine to obtain all the information from the configuration file, already shaped and verified.
 
-    :param file: Python pointer to config. file as returned by open().
-    :return: Dictionary with the contents of the config. file in standarized form, ready to be used by
-        the class SlaterKoster. 
-    """
+#     :param file: Python pointer to config. file as returned by open().
+#     :return: Dictionary with the contents of the config. file in standarized form, ready to be used by
+#         the class SlaterKoster. 
+#     """
 
-    print("Parsing configuration file... ", end='')
-    configuration = shape_arguments(parse_raw_arguments(file))
-    required_arguments = ['System name', 'Dimensionality', 'Bravais lattice', 'Species',
-                          'Motif', 'Orbitals', 'Onsite energy', 'SK amplitudes']
-    check_arguments(configuration, required_arguments)
-    check_coherence(configuration)
+#     print("Parsing configuration file... ", end='')
+#     configuration = shape_arguments(parse_raw_arguments(file))
+#     required_arguments = ['System name', 'Dimensions', 'Bravais lattice', 'Species',
+#                           'Motif', 'Orbitals', 'Onsite energy', 'SK amplitudes']
+#     check_arguments(configuration, required_arguments)
+#     check_coherence(configuration)
 
-    mix_parameters(configuration)
-    transform_sk_coefficients(configuration)
+#     mix_parameters(configuration)
+#     transform_sk_coefficients(configuration)
     
-    print("Done\n")
+#     print("Done\n")
 
-    return configuration
+#     return configuration
+
+
+def parse_config_file(filename: str) -> dict:
+    """
+    Routine to parse the YAML configuration file, and extract all the information already shaped and verified.
+    
+    :param filename: Path of the YAML configuration file.
+    :return: Dictionary with the contents of the config. file in standarized form, ready to be used by
+        the class SlaterKoster.
+    """
+    
+    with open(filename, 'r') as file:
+        configuration = shape_arguments(yaml.safe_load(file))
+        
+        required_arguments = ['SystemName', 'Dimensions', 'Lattice', 'Species',
+                          'Motif', 'Orbitals', 'OnsiteEnergy', 'SKAmplitudes']
+        check_arguments(configuration, required_arguments)
+        check_coherence(configuration)
+        
+        mix_parameters(configuration)
+        transform_sk_coefficients(configuration)
+        
+        return configuration

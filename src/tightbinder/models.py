@@ -47,8 +47,8 @@ class SlaterKoster(System):
 
     def __init__(self, configuration: dict = None, mode: str = 'minimal', r: float = None, boundary: str = "PBC") -> None:
         if configuration is not None:
-            super().__init__(system_name=configuration["System name"],
-                             bravais_lattice=configuration["Bravais lattice"],
+            super().__init__(system_name=configuration["SystemName"],
+                             bravais_lattice=configuration["Lattice"],
                              motif=configuration["Motif"])
         else:
             super().__init__()
@@ -70,7 +70,7 @@ class SlaterKoster(System):
             print('Error: Incorrect mode')
             sys.exit(1)
         
-        self.neighbours = len(configuration['SK amplitudes'].keys())
+        self.neighbours = len(configuration['SKAmplitudes'].keys())
 
     @property
     def ordering(self):
@@ -84,7 +84,7 @@ class SlaterKoster(System):
 
     @property
     def nspecies(self):
-        return self.configuration["Species"]
+        return len(self.configuration["Species"])
 
     @property
     def filling(self) -> int:
@@ -118,7 +118,7 @@ class SlaterKoster(System):
         initial_orbital_type = initial_orbital[0]
         final_orbital_type = final_orbital[0]
 
-        amplitudes = self.configuration['SK amplitudes'][neigh]
+        amplitudes = self.configuration['SKAmplitudes'][neigh]
 
         possible_orbitals = {'s': 0, 'p': 1, 'd': 2}
         if possible_orbitals[initial_orbital_type] > possible_orbitals[final_orbital_type]:
@@ -317,7 +317,7 @@ class SlaterKoster(System):
                                 if orbital in orbitals]
             
             soc = (self.spin_orbit_hamiltonian[np.ix_(orbitals_indices, orbitals_indices)] *
-                   self.configuration['Spin-orbit coupling'][species])
+                   self.configuration['SOC'][species])
             spin_orbit_hamiltonian[matrix_index : matrix_index + norbitals, matrix_index : matrix_index + norbitals] = soc
             matrix_index += norbitals
 
@@ -347,7 +347,7 @@ class SlaterKoster(System):
         matrix_index = 0
         for n, atom in enumerate(self.motif):
             species = int(atom[3])  # To match list beginning on zero
-            hamiltonian_atom_block = sp.diags(np.array(self.configuration['Onsite energy'][species]), format='lil')
+            hamiltonian_atom_block = sp.diags(np.array(self.configuration['OnsiteEnergy'][species]), format='lil')
             hamiltonian[0][matrix_index : matrix_index + self.norbitals[species],
                            matrix_index : matrix_index + self.norbitals[species]] = hamiltonian_atom_block
             matrix_index += self.norbitals[species]
@@ -391,7 +391,7 @@ class SlaterKoster(System):
             self.__zeeman_term(0)
             hamiltonian[0] += self.__zeeman
 
-            if self.configuration['Spin-orbit coupling'] != 0:
+            if self.configuration['SOC'] != 0:
                 self.__initialize_spin_orbit_coupling()
                 self.__spin_orbit_h()
                 hamiltonian[0] += self.spin_orbit_hamiltonian

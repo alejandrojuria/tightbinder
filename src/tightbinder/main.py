@@ -13,11 +13,6 @@ import time
 from tightbinder.models import SlaterKoster
 import matplotlib.pyplot as plt
 
-plt.rcParams.update({
-    "text.usetex": True,
-    "font.family": "serif"
-})
-
 
 def main():
     """ Main routine """
@@ -37,7 +32,7 @@ def main():
         print('Error: Input file does not exist')
         sys.exit(1)
 
-    configuration = parse_config_file(file)
+    configuration = parse_config_file(args.file)
     if 'Radius' in configuration:
         model = SlaterKoster(configuration, mode='radius', r=configuration['Radius'])
     else:
@@ -65,7 +60,8 @@ def main():
         model.export_model(modelfile, fmt="%10.6f")
         print(f"Written model to file {modelfile}")
 
-    labels = configuration['High symmetry points']
+    labels = configuration['SymmetryPoints']
+    print(labels)
     kpoints = model.high_symmetry_path(configuration['Mesh'][0], labels)
 
     results = model.solve(kpoints)
