@@ -1,0 +1,20 @@
+SystemName: Bi(111) (2nn)
+Dimensions: 2
+Lattice: 
+  - [3.92587,  2.2666, 0.0]
+  - [3.92587, -2.2666, 0.0]
+Species: [Bi]
+Motif:
+  - [0, 0, 0, 0]
+  - [2.61724, 0, -1.585, 0]
+Filling: [5]
+Orbitals: [s px py pz]
+OnsiteEnergy:
+  - [-10.906, -0.486, -0.486, -0.486]
+SKAmplitudes: 
+  - (0, 0, 1) -0.608 1.320 1.854 -0.600
+  - (0, 0, 2)  0.0 0.0 0.156 0.0
+Spin: True
+SOC: [1.5]
+Mesh: [200, 200]
+SymmetryPoints: M G K M 

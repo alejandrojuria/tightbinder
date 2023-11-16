@@ -1,0 +1,20 @@
+SystemName: Sb(111) (2nn)
+Dimensions: 2
+Lattice: 
+  - [3.72391,  2.15, 0.0]
+  - [3.72391, -2.15, 0.0]
+Species: Sb
+Motif:
+  - [0, 0, 0, 0]
+  - [2.48261, 0, -1.50, 0]
+Filling: 5
+Orbitals: [s px py pz]
+OnsiteEnergy:
+  - [-10.068, -0.926, -0.926, -0.926]
+SKAmplitudes: 
+  - (0, 0; 1) -0.694 1.554 2.342 -0.582
+  - (0, 0; 2) 0.0 0.0 0.352 0.0
+Spin: True
+SOC: 0.6
+Mesh: [200, 200]
+SymmetryPoints: M G K M 

@@ -1,0 +1,20 @@
+SystemName: hBN
+Dimensions: 2
+Lattice: 
+  - [2.16506,  1.25,  0.0]
+  - [2.16506, -1.25,  0.0]
+Species: [B, "N"]
+Motif:
+  - [0,  0,  0,  0]
+  - [1.443376,  0,  0,  1]
+Filling: [0.5, 0.5]
+Orbitals: [s, s]
+OnsiteEnergy:
+  -  3.625
+  - -3.625
+SKAmplitudes: 
+  - (0, 1) -2.3
+Spin: False
+SOC: [0, 0]
+Mesh: [100, 100]
+SymmetryPoints: G K M G

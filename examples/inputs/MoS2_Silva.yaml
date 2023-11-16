@@ -1,0 +1,26 @@
+SystemName: MoS2
+Dimensions: 2
+Lattice: 
+  - [3.16, 0.0, 0.0]
+  - [1.58, 2.73664, 0.0]
+Species: [Mo, S]
+Motif:
+  - [0, 0, 0, 0]
+  - [0.0, 1.8244,  1.586, 1]
+  - [0.0, 1.8244, -1.586, 1]
+Filling: [6, 4]
+Orbitals: 
+  - dxy dyz dzx dx2-y2 d3z2-r2
+  - px py pz
+OnsiteEnergy:
+  - [-1.511, -0.050, -0.050, -1.511, -1.094]
+  - [-3.559, -3.559, -6.886]
+SKAmplitudes: 
+  - (0, 0; 1) -0.895 0.252 0.228
+  - (0, 1; 1) 3.689 -1.241
+  - (1, 1; 1) 1.225 -0.467
+Spin: True
+SOC: [0.1125, 0.078]
+Radius: 3.17
+Mesh: [200, 200]
+SymmetryPoints: G M K G

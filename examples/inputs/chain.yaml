@@ -1,0 +1,17 @@
+SystemName: Test chain
+Dimensions: 1
+Lattice: 
+  - [1.0, 0.0, 0.0]
+Species: H
+Motif:
+  - [0.0, 0.0, 0.0, 0]
+Filling: 1
+Orbitals: s
+OnsiteEnergy:
+  - [1]
+SKAmplitudes: 
+  - (0, 0) -0.3
+Spin: True
+SOC: 0
+Mesh: 200
+SymmetryPoints: K G K

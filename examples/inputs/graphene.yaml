@@ -1,0 +1,19 @@
+SystemName: Graphene
+Dimensions: 2
+Lattice: 
+  - [2.1304,  1.23, 0.0]
+  - [2.1304, -1.23, 0.0]
+Species: C
+Motif:
+  - [0, 0, 0, 0]
+  - [1.4203, 0, 0, 0]
+Filling: 4
+Orbitals: [s px py pz]
+OnsiteEnergy:
+  - [-17.52, -8.97, -8.97, -8.97]
+SKAmplitudes: 
+  - (0, 0) -6.769 5.580 5.037 -3.033 
+Spin: True
+SOC: 0.027
+Mesh: [200, 200]
+SymmetryPoints: M G K M
