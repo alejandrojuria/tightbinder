@@ -4,7 +4,10 @@
   [![Documentation Status](https://readthedocs.org/projects/tightbinder/badge/?version=latest)](https://tightbinder.readthedocs.io/en/latest/?badge=latest)
   [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/alejandrojuria/tightbinder/issues)
   [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-  [![GitHub all releases](https://img.shields.io/github/downloads/alejandrojuria/tightbinder/total)](https://img.shields.io/pypi/dm/tightbinder)
+  ![PyPI - Downloads](https://img.shields.io/pypi/dm/tightbinder)
+
+  
+  
   
 </div>
 
