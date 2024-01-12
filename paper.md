@@ -61,7 +61,7 @@ designed to build Slater-Koster models, while the rest require specifying direct
 that, they are usually oriented towards crystalline structures, lacking tools for the description of disorder. `tightbinder`
 provides all the standard functionality expected from a tight-binding code, focusing specifically on Slater-Koster models,
 which can be used to describe realistic amorphous materials. 
-It also provides tools for the topological characterization of solids, similar to those of $\mathbb{Z}_2Pack$ but
+It also provides tools for the topological characterization of solids, similar to those of $\mathbb{Z}_2$Pack but
 integrated within the API. These features give the library its own identity within the landscape of tight-binding frameworks, not
 necessarily competing but providing alternative tools and a different perspective.
 
