@@ -5,6 +5,7 @@
   [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/alejandrojuria/tightbinder/issues)
   [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
   ![PyPI - Downloads](https://img.shields.io/pypi/dm/tightbinder)
+  [![DOI](https://joss.theoj.org/papers/10.21105/joss.05810/status.svg)](https://doi.org/10.21105/joss.05810)
 
   
   
