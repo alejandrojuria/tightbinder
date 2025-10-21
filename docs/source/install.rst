@@ -13,18 +13,22 @@ Alternatively, it can also be manually installed. First clone the repository:
 
     git clone https://github.com/alejandrojuria/tightbinder.git
 
-Then, from the root folder of the repository install the required packages:
+Then, from the root folder of the repository install package with ``pip``, which will automatically handle dependency installation:
 
 .. code-block:: bash
 
     cd /tightbinder
-    pip install -r requirements.txt
-
-The package is installed finally with
-
-.. code-block:: bash
-
     pip install .
+
+.. note::
+
+    For developing the library, it is more convenient to install the package in *editable' mode:
+
+    .. code-block:: bash
+
+        pip install -e .
+    
+    which will handle automatically changes made to the library without having to reinstall the library each time.
 
 .. note::
 

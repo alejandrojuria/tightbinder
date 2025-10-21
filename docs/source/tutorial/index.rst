@@ -6,7 +6,7 @@ band structure simply running from the terminal the following command, from the 
 
 .. code-block:: bash
 
-    python tightbinder/main.py examples/[config_file]
+    python -m tightbinder.main examples/inputs/[config_file]
 
 For a more detailed exploration of the model defined, we have to use directly the library. Next we show some common situations that might appear when 
 setting up the simulation of a given material:
