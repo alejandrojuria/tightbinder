@@ -1,7 +1,7 @@
 [project]
 
 name = "tightbinder"  
-version = "0.2.1"  
+version = "0.2.2"  
 description = "Slater-Koster tight-binding library for crystalline and disordered solids"  
 readme = "README.md" 
 requires-python = ">=3.7"
@@ -10,12 +10,12 @@ license = {file = "LICENSE"}
 keywords = ["tight-binding", "electronic structure", "topology", "amorphous"] 
 
 authors = [
-  {name = "A. J. Uría-Álvarez", email = "alejandro.uria@uam.es" },
+  {name = "A. J. Uría-Álvarez", email = "uria@itp.uni-frankfurt.de" },
   {name = "J. J. Palacios"} 
 ]
 
 maintainers = [
-  {name = "A. J. Uría-Álvarez", email = "alejandro.uria@uam.es" }
+  {name = "A. J. Uría-Álvarez", email = "uria@itp.uni-frankfurt.de" }
 ]
 
 dependencies = [
