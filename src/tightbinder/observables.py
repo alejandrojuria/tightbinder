@@ -2,9 +2,6 @@
 Module containing routines for computation of observables.
 """
  
-from tightbinder.result import Spectrum
-from tightbinder.system import System
-from tightbinder.models import SlaterKoster
 
 import numpy as np
 import scipy.sparse as sp
@@ -12,6 +9,10 @@ import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from typing import Union, List, Tuple
 from copy import deepcopy
+
+from tightbinder.result import Spectrum
+from tightbinder.system import System
+from tightbinder.models import SlaterKoster
 
 
 def _retarded_green_function(w: float, e: float, delta: float) -> complex:
@@ -425,8 +426,8 @@ class TransportDevice:
         device_dim = self.device_h.shape[0]
         energies = np.linspace(minE, maxE, npoints)
         currents = []
-        extended_lead_selfenergy_L = sp.lil_matrix((device_dim, device_dim), dtype=np.complex_)
-        extended_lead_selfenergy_R = sp.lil_matrix((device_dim, device_dim), dtype=np.complex_)
+        extended_lead_selfenergy_L = sp.lil_matrix((device_dim, device_dim), dtype=np.complex128)
+        extended_lead_selfenergy_R = sp.lil_matrix((device_dim, device_dim), dtype=np.complex128)
 
         for energy in energies:
             lead_selfenergy_L = self.__lead_selfenergy(energy, self.left_lead_h[0], self.left_lead_h[1].transpose().conjugate(), delta, method=method)  
@@ -551,7 +552,7 @@ class TransportDevice:
             model_device.bonds = system_bonds + left_bonds + right_bonds
             model_device.initialize_hamiltonian(find_bonds=False)
 
-        device_hamiltonian = sp.csc_matrix(model_device.hamiltonian[0].shape, dtype=np.complex_)
+        device_hamiltonian = sp.csc_matrix(model_device.hamiltonian[0].shape, dtype=np.complex128)
         for h in model_device.hamiltonian:
             device_hamiltonian += h
 
@@ -589,7 +590,7 @@ class TransportDevice:
         else:
             findBonds = True
         model_lead.initialize_hamiltonian(find_bonds=findBonds)
-        lead_total_hamiltonian = sp.csc_matrix(model_lead.hamiltonian[0].shape, dtype=np.complex_)
+        lead_total_hamiltonian = sp.csc_matrix(model_lead.hamiltonian[0].shape, dtype=np.complex128)
         for h in model_lead.hamiltonian:
             lead_total_hamiltonian += h
 
@@ -642,10 +643,10 @@ class TransportDevice:
             selfenergy = lead_coupling @ g @ lead_coupling.transpose().conjugate()
 
         elif method == "LM":
-            selfenergy = sp.csc_matrix(lead_hamiltonian.shape, dtype=np.complex_)
+            selfenergy = sp.csc_matrix(lead_hamiltonian.shape, dtype=np.complex128)
 
-            old_selfenergy = sp.csc_matrix(lead_hamiltonian.shape, dtype=np.complex_)
-            old2_selfenergy = sp.csc_matrix(lead_hamiltonian.shape, dtype=np.complex_)
+            old_selfenergy = sp.csc_matrix(lead_hamiltonian.shape, dtype=np.complex128)
+            old2_selfenergy = sp.csc_matrix(lead_hamiltonian.shape, dtype=np.complex128)
             identity = sp.eye(lead_hamiltonian.shape[0], format="csc")
             while notConverged:
                 old2_selfenergy = old_selfenergy
@@ -678,11 +679,11 @@ class TransportDevice:
     #     :return: Selfenergy matrix evaluated at energy+i*delta
     #     """
 
-    #     selfenergy = sp.csc_matrix(lead_hamiltonian.shape, dtype=np.complex_)
+    #     selfenergy = sp.csc_matrix(lead_hamiltonian.shape, dtype=np.complex128)
     #     residuals, selfenergies = [], []
 
     #     notConverged = True
-    #     old_selfenergy = sp.csc_matrix(lead_hamiltonian.shape, dtype=np.complex_)
+    #     old_selfenergy = sp.csc_matrix(lead_hamiltonian.shape, dtype=np.complex128)
     #     identity = sp.eye(lead_hamiltonian.shape[0], format="csc")
     #     n = 3
     #     first_iterations = 10
@@ -710,7 +711,7 @@ class TransportDevice:
     #             selfenergies.pop(0)
     #             residuals.pop(0)
             
-    #             residual_matrix = np.zeros([len(residuals) + 1, len(residuals) + 1], dtype=np.complex_)
+    #             residual_matrix = np.zeros([len(residuals) + 1, len(residuals) + 1], dtype=np.complex128)
     #             for i in range(len(residuals)):
     #                 ri = residuals[i].transpose().conjugate()
     #                 for j in range(len(residuals) - i):
@@ -729,7 +730,7 @@ class TransportDevice:
 
     #             coefs = np.linalg.solve(residual_matrix, independent_vector)
 
-    #             selfenergy = sp.csc_matrix(lead_hamiltonian.shape, dtype=np.complex_)
+    #             selfenergy = sp.csc_matrix(lead_hamiltonian.shape, dtype=np.complex128)
     #             for i, coef in enumerate(coefs[:-1]):
     #                 selfenergy += coef  * (selfenergies[i] + 0.5 * residuals[i])
 
@@ -758,10 +759,10 @@ class TransportDevice:
     
         device_dim = device.shape[0]
         
-        extended_lead_selfenergy_L = sp.lil_matrix((device_dim, device_dim), dtype=np.complex_)
+        extended_lead_selfenergy_L = sp.lil_matrix((device_dim, device_dim), dtype=np.complex128)
         extended_lead_selfenergy_L[:left_self_energy.shape[0], :left_self_energy.shape[0]] = left_self_energy
 
-        extended_lead_selfenergy_R= sp.lil_matrix((device_dim, device_dim), dtype=np.complex_)
+        extended_lead_selfenergy_R= sp.lil_matrix((device_dim, device_dim), dtype=np.complex128)
         extended_lead_selfenergy_R[(device_dim - right_self_energy.shape[0]):, (device_dim - right_self_energy.shape[0]):] = right_self_energy
 
         extended_lead_selfenergy_L = extended_lead_selfenergy_L.tocsc()

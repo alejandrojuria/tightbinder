@@ -13,7 +13,8 @@ from numpy.linalg import LinAlgError
 import math
 import sys
 from typing import Union, List
-from .utils import generate_basis_combinations, alpha_shape_2d
+
+from tightbinder.utils import generate_basis_combinations, alpha_shape_2d
 
 
 # --------------- Constants ---------------

@@ -11,10 +11,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 import scipy as sp
-from .system import System
-from .result import Spectrum
 from matplotlib.axes import Axes
 from io import TextIOWrapper
+
+from tightbinder.system import System
+from tightbinder.result import Spectrum
 
 def __wilson_loop(system: System, path: list) -> np.ndarray:
     """ 

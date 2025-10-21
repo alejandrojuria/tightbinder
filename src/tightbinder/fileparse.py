@@ -4,10 +4,11 @@ Routines to parse the tight-binding parameters written in the input file.
 
 from io import TextIOWrapper
 import re
-from tightbinder.utils import pretty_print_dictionary
 from typing import List
 import yaml
 from numbers import Number
+
+from tightbinder.utils import pretty_print_dictionary
 
 def parse_raw_arguments(file: TextIOWrapper) -> dict:
     """ 

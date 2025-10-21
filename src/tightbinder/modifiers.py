@@ -4,6 +4,7 @@ Modifications of the system such as strain or electric field.
 
 from shutil import ExecError
 import numpy as np
+
 from tightbinder.models import SlaterKoster
 from tightbinder.system import System
 from tightbinder.fileparse import mix_parameters

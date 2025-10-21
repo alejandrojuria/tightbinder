@@ -13,12 +13,12 @@ alternatively we can specify which atoms
 """
 
 import numpy as np
-from tightbinder.models import SlaterKoster
-from tightbinder.system import System
 import sys
 import random
 from typing import List
 
+from tightbinder.models import SlaterKoster
+from tightbinder.system import System
 
 # ----------------------------- Random routines -----------------------------
 def introduce_vacancies(system: System, probability: float = 0.5) -> System:

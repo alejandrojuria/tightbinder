@@ -7,7 +7,6 @@ has the basic functionality for the other models to derive from it.
 
 from __future__ import annotations
 from typing import Tuple, Union, List
-from .crystal import Crystal
 import numpy as np
 import scipy.sparse as sp
 import scipy.sparse.linalg
@@ -15,6 +14,7 @@ import matplotlib.pyplot as plt
 import sys
 from itertools import product
 
+from tightbinder.crystal import Crystal
 
 
 class System(Crystal):

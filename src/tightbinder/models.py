@@ -6,14 +6,15 @@ to toy models such as the BHZ model or Wilson fermions.
 from __future__ import annotations
 from typing import List, Tuple, Union
 
-from .system import System, FrozenClass
-from .crystal import Crystal
 import numpy as np
 import scipy.sparse as sp
 import sys
 import math
 import cmath
-from .utils import overrides
+
+from tightbinder.utils import overrides
+from tightbinder.system import System, FrozenClass
+from tightbinder.crystal import Crystal
 
 # Module-level variables
 sigma_x = np.array([[0, 1],

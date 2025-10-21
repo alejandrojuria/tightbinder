@@ -8,6 +8,7 @@ minimize function from SciPy.
 from typing import Callable, List, Tuple
 import numpy as np
 from scipy.optimize import minimize
+
 from tightbinder.models import SlaterKoster
 from tightbinder.fileparse import transform_sk_coefficients
 

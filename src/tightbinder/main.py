@@ -7,12 +7,12 @@
 
 import argparse
 import sys
-from tightbinder.fileparse import parse_config_file
-from tightbinder.topology import calculate_wannier_centre_flow, calculate_z2_invariant, plot_wannier_centre_flow
 import time
-from tightbinder.models import SlaterKoster
 import matplotlib.pyplot as plt
 
+from tightbinder.fileparse import parse_config_file
+from tightbinder.topology import calculate_wannier_centre_flow, calculate_z2_invariant, plot_wannier_centre_flow
+from tightbinder.models import SlaterKoster
 
 def main():
     """ Main routine """
