@@ -18,11 +18,11 @@ from tightbinder.crystal import Crystal
 
 # Module-level variables
 sigma_x = np.array([[0, 1],
-                    [1, 0]], dtype=np.complex_)
+                    [1, 0]], dtype=np.complex128)
 sigma_y = np.array([[0, -1j],
-                    [1j, 0]], dtype=np.complex_)
+                    [1j, 0]], dtype=np.complex128)
 sigma_z = np.array([[1, 0],
-                    [0, -1]], dtype=np.complex_)
+                    [0, -1]], dtype=np.complex128)
 """
 Definition of Pauli matrix x, y, z. Used by several predefined models.
 """
@@ -266,7 +266,7 @@ class SlaterKoster(System):
 
         dimension_block = 1 + 3 + 5
         # We hardcode the whole spin-orbit hamilonian up to d orbitals
-        spin_orbit_hamiltonian = np.zeros([dimension_block*2, dimension_block*2], dtype=np.complex_)
+        spin_orbit_hamiltonian = np.zeros([dimension_block*2, dimension_block*2], dtype=np.complex128)
         p_orbital_beginning = 1
         d_orbital_beginning = 4
         # p orbitals
@@ -308,7 +308,7 @@ class SlaterKoster(System):
 
         possible_orbitals = ['s', 'px', 'py', 'pz', 'dxy', 'dyz', 'dzx', 'dx2-y2', 'd3z2-r2']
         npossible_orbitals = len(possible_orbitals)
-        spin_orbit_hamiltonian = sp.lil_matrix((self.basisdim, self.basisdim), dtype=np.complex_)
+        spin_orbit_hamiltonian = sp.lil_matrix((self.basisdim, self.basisdim), dtype=np.complex128)
         matrix_index = 0
         for n, atom in enumerate(self.motif):
             species = int(atom[3])
@@ -343,7 +343,7 @@ class SlaterKoster(System):
 
         hamiltonian = []
         for _ in self._unit_cell_list:
-            hamiltonian.append(sp.lil_matrix((self.basisdim, self.basisdim), dtype=np.complex_))
+            hamiltonian.append(sp.lil_matrix((self.basisdim, self.basisdim), dtype=np.complex128))
 
         matrix_index = 0
         for n, atom in enumerate(self.motif):
@@ -432,9 +432,9 @@ class SlaterKoster(System):
         """
 
         if self.matrix_type == "dense":
-            hamiltonian_k = np.zeros((self.basisdim, self.basisdim), dtype=np.complex_)
+            hamiltonian_k = np.zeros((self.basisdim, self.basisdim), dtype=np.complex128)
         else:
-            hamiltonian_k = sp.csr_matrix((self.basisdim, self.basisdim), dtype=np.complex_)
+            hamiltonian_k = sp.csr_matrix((self.basisdim, self.basisdim), dtype=np.complex128)
 
         for cell_index, cell in enumerate(self._unit_cell_list):
             hamiltonian_k += self.hamiltonian[cell_index] * cmath.exp(1j*np.dot(k, cell))
@@ -463,7 +463,7 @@ class SlaterKoster(System):
 
         nbasisdim = self.basisdim + 1 + spin
         for n, fock_matrix in enumerate(self.hamiltonian):
-            new_fock_matrix = np.zeros([nbasisdim, nbasisdim], dtype=np.complex_)
+            new_fock_matrix = np.zeros([nbasisdim, nbasisdim], dtype=np.complex128)
 
             new_fock_matrix[0:index, 0:index] = fock_matrix[0:index, 0:index]
             new_fock_matrix[0:index, (index + 1 + spin):] = fock_matrix[0:index, index:]
@@ -515,7 +515,7 @@ class SlaterKoster(System):
         norb = core_model.norbitals[0]
         nbasisdim += norb
         for n, fock_matrix in enumerate(self.hamiltonian):
-            new_fock_matrix = np.zeros([nbasisdim, nbasisdim], dtype=np.complex_)
+            new_fock_matrix = np.zeros([nbasisdim, nbasisdim], dtype=np.complex128)
 
             new_fock_matrix[0:index, 0:index] = fock_matrix[0:index, 0:index]
             new_fock_matrix[0:index, (index + norb):] = fock_matrix[0:index, index:]
@@ -631,7 +631,7 @@ class SlaterKoster(System):
 
             unit_cell_list = []
             hamiltonian = []
-            hamiltonian_matrix = np.zeros([basisdim, basisdim], dtype=np.complex_)
+            hamiltonian_matrix = np.zeros([basisdim, basisdim], dtype=np.complex128)
             for line in file.readlines():
                 line = line.split()
                 if len(line) == 3:
@@ -639,7 +639,7 @@ class SlaterKoster(System):
                 elif line[0] == "#":
                     it = 0
                     hamiltonian.append(hamiltonian_matrix)
-                    hamiltonian_matrix = np.zeros([basisdim, basisdim], dtype=np.complex_)
+                    hamiltonian_matrix = np.zeros([basisdim, basisdim], dtype=np.complex128)
                 else:
                     hamiltonian_matrix[it, :] = [complex(line[2*i], line[2*i + 1]) for i in range(len(line))]
                     it += 1
@@ -878,7 +878,7 @@ class WilsonFermions2D(System, FrozenClass):
 
         alpha_x = np.kron(sigma_x, sigma_x)
         alpha_y = np.kron(sigma_x, sigma_y)
-        beta = np.kron(sigma_z, np.eye(2, dtype=np.complex_))
+        beta = np.kron(sigma_z, np.eye(2, dtype=np.complex128))
 
         hamiltonian = self.t * (np.sin(k[0] * self.a) * alpha_x + np.sin(k[1] * self.a) * alpha_y) + (
                 np.cos(k[0] * self.a) + np.cos(k[1] * self.a) + self.m - 3) * beta
@@ -922,7 +922,7 @@ class WilsonFermions3D(System, FrozenClass):
         alpha_x = np.kron(sigma_x, sigma_x)
         alpha_y = np.kron(sigma_x, sigma_y)
         alpha_z = np.kron(sigma_x, sigma_z)
-        beta = np.kron(sigma_z, np.eye(2, dtype=np.complex_))
+        beta = np.kron(sigma_z, np.eye(2, dtype=np.complex128))
 
         hamiltonian = (self.t * (np.sin(k[0] * self.a) * alpha_x + np.sin(k[1] * self.a) * alpha_y +
                                  np.sin(k[2] * self.a) * alpha_z) +
@@ -978,11 +978,11 @@ class WilsonAmorphous(System):
         phi = math.atan2(y, x)
         theta = math.acos(z / r)
 
-        hopping = np.zeros([4, 4], dtype=np.complex_)
+        hopping = np.zeros([4, 4], dtype=np.complex128)
         np.fill_diagonal(hopping, [1, 1, -1, -1])
         offdiag_block = np.array([[-1j * math.cos(theta), -1j * cmath.exp(-1j * phi) * math.sin(theta)],
                                   [-1j * cmath.exp(1j * phi) * math.sin(theta), 1j * math.cos(theta)]],
-                                 dtype=np.complex_)
+                                 dtype=np.complex128)
         hopping[0:2, 2:4] = offdiag_block
         hopping[2:4, 0:2] = offdiag_block
         hopping *= 0.5
@@ -1009,7 +1009,7 @@ class WilsonAmorphous(System):
 
         hamiltonian = []
         for _ in self._unit_cell_list:
-            hamiltonian.append(np.zeros([self.basisdim, self.basisdim], dtype=np.complex_))
+            hamiltonian.append(np.zeros([self.basisdim, self.basisdim], dtype=np.complex128))
 
         hamiltonian_atom_block = np.diag(np.array([-3 + self.m, -3 + self.m,
                                                    3 - self.m, 3 - self.m])*0.5)
@@ -1039,7 +1039,7 @@ class WilsonAmorphous(System):
         """
 
         dimension = len(self.hamiltonian[0])
-        hamiltonian_k = np.zeros((dimension, dimension), dtype=np.complex_)
+        hamiltonian_k = np.zeros((dimension, dimension), dtype=np.complex128)
         for cell_index, cell in enumerate(self._unit_cell_list):
             hamiltonian_k += (self.hamiltonian[cell_index] * cmath.exp(1j * np.dot(k, cell)))
 
@@ -1100,7 +1100,7 @@ class HaldaneModel(System, FrozenClass):
         first_neighbours = [a1, a2, a3]
         second_neighbours = [-a2 + a3, -a3 + a1, -a1 + a2]
 
-        h = np.zeros([2, 2], dtype=np.complex_)
+        h = np.zeros([2, 2], dtype=np.complex128)
 
         h += 2 * self.t2 * np.cos(self.phi) * np.sum([np.cos(np.dot(k, b)) for b in second_neighbours]) * identity
         h += self.t1 * np.sum([np.cos(np.dot(k, a)) for a in first_neighbours]) * sigma_x
@@ -1155,7 +1155,7 @@ class AgarwalaChern(System):
         r = math.sqrt(x ** 2 + y ** 2 + z ** 2)
         theta = math.atan2(y, x)
 
-        hopping = np.zeros([2, 2], dtype=np.complex_)
+        hopping = np.zeros([2, 2], dtype=np.complex128)
         hopping[0, 0] = -1 + self.t2
         hopping[1, 1] =  1 + self.t2
         hopping[0, 1] = -1j*cmath.exp(-1j*theta) + self.lda * ((1 + 1j)*math.sin(theta)**2 - 1)
@@ -1183,7 +1183,7 @@ class AgarwalaChern(System):
 
         hamiltonian = []
         for _ in self._unit_cell_list:
-            hamiltonian.append(np.zeros([self.basisdim, self.basisdim], dtype=np.complex_))
+            hamiltonian.append(np.zeros([self.basisdim, self.basisdim], dtype=np.complex128))
 
         hamiltonian_atom_block = np.array([[       2 + self.m, (1 - 1j)*self.lda], 
                                            [(1 + 1j)*self.lda,       -2 - self.m]])
@@ -1215,7 +1215,7 @@ class AgarwalaChern(System):
         """
 
         dimension = len(self.hamiltonian[0])
-        hamiltonian_k = np.zeros((dimension, dimension), dtype=np.complex_)
+        hamiltonian_k = np.zeros((dimension, dimension), dtype=np.complex128)
         for cell_index, cell in enumerate(self._unit_cell_list):
             hamiltonian_k += (self.hamiltonian[cell_index] * cmath.exp(1j * np.dot(k, cell)))
 
@@ -1400,7 +1400,7 @@ class RealSpace(System):
             initial_atom_index, final_atom_index, cell = bond
 
     def hamiltonian_k(self, k):
-        hamiltonian_k = np.zeros((self.basisdim, self.basisdim), dtype=np.complex_)
+        hamiltonian_k = np.zeros((self.basisdim, self.basisdim), dtype=np.complex128)
         for cell_index, cell in enumerate(self._unit_cell_list):
             hamiltonian_k += (self.hamiltonian[cell_index] * cmath.exp(1j * np.dot(k, cell)))
 
@@ -1532,7 +1532,7 @@ class Stack(System):
         # Now glue the hamiltonians of each layer together
         self.hamiltonian = []
         for cell_index in range(len(self.bottom_layer._unit_cell_list)):
-            h_cell = np.zeros([self.basisdim, self.basisdim], dtype=np.complex_)
+            h_cell = np.zeros([self.basisdim, self.basisdim], dtype=np.complex128)
             h_cell[:self.bottom_layer.basisdim, 
                    :self.bottom_layer.basisdim] = self.bottom_layer.hamiltonian[cell_index]
             h_cell[self.bottom_layer.basisdim:self.basisdim, 
@@ -1578,7 +1578,7 @@ class Stack(System):
 
 
     def hamiltonian_k(self, k):
-        hamiltonian_k = np.zeros([self.basisdim, self.basisdim], dtype=np.complex_)
+        hamiltonian_k = np.zeros([self.basisdim, self.basisdim], dtype=np.complex128)
         for cell_index, cell in enumerate(self._unit_cell_list):
             hamiltonian_k += self.hamiltonian[cell_index] * cmath.exp(1j*np.dot(k, cell))
 

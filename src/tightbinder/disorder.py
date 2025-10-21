@@ -113,7 +113,7 @@ def amorphize(system: System, spread: float = 0.1, distribution: str = "uniform"
         z = np.random.normal(0, spread, system.natoms)
         displacements = np.array([x, y, z]).T
 
-        new_motif = np.asfarray(np.copy(system.motif))
+        new_motif = np.asarray(np.copy(system.motif), dtype=np.float64)
         new_motif[:, :3] += displacements
         system.motif = new_motif
 
@@ -133,7 +133,7 @@ def amorphize(system: System, spread: float = 0.1, distribution: str = "uniform"
     z = radius_array * np.cos(theta_array)
     displacements = np.array([x, y, z]).T
 
-    new_motif = np.asfarray(np.copy(system.motif))
+    new_motif = np.asarray(np.copy(system.motif), dtype=np.float64)
     new_motif[:, :3] += displacements
     system.motif = new_motif
 
